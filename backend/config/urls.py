@@ -22,5 +22,7 @@ from core.views import health
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # /Health works with or without trailing slash
+    path("health", health),
     path("health/", health),
 ]
