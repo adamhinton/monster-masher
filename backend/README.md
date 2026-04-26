@@ -16,6 +16,10 @@ pip install -r requirements.txt
 
 python manage.py runserver
 
+OR:
+python manage.py collectstatic --noinput
+gunicorn config.wsgi:application --bind 0.0.0.0:8000
+
 Visit:
 http://127.0.0.1:8000/
 
