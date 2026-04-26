@@ -25,7 +25,11 @@ http://127.0.0.1:8000/
 
 ## Health endpoint check
 
+In dev:
 curl http://127.0.0.1:8000/health/
+
+In prod:
+curl https://monster-masher.onrender.com/health
 
 ## Hosting
 
