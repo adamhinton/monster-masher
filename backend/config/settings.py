@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Sentry error monitoring and logging
 sentry_sdk.init(
     dsn="https://8f3b1649ff89f8f8621e60e08eb4b2b2@o4511128491261952.ingest.us.sentry.io/4511289614336000",
+    enable_logs=True,
     # Add data like request headers and IP for users,
     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
     send_default_pii=True,

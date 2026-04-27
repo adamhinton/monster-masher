@@ -10,15 +10,22 @@ If running for the first time:
 
 Git checkout root folder of project, then:
 cd backend (if in root folder)
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
+For local development (recommended):
 python manage.py runserver
 
-OR:
+For production-like testing (Linux/prod style):
 python manage.py collectstatic --noinput
 gunicorn config.wsgi:application --bind 0.0.0.0:8000
+
+If you are on macOS and see an error like "objc[...]: +[NSString initialize] ... when fork() was called",
+avoid running Gunicorn locally and use `python manage.py runserver` instead.
+
+Temporary macOS-only workaround (not recommended for real production):
+OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES gunicorn config.wsgi:application --bind 0.0.0.0:8000
 
 Visit:
 http://127.0.0.1:8000/
