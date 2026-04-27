@@ -20,9 +20,20 @@ from django.urls import path
 
 from core.views import health
 
+"""
+Purposefully triggers an error when hitting the example Sentry error endpoint.
+"""
+
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     # /Health works with or without trailing slash
     path("health", health),
     path("health/", health),
+    # Example endpoint that triggers Sentry error
+    path("sentry-debug/", trigger_error),
 ]
