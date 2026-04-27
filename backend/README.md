@@ -42,3 +42,19 @@ curl https://monster-masher.onrender.com/health
 
 API: Render
 Storage: Supabase
+
+## Sentry environment tagging
+
+Sentry defaults environment to production if you do not set one.
+
+For local development, set one of these before starting Django:
+
+export SENTRY_ENVIRONMENT=development
+
+# or
+
+export DJANGO_ENV=development
+
+In Render production, set:
+
+SENTRY_ENVIRONMENT=production

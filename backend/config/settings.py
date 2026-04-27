@@ -18,20 +18,29 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+
+IS_RENDER = os.environ.get("RENDER") == "true"
+
+# Sentry defaults environment to "production" unless explicitly set.
+SENTRY_ENVIRONMENT = os.environ.get(
+    "SENTRY_ENVIRONMENT",
+    os.environ.get("DJANGO_ENV", "production" if IS_RENDER else "development"),
+)
+
 # Sentry error monitoring and logging
 sentry_sdk.init(
-    dsn="https://8f3b1649ff89f8f8621e60e08eb4b2b2@o4511128491261952.ingest.us.sentry.io/4511289614336000",
+    dsn=os.environ.get(
+        "SENTRY_DSN",
+        "https://8f3b1649ff89f8f8621e60e08eb4b2b2@o4511128491261952.ingest.us.sentry.io/4511289614336000",
+    ),
+    environment=SENTRY_ENVIRONMENT,
     enable_logs=True,
     # Add data like request headers and IP for users,
     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
     send_default_pii=True,
 )
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-IS_RENDER = os.environ.get("RENDER") == "true"
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
