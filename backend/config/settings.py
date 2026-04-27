@@ -29,6 +29,19 @@ SENTRY_ENVIRONMENT = os.environ.get(
     os.environ.get("DJANGO_ENV", "production" if IS_RENDER else "development"),
 )
 
+
+def traces_sampler(sampling_context):
+    """
+    Ensures that pings to /health are ignored in Sentry logs.
+    This is because Render pings /health every five seconds which is annoying to log
+    """
+    wsgi_environ = sampling_context.get("wsgi_environ", {})
+    # Ensure Sentry ignores /health pings in logs
+    if wsgi_environ.get("PATH_INFO") == "/health":
+        return 0  # drop it
+    return 1.0  # your normal sample rate
+
+
 # Sentry error monitoring and logging
 sentry_sdk.init(
     dsn=os.environ.get(
@@ -40,6 +53,7 @@ sentry_sdk.init(
     # Add data like request headers and IP for users,
     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
     send_default_pii=True,
+    traces_sampler=traces_sampler,
 )
 
 # SECURITY WARNING: keep the secret key used in production secret!
