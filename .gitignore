@@ -34,3 +34,9 @@ pnpm-debug.log*
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Copilot instructions
+copilot-instructions.md
+
+# Database
+db.sqlite3
