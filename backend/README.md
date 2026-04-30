@@ -135,3 +135,27 @@ All API routes live under `/api/`. New endpoints belong in the relevant app's `u
 - Future: shared response helpers, constants, base permission classes
 
 It has no models, no migrations, and no URLs of its own.
+
+---
+
+## Running Tests
+
+Run all tests from the `backend/` directory:
+
+```sh
+python manage.py test
+```
+
+Run a specific app's tests:
+
+```sh
+python manage.py test core
+python manage.py test apps.common
+```
+
+Tests live alongside the code they cover:
+
+- `core/tests.py` — health endpoint
+- `apps/common/tests.py` — error response shape and `/api/` conventions
+
+No test hits a network endpoint or external service. Keep it that way.

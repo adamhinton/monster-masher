@@ -37,6 +37,7 @@ pnpm-debug.log*
 
 # Copilot instructions
 copilot-instructions.md
+phase-1-build-plan.md
 
 # Database
 db.sqlite3
