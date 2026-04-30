@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "apps.common.apps.CommonConfig",
 ]
 
 MIDDLEWARE = [
@@ -219,8 +220,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
-    # Custom exception handler will be wired in build plan Step 3.
-    # "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
+    "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
 }
 
 if DEBUG:

@@ -97,3 +97,41 @@ SENTRY_ENVIRONMENT=production
 - **Module docstrings**: Triple-quoted docstrings at the top of Python files that benefit from context (views, models, serializers, middleware, management commands). Not needed for trivial `__init__.py` files.
 - **Function/class docstrings**: On non-obvious functions and classes.
 - **Comments**: Only when they explain _why_, not _what_. If the code reads clearly, don't comment it.
+
+---
+
+## API Conventions
+
+### Error response shape
+
+All API errors use this shape:
+
+```json
+{
+	"error": {
+		"code": "string_code",
+		"message": "Human-readable message",
+		"details": {}
+	}
+}
+```
+
+Common `code` values: `not_found`, `method_not_allowed`, `permission_denied`, `not_authenticated`, `validation_error`.
+
+For validation errors, `details` contains field-level messages keyed by field name.
+
+**How this works in practice**: raise a standard DRF exception (e.g. `raise NotFound()`, `raise PermissionDenied()`) and the custom handler in `apps/common/exceptions.py` wraps it automatically. Views that return `Response` directly for error cases should manually match this shape.
+
+### URL namespace
+
+All API routes live under `/api/`. New endpoints belong in the relevant app's `urls.py` and get included in `apps/common/urls.py`. Do not wire new API routes directly in `config/urls.py`.
+
+### apps/common/
+
+`apps/common/` holds shared conventions with no feature-specific logic:
+
+- `exceptions.py` — custom DRF exception handler
+- `views.py` — `api_not_found` catch-all for unknown `/api/` routes
+- Future: shared response helpers, constants, base permission classes
+
+It has no models, no migrations, and no URLs of its own.
