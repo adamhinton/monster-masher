@@ -16,7 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 from core.views import health
 
@@ -31,9 +31,11 @@ def trigger_error(request):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # /Health works with or without trailing slash
+    # /health works with or without trailing slash
     path("health", health),
     path("health/", health),
+    # All API routes are namespaced under /api/ — add new endpoints in apps/common/urls.py
+    path("api/", include("apps.common.urls")),
     # Example endpoint that triggers Sentry error
     path("sentry-debug/", trigger_error),
 ]
