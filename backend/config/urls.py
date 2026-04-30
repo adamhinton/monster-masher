@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
+from django.conf import settings
 
 from core.views import health
 
@@ -36,3 +37,8 @@ urlpatterns = [
     # Example endpoint that triggers Sentry error
     path("sentry-debug/", trigger_error),
 ]
+
+# Sentry has a /sentry-debug endpoint that intentionally throws an error to show that its logging works
+# This disables that endpoint in production so users can't maliciously mess with our server by hitting the endpoint
+if settings.DEBUG:  # if environment is dev
+    urlpatterns += [path("sentry-debug/", trigger_error)]
