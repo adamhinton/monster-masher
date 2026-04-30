@@ -9,7 +9,7 @@ from django.test import TestCase
 class ErrorShapeTests(TestCase):
     def test_unknown_api_route_returns_json_404(self):
         response = self.client.get("/api/doesnotexist/")
-        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response.status_code, 404)
         data = response.json()
         self.assertEqual(data["error"]["code"], "not_found")
 
