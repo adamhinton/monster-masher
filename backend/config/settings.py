@@ -36,8 +36,8 @@ def traces_sampler(sampling_context):
     This is because Render pings /health every five seconds which is annoying to log
     """
     wsgi_environ = sampling_context.get("wsgi_environ", {})
-    # Ensure Sentry ignores /health pings in logs
-    if wsgi_environ.get("PATH_INFO") == "/health":
+    # Ensure Sentry ignores /health pings in logs. Both paths are registered.
+    if wsgi_environ.get("PATH_INFO") in ("/health", "/health/"):
         return 0  # drop it
     return 1.0  # your normal sample rate
 
@@ -112,8 +112,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

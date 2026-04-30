@@ -20,12 +20,9 @@ from django.urls import include, path
 
 from core.views import health
 
-"""
-Purposefully triggers an error when hitting the example Sentry error endpoint.
-"""
-
 
 def trigger_error(request):
+    """Purposefully triggers a ZeroDivisionError to verify Sentry error capture is working."""
     division_by_zero = 1 / 0
 
 
