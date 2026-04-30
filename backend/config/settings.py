@@ -106,6 +106,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
@@ -205,3 +206,24 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    # Phase 4 of our build plan will replace these with Supabase JWT auth.
+    # AllowAny here is intentional, not accidental — no protected endpoints exist yet. Will be changed later.
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+    # Only render JSON in production. Browsable HTML API is for local dev only.
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    # Custom exception handler will be wired in build plan Step 3.
+    # "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
+}
+
+if DEBUG:
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] += [
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ]

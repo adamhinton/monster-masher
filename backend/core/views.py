@@ -1,9 +1,9 @@
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from sentry_sdk import logger as sentry_logger
 
 
-@require_GET
+@api_view(["GET"])
 def health(request):
     user_agent = request.headers.get("User-Agent", "")
 
@@ -19,4 +19,4 @@ def health(request):
             },
         )
 
-    return JsonResponse({"status": "ok"})
+    return Response({"status": "ok"})

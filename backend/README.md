@@ -13,6 +13,12 @@ cd backend (if in root folder)
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env # then fill in real values (DJANGO_SECRET_KEY at minimum)
+
+`.env.example` lists all env vars the project knows about, with safe placeholder
+values. The real `.env` is gitignored — never commit it. On Render, env vars are
+set through the dashboard instead of a `.env` file, so `load_dotenv()` is a no-op
+in production.
 
 For local development (recommended):
 python manage.py runserver
@@ -83,3 +89,11 @@ export DJANGO_ENV=development
 In Render production, set:
 
 SENTRY_ENVIRONMENT=production
+
+---
+
+## Code Conventions
+
+- **Module docstrings**: Triple-quoted docstrings at the top of Python files that benefit from context (views, models, serializers, middleware, management commands). Not needed for trivial `__init__.py` files.
+- **Function/class docstrings**: On non-obvious functions and classes.
+- **Comments**: Only when they explain _why_, not _what_. If the code reads clearly, don't comment it.
