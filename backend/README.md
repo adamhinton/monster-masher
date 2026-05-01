@@ -36,13 +36,64 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES gunicorn config.wsgi:application --bind 
 Visit:
 http://127.0.0.1:8000/
 
-## Health endpoint check
+## API Endpoints
 
-In dev:
+### Health check
+
+```
+GET /health
+GET /health/
+```
+
+Returns `{"status": "ok"}` when the server is running. No authentication required.
+
+```sh
+# Dev
 curl http://127.0.0.1:8000/health
 
-In prod:
+# Prod
 curl https://monster-masher.onrender.com/health
+```
+
+### OpenAPI schema
+
+```
+GET /api/schema/           → OpenAPI 3.x YAML
+GET /api/schema/?format=json → OpenAPI 3.x JSON
+```
+
+The committed `backend/openapi.yaml` is generated from this endpoint. The frontend codegen pipeline reads `openapi.yaml` directly (no running server needed).
+
+```sh
+curl http://127.0.0.1:8000/api/schema/
+curl "http://127.0.0.1:8000/api/schema/?format=json"
+```
+
+### Swagger UI (interactive docs)
+
+```
+GET /api/docs/
+```
+
+Browser-based Swagger UI. Lists all documented endpoints with request/response shapes.
+
+```sh
+open http://127.0.0.1:8000/api/docs/
+```
+
+### Catch-all (unknown /api/\* routes)
+
+Any `/api/` path that does not match a registered endpoint returns a standard JSON 404:
+
+```json
+{
+	"error": {
+		"code": "not_found",
+		"message": "The requested endpoint does not exist.",
+		"details": {}
+	}
+}
+```
 
 ## Hosting
 
