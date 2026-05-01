@@ -95,6 +95,21 @@ Any `/api/` path that does not match a registered endpoint returns a standard JS
 }
 ```
 
+## Regenerating the API Schema
+
+After any API change (serializer, view, or endpoint):
+
+```sh
+cd backend/ && python manage.py spectacular --file openapi.yaml
+cd frontend/ && npm run generate:api
+# Fix any frontend TypeScript errors
+# Commit both openapi.yaml and __generated__/types.ts
+```
+
+The committed `backend/openapi.yaml` is the source of truth for the frontend codegen pipeline. Never edit it manually.
+
+---
+
 ## Hosting
 
 API: Render

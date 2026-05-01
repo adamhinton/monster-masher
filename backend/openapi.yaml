@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info:
+  title: Monster Masher API
+  version: 0.1.0
+  description: Django REST API for Monster Masher.
+paths:
+  /health/:
+    get:
+      operationId: health_retrieve
+      description: Returns ok when the server is running. Unauthenticated.
+      summary: Health check
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          description: ''
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
