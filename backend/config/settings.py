@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "apps.common.apps.CommonConfig",
 ]
 
@@ -206,6 +207,15 @@ STORAGES = {
     },
 }
 
+# Serializer stuff
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Monster Masher API",
+    "DESCRIPTION": "Django REST API for Monster Masher.",
+    "VERSION": "0.1.0",
+    # Prevents /api/schema/ and /api/docs/ from listing themselves in the schema.
+    "SERVE_INCLUDE_SCHEMA": False,
+}
+
 # Django REST Framework
 REST_FRAMEWORK = {
     # Phase 4 of our build plan will replace these with Supabase JWT auth.
@@ -219,9 +229,12 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 if DEBUG:
-    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] += [
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = list(
+        REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"]
+    ) + [
         "rest_framework.renderers.BrowsableAPIRenderer",
     ]

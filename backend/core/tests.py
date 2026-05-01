@@ -8,16 +8,35 @@ from django.test import TestCase
 
 class HealthEndpointTests(TestCase):
     def test_health_returns_200(self):
-        response = self.client.get("/health/")
+        response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
 
     def test_health_returns_ok_status(self):
-        response = self.client.get("/health/")
+        response = self.client.get("/health")
         self.assertEqual(response.json(), {"status": "ok"})
 
     def test_health_post_not_allowed(self):
         """
         /health endpoint allows only GET, not POST
         """
+        response = self.client.post("/health")
+        self.assertEqual(response.status_code, 405)
+
+
+class HealthEndpointTrailingSlashTests(TestCase):
+    """
+    Mirrors HealthEndpointTests for /health/ — both forms are matched by the same
+    re_path pattern and must behave identically.
+    """
+
+    def test_health_trailing_slash_returns_200(self):
+        response = self.client.get("/health/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_health_trailing_slash_returns_ok_status(self):
+        response = self.client.get("/health/")
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_health_trailing_slash_post_not_allowed(self):
         response = self.client.post("/health/")
         self.assertEqual(response.status_code, 405)
