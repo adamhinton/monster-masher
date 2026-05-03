@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { fetchDjangoHealth, type HealthResponse } from "@/lib/api/health";
+import { fetchDjangoHealth } from "@/lib/api/health";
+import type { HealthResponse } from "@/lib/api/schemas/health";
 
 type HealthCheckState =
 	| { status: "idle" }

@@ -2,16 +2,10 @@
 // Helper for Django health check API. This is used in the frontend to check if the backend is healthy.
 // _________________
 
-import { z } from "zod";
-
 import { env } from "@/lib/env";
+import { HealthResponse, HealthResponseSchema } from "./schemas/health";
 
-export const HealthResponseSchema = z.object({
-	status: z.literal("ok"),
-});
-
-export type HealthResponse = z.infer<typeof HealthResponseSchema>;
-
+/**Frontend helper to make sure the backend is healthy via /health endpoint */
 export async function fetchDjangoHealth(): Promise<HealthResponse> {
 	const response = await fetch(`${env.djangoApiBaseUrl}/health`, {
 		method: "GET",
