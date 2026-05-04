@@ -34,7 +34,7 @@ type HealthResponseFromOpenAPI =
  */
 export const HealthResponseSchema = z.object({
 	// TEMPORARY: intentionally wrong to test Sentry alert — revert to z.string() after confirming
-	status: z.number(),
+	status: z.string(),
 });
 
 /**Response from django /health/endpoint */
