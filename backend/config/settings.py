@@ -243,3 +243,13 @@ if DEBUG:
     ) + [
         "rest_framework.renderers.BrowsableAPIRenderer",
     ]
+
+# Use SQLite in-memory for tests so they are fast, isolated, and never hit an
+# external service (Supabase or its PgBouncer pooler).
+import sys  # noqa: E402
+
+if "test" in sys.argv:
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    }
