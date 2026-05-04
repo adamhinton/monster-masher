@@ -13,7 +13,7 @@ cd backend (if in root folder)
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env # then fill in real values (DJANGO_SECRET_KEY at minimum)
+cp .env.example .env # then fill in real values (DJANGO_SECRET_KEY and DATABASE_URL at minimum)
 
 `.env.example` lists all env vars the project knows about, with safe placeholder
 values. The real `.env` is gitignored — never commit it. On Render, env vars are
@@ -114,6 +114,34 @@ The committed `backend/openapi.yaml` is the source of truth for the frontend cod
 
 API: Render
 Storage: Supabase
+
+---
+
+## Database
+
+Django uses Supabase Postgres via `dj-database-url`. Set `DATABASE_URL` in `.env` for local dev.
+
+**Connection options** (in order of preference):
+
+1. **Direct connection** — best for persistent servers; uses IPv6 on newer Supabase projects, which may fail from some networks
+2. **Session pooler** (port 5432) — use this if the direct connection fails due to IPv6 issues
+3. **Transaction pooler** (port 6543) — **never use this for Django**; Django requires prepared statements, which the transaction pooler does not support
+
+SSL is required in production and disabled locally (controlled by `DEBUG`).
+
+**Migrations**:
+
+```sh
+# Apply migrations locally
+python manage.py migrate
+
+# Create a local superuser (for Django admin)
+python manage.py createsuperuser
+```
+
+Migrations run automatically on Render during each deploy via `build.sh`.
+
+---
 
 ## Render service setup (prod)
 
