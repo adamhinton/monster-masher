@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Monster Masher — Frontend
+
+Next.js App Router frontend for Monster Masher.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.local.example` to `.env.local` and fill in values before running.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable                          | Description                                                        |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `NEXT_PUBLIC_DJANGO_API_BASE_URL` | Base URL for the Django API (e.g. `http://127.0.0.1:8000` locally) |
 
-## Learn More
+## Regenerating API Types
 
-To learn more about Next.js, take a look at the following resources:
+TypeScript types for the Django API are auto-generated from `backend/openapi.yaml`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```sh
+# From frontend/
+npm run generate:api
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This writes `src/lib/api/__generated__/types.ts`. Do not edit that file manually — it is machine-generated and committed to the repo. Run the command and commit the output whenever the backend OpenAPI schema changes.
 
-## Deploy on Vercel
+## Adding a New API Call
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+For every new API endpoint call:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Write a Zod schema in `src/lib/api/schemas/` (one file per resource/endpoint group).
+2. Add a compile-time drift check at the bottom of the schema file:
+   ```ts
+   type _Check = Assert<AssertExact<z.output<typeof MySchema>, OpenAPIType>>;
+   ```
+   If the Zod schema drifts from the OpenAPI type, `tsc` will fail on that line with a descriptive error showing both sides of the mismatch.
+3. Wrap the `Schema.parse(data)` call in a try/catch that sends to Sentry before re-throwing:
+   ```ts
+   try {
+   	return MySchema.parse(data);
+   } catch (err) {
+   	Sentry.captureException(err, {
+   		tags: { type: "api_contract_drift", endpoint: "/api/..." },
+   	});
+   	throw err;
+   }
+   ```
+
+See `src/lib/api/schemas/health.ts` and `src/lib/api/health.ts` for a working example.

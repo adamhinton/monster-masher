@@ -11,7 +11,7 @@ on:
 
 jobs:
   validate:
-    name: Validate Backend and Frontend Types
+    name: OpenAPI Type Contract matches manually-written Zod Schemas
     runs-on: ubuntu-latest
 
     steps:

@@ -10,16 +10,16 @@ paths:
       description: Returns ok when the server is running. Unauthenticated.
       summary: Health check
       tags:
-      - health
+        - health
       security:
-      - {}
+        - {}
       responses:
-        '200':
+        "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResponse'
-          description: ''
+                $ref: "#/components/schemas/HealthResponse"
+          description: ""
 components:
   schemas:
     HealthResponse:
@@ -28,4 +28,4 @@ components:
         status:
           type: string
       required:
-      - status
+        - status
