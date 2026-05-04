@@ -1,4 +1,6 @@
-name: Backend tests
+# Checks that all unit tests pass before merging to main
+
+name: Backend tests pass
 
 on:
   pull_request:
