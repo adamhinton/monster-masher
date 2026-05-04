@@ -33,9 +33,8 @@ type HealthResponseFromOpenAPI =
  * This should match the OpenAPI type exactly; we have a type guard to ensure this.
  */
 export const HealthResponseSchema = z.object({
-	// CharField() in Django produces type: string in OpenAPI — use z.string(), not z.literal("ok").
-	// See phase-2-openapi-contract-foundation.md § 8b for the reasoning.
-	status: z.string(),
+	// TEMPORARY: intentionally wrong to test Sentry alert — revert to z.string() after confirming
+	status: z.number(),
 });
 
 /**Response from django /health/endpoint */
