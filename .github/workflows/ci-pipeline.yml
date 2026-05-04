@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      NEXT_PUBLIC_DJANGO_API_BASE_URL: "https://monster-masher.onrender.com"
 
     steps:
       - name: Checkout Code
