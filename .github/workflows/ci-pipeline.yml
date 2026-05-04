@@ -18,52 +18,52 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install Backend Dependencies
         run: |
           python -m venv .venv
           source .venv/bin/activate
-          pip install -r backend/requirements.txt || true
+          pip install -r backend/requirements.txt
 
       - name: Generate Backend Schema
         run: |
           source .venv/bin/activate
           cd backend
-          python manage.py spectacular --file openapi.yaml || true
+          python manage.py spectacular --file openapi.yaml
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 18
+          node-version: 20.9.0
 
       - name: Install Frontend Dependencies
         run: |
           cd frontend
-          npm ci || true
+          npm ci
 
       - name: Generate Frontend Types
         run: |
           cd frontend
-          npm run generate:api || true
+          npm run generate:api
 
       - name: Run TypeScript Type Checks
         run: |
           cd frontend
-          npm run build || true
+          npm run build
 
       - name: Run Backend Tests
         run: |
           source .venv/bin/activate
           cd backend
-          python manage.py test || true
+          python manage.py test
 
       - name: Run Frontend Linting
         run: |
           cd frontend
-          npm run lint || true
+          npm run lint
