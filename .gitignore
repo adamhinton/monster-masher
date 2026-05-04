@@ -39,6 +39,7 @@ pnpm-debug.log*
 copilot-instructions.md
 phase-1-build-plan.md
 phase-2-openapi-contract-foundation.md
+phase-3-supabase-connection.md
 
 # Database
 db.sqlite3
