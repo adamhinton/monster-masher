@@ -17,7 +17,7 @@
 import { z } from "zod";
 
 import type { paths } from "@/lib/api/__generated__/types";
-import type { Assert, IsExact } from "@/lib/api/type-assertions";
+import type { Assert, AssertExact } from "@/lib/api/type-assertions";
 
 /**
  * Response from our Django api's /health endpoint.
@@ -33,8 +33,8 @@ type HealthResponseFromOpenAPI =
  * This should match the OpenAPI type exactly; we have a type guard to ensure this.
  */
 export const HealthResponseSchema = z.object({
-	// It's {status: "ok"} today, but auto-generated types aren't that precise, and for good reason
-	// TODO if there's a zod-API mismatch it just says "type false doesn't equal type true" which isn't very helpful; see if we can sweet-talk the compiler in to more helpful error messages
+	// CharField() in Django produces type: string in OpenAPI — use z.string(), not z.literal("ok").
+	// See phase-2-openapi-contract-foundation.md § 8b for the reasoning.
 	status: z.string(),
 });
 
@@ -50,5 +50,5 @@ export type HealthResponse = z.output<typeof HealthResponseSchema>;
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type _HealthResponseSchemaMatchesOpenAPI = Assert<
-	IsExact<HealthResponse, HealthResponseFromOpenAPI>
+	AssertExact<HealthResponse, HealthResponseFromOpenAPI>
 >;
