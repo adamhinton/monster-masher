@@ -166,6 +166,21 @@ DATABASES = {
     )
 }
 
+# Supabase Auth — used for JWT verification on protected API routes.
+# SUPABASE_URL is the project URL: https://<project-ref>.supabase.co
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+# Tokens issued by Supabase always have audience="authenticated" for logged-in users.
+SUPABASE_AUTH_AUDIENCE = os.environ.get("SUPABASE_AUTH_AUDIENCE", "authenticated")
+# Derived from SUPABASE_URL — do not override these unless you know what you are doing.
+SUPABASE_JWT_ISSUER = f"{SUPABASE_URL}/auth/v1" if SUPABASE_URL else ""
+SUPABASE_JWKS_URL = (
+    f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json" if SUPABASE_URL else ""
+)
+# Signing algorithm for JWT verification. Must match the algorithm shown in
+# Supabase Dashboard → Authentication → JWT Signing Keys.
+# ES256 (Elliptic Curve, recommended) or RS256 (RSA). New projects default to ES256.
+SUPABASE_JWT_ALGORITHM = os.environ.get("SUPABASE_JWT_ALGORITHM", "ES256")
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
