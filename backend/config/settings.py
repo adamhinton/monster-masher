@@ -110,6 +110,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "apps.common.apps.CommonConfig",
+    "apps.accounts.apps.AccountsConfig",
 ]
 
 MIDDLEWARE = [
@@ -159,9 +160,9 @@ DATABASES = {
         # SQLite fallback for local dev without DATABASE_URL set.
         # In practice, always set DATABASE_URL in .env for real work.
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,           # Keep DB connections alive for reuse across requests
-        conn_health_checks=True,    # Check connection health before reuse (recommended with conn_max_age)
-        ssl_require=not DEBUG,      # Require SSL in production; skip for local SQLite fallback
+        conn_max_age=600,  # Keep DB connections alive for reuse across requests
+        conn_health_checks=True,  # Check connection health before reuse (recommended with conn_max_age)
+        ssl_require=not DEBUG,  # Require SSL in production; skip for local SQLite fallback
     )
 }
 
