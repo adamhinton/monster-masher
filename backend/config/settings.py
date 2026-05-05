@@ -239,10 +239,13 @@ SPECTACULAR_SETTINGS = {
 
 # Django REST Framework
 REST_FRAMEWORK = {
-    # Phase 4 of our build plan will replace these with Supabase JWT auth.
-    # AllowAny here is intentional, not accidental — no protected endpoints exist yet. Will be changed later.
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.accounts.authentication.SupabaseJWTAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": [
+        # AllowAny at the default level — individual views declare their own
+        # permission_classes. This prevents accidentally locking down /health,
+        # /api/schema/, and /api/docs/.
         "rest_framework.permissions.AllowAny",
     ],
     # Only render JSON in production. Browsable HTML API is for local dev only.
