@@ -75,10 +75,12 @@ def verify_supabase_jwt(token: str) -> dict[str, Any]:
         raise AuthenticationFailed("Token audience is invalid.")
     except jwt.InvalidIssuerError:
         raise AuthenticationFailed("Token issuer is invalid.")
-    except jwt.DecodeError:
-        raise AuthenticationFailed("Token could not be decoded.")
-    except jwt.InvalidTokenError:
-        raise AuthenticationFailed("Token is invalid.")
+    except jwt.DecodeError as exc:
+        logger.warning("Token decode error: %s", str(exc))
+        raise AuthenticationFailed("Invalid token format.") from exc
+    except Exception as exc:
+        logger.error("Unexpected error during token verification: %s", str(exc))
+        raise AuthenticationFailed("An unexpected error occurred during token verification.") from exc
 
     return claims
 

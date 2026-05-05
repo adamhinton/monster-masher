@@ -4,22 +4,57 @@ info:
   version: 0.1.0
   description: Django REST API for Monster Masher.
 paths:
+  /api/me/:
+    get:
+      operationId: api_me_retrieve
+      description: Get the current user's profile.
+      summary: Get current user profile
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+  /api/me/bootstrap/:
+    post:
+      operationId: api_me_bootstrap_create
+      description: Idempotent. The authentication class already creates the profile
+        on first verified request, but this endpoint gives the frontend a clean 'finish
+        login' hook to call explicitly after auth confirm.
+      summary: Create or fetch UserProfile for the current Supabase user
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
   /health/:
     get:
       operationId: health_retrieve
       description: Returns ok when the server is running. Unauthenticated.
       summary: Health check
       tags:
-        - health
+      - health
       security:
-        - {}
+      - SupabaseJWTAuthentication: []
+      - {}
       responses:
-        "200":
+        '200':
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthResponse"
-          description: ""
+                $ref: '#/components/schemas/HealthResponse'
+          description: ''
 components:
   schemas:
     HealthResponse:
@@ -28,4 +63,42 @@ components:
         status:
           type: string
       required:
-        - status
+      - status
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        supabase_user_id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - display_name
+      - email
+      - id
+      - supabase_user_id
+      - updated_at
+  securitySchemes:
+    SupabaseJWTAuthentication:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

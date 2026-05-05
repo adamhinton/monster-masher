@@ -7,8 +7,13 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.views import exception_handler
 
 from .serializers import UserProfileSerializer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MeView(GenericAPIView):
@@ -50,3 +55,22 @@ class BootstrapMeView(GenericAPIView):
         # The auth class already called get_or_create; request.user is the profile.
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+
+# Custom exception handler to ensure proper 401 response for AuthenticationFailed
+# It was returning 500 without this, which we didn't want
+def custom_exception_handler(exc, context):
+    response = exception_handler(exc, context)
+
+    if isinstance(exc, AuthenticationFailed):
+        logger.debug("Custom exception handler invoked for exception: %s", str(exc))
+        if response is not None:
+            response.data = {
+                "error": {
+                    "code": "not_authenticated",
+                    "message": str(exc),
+                    "details": "Invalid or expired token.",
+                }
+            }
+
+    return response
