@@ -252,7 +252,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
-    "EXCEPTION_HANDLER": "apps.accounts.views.custom_exception_handler",
+    "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 

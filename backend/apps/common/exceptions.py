@@ -24,6 +24,9 @@ def _code_for_exception(exc) -> str:
         return "permission_denied"
     if isinstance(exc, drf_exceptions.ValidationError):
         return "validation_error"
+    # AuthenticationFailed must be checked before NotAuthenticated (it's a subclass)
+    if isinstance(exc, drf_exceptions.AuthenticationFailed):
+        return "not_authenticated"
     if isinstance(exc, drf_exceptions.NotAuthenticated):
         return "not_authenticated"
     return "error"
