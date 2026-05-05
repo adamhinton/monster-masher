@@ -80,7 +80,9 @@ def verify_supabase_jwt(token: str) -> dict[str, Any]:
         raise AuthenticationFailed("Invalid token format.") from exc
     except Exception as exc:
         logger.error("Unexpected error during token verification: %s", str(exc))
-        raise AuthenticationFailed("An unexpected error occurred during token verification.") from exc
+        raise AuthenticationFailed(
+            "An unexpected error occurred during token verification."
+        ) from exc
 
     return claims
 
