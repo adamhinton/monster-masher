@@ -4,6 +4,46 @@
  */
 
 export interface paths {
+    "/api/me/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get current user profile
+         * @description Get the current user's profile.
+         */
+        get: operations["api_me_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/bootstrap/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create or fetch UserProfile for the current Supabase user
+         * @description Idempotent. The authentication class already creates the profile on first verified request, but this endpoint gives the frontend a clean 'finish login' hook to call explicitly after auth confirm.
+         */
+        post: operations["api_me_bootstrap_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/": {
         parameters: {
             query?: never;
@@ -31,6 +71,19 @@ export interface components {
         HealthResponse: {
             status: string;
         };
+        UserProfile: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly supabase_user_id: string;
+            /** Format: email */
+            readonly email: string;
+            readonly display_name: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -40,6 +93,44 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    api_me_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+        };
+    };
+    api_me_bootstrap_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+        };
+    };
     health_retrieve: {
         parameters: {
             query?: never;
