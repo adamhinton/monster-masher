@@ -18,6 +18,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
 
 from .models import UserProfile
+from drf_spectacular.extensions import OpenApiAuthenticationExtension
 
 logger = logging.getLogger(__name__)
 
@@ -139,3 +140,15 @@ class SupabaseJWTAuthentication(BaseAuthentication):
         # Returning "Bearer" causes DRF to send WWW-Authenticate: Bearer on 401s,
         # which is the correct HTTP response for token-based auth.
         return "Bearer"
+
+
+class SupabaseJWTAuthenticationExtension(OpenApiAuthenticationExtension):
+    target_class = "apps.accounts.authentication.SupabaseJWTAuthentication"  # Full import path to the authentication class
+    name = "SupabaseJWTAuthentication"
+
+    def get_security_definition(self, auto_schema):
+        return {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
