@@ -126,5 +126,47 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+
+  /* ── Typography hierarchy ── */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+  }
+  h2 {
+    font-size: 2rem;
+  }
+  h3 {
+    font-size: 1.5rem;
+  }
+  h4 {
+    font-size: 1.25rem;
+  }
+
+  p {
+    line-height: 1.65;
+  }
+
+  /* Smooth link transitions */
+  a {
+    transition: color 150ms ease;
+  }
+
+  /* Code blocks use the mono font */
+  code,
+  pre,
+  kbd {
+    font-family: var(--font-mono);
   }
 }
