@@ -3,10 +3,12 @@
 // Validation is lazy (via getters) so importing this module never throws — only
 // accessing a missing variable does. This prevents build-time prerender failures
 // on pages that don't need every variable.
+// NOTE: NEXT_PUBLIC_* vars must be referenced with literal dot notation
+// (process.env.NEXT_PUBLIC_FOO) so Next.js can statically inline them at build time.
+// Dynamic bracket access (process.env[name]) bypasses inlining and always yields undefined.
 // _______________
 
-function requireEnv(name: string): string {
-	const value = process.env[name as keyof typeof process.env];
+function assertDefined(value: string | undefined, name: string): string {
 	if (!value) throw new Error(`Missing ${name}`);
 	return value;
 }
@@ -16,15 +18,27 @@ function requireEnv(name: string): string {
  */
 export const env = {
 	get djangoApiBaseUrl() {
-		return requireEnv("NEXT_PUBLIC_DJANGO_API_BASE_URL").replace(/\/$/, "");
+		return assertDefined(
+			process.env.NEXT_PUBLIC_DJANGO_API_BASE_URL,
+			"NEXT_PUBLIC_DJANGO_API_BASE_URL",
+		).replace(/\/$/, "");
 	},
 	get supabaseUrl() {
-		return requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+		return assertDefined(
+			process.env.NEXT_PUBLIC_SUPABASE_URL,
+			"NEXT_PUBLIC_SUPABASE_URL",
+		);
 	},
 	get supabasePublishableKey() {
-		return requireEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+		return assertDefined(
+			process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+			"NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+		);
 	},
 	get appUrl() {
-		return requireEnv("NEXT_PUBLIC_APP_URL");
+		return assertDefined(
+			process.env.NEXT_PUBLIC_APP_URL,
+			"NEXT_PUBLIC_APP_URL",
+		);
 	},
 };
