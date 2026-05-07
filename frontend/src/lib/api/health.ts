@@ -9,6 +9,7 @@ import { HealthResponse, HealthResponseSchema } from "./schemas/health";
 
 /**Frontend helper to make sure the backend is healthy via /health endpoint */
 export async function fetchDjangoHealth(): Promise<HealthResponse> {
+	console.log("env.djangoApiBaseUrl:", env.djangoApiBaseUrl);
 	const response = await fetch(`${env.djangoApiBaseUrl}/health`, {
 		method: "GET",
 		cache: "no-store",
