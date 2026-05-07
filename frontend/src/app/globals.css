@@ -8,7 +8,9 @@
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--font-sans: var(--font-geist-sans), system-ui, sans-serif;
-	--font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+	--font-mono:
+		var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+		Consolas, "Liberation Mono", "Courier New", monospace;
 	--font-heading: var(--font-sans);
 	--color-ring: var(--ring);
 	--color-input: var(--input);
@@ -46,84 +48,84 @@
    Do not scatter hardcoded colors in components; use these tokens.
    ───────────────────────────────────────────────────────────────── */
 :root {
-  /* ── Surfaces ── */
-  --background: oklch(0.98 0.012 90);   /* warm cream — not clinical white */
-  --foreground: oklch(0.14 0.02 265);   /* near-black with subtle purple tint */
-  --card: oklch(0.995 0.007 90);        /* slightly warmer than background */
-  --card-foreground: oklch(0.14 0.02 265);
-  --popover: oklch(0.995 0.007 90);
-  --popover-foreground: oklch(0.14 0.02 265);
+	/* ── Surfaces ── */
+	--background: oklch(0.98 0.012 90); /* warm cream — not clinical white */
+	--foreground: oklch(0.14 0.02 265); /* near-black with subtle purple tint */
+	--card: oklch(0.995 0.007 90); /* slightly warmer than background */
+	--card-foreground: oklch(0.14 0.02 265);
+	--popover: oklch(0.995 0.007 90);
+	--popover-foreground: oklch(0.14 0.02 265);
 
-  /* ── Primary — vivid violet ── */
-  --primary: oklch(0.52 0.24 290);                /* strong violet CTA */
-  --primary-foreground: oklch(0.985 0.01 290);    /* near-white on primary */
+	/* ── Primary — vivid violet ── */
+	--primary: oklch(0.52 0.24 290); /* strong violet CTA */
+	--primary-foreground: oklch(0.985 0.01 290); /* near-white on primary */
 
-  /* ── Secondary — soft lavender ── */
-  --secondary: oklch(0.93 0.03 290);
-  --secondary-foreground: oklch(0.3 0.06 290);
+	/* ── Secondary — soft lavender ── */
+	--secondary: oklch(0.93 0.03 290);
+	--secondary-foreground: oklch(0.3 0.06 290);
 
-  /* ── Muted ── */
-  --muted: oklch(0.95 0.01 90);           /* warm light gray */
-  --muted-foreground: oklch(0.5 0.02 265);
+	/* ── Muted ── */
+	--muted: oklch(0.95 0.01 90); /* warm light gray */
+	--muted-foreground: oklch(0.5 0.02 265);
 
-  /* ── Accent — rose/pink ── */
-  --accent: oklch(0.88 0.05 0);           /* soft rose surface */
-  --accent-foreground: oklch(0.3 0.1 0);
+	/* ── Accent — rose/pink ── */
+	--accent: oklch(0.88 0.05 0); /* soft rose surface */
+	--accent-foreground: oklch(0.3 0.1 0);
 
-  /* ── Destructive ── */
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.985 0.01 25);
+	/* ── Destructive ── */
+	--destructive: oklch(0.55 0.22 25);
+	--destructive-foreground: oklch(0.985 0.01 25);
 
-  /* ── Chrome ── */
-  --border: oklch(0.9 0.018 265);
-  --input: oklch(0.9 0.018 265);
-  --ring: oklch(0.52 0.24 290);           /* focus ring = primary */
+	/* ── Chrome ── */
+	--border: oklch(0.9 0.018 265);
+	--input: oklch(0.9 0.018 265);
+	--ring: oklch(0.52 0.24 290); /* focus ring = primary */
 
-  /* ── Shape ── */
-  --radius: 0.5rem;
+	/* ── Shape ── */
+	--radius: 0.5rem;
 
-  /* ── Brand extras (raw CSS vars for glow effects etc.) ── */
-  --brand-primary-glow: oklch(0.52 0.24 290 / 0.25);
-  --brand-accent-glow: oklch(0.65 0.22 350 / 0.2);
+	/* ── Brand extras (raw CSS vars for glow effects etc.) ── */
+	--brand-primary-glow: oklch(0.52 0.24 290 / 0.25);
+	--brand-accent-glow: oklch(0.65 0.22 350 / 0.2);
 }
 
 .dark {
-  /* ── Surfaces ── */
-  --background: oklch(0.13 0.04 280);   /* deep navy-black, slightly purple */
-  --foreground: oklch(0.95 0.01 290);   /* near-white, cool-tinted */
-  --card: oklch(0.17 0.04 280);
-  --card-foreground: oklch(0.95 0.01 290);
-  --popover: oklch(0.16 0.04 280);
-  --popover-foreground: oklch(0.95 0.01 290);
+	/* ── Surfaces ── */
+	--background: oklch(0.13 0.04 280); /* deep navy-black, slightly purple */
+	--foreground: oklch(0.95 0.01 290); /* near-white, cool-tinted */
+	--card: oklch(0.17 0.04 280);
+	--card-foreground: oklch(0.95 0.01 290);
+	--popover: oklch(0.16 0.04 280);
+	--popover-foreground: oklch(0.95 0.01 290);
 
-  /* ── Primary — bright violet on dark ── */
-  --primary: oklch(0.66 0.25 285);
-  --primary-foreground: oklch(0.985 0.01 290);
+	/* ── Primary — bright violet on dark ── */
+	--primary: oklch(0.66 0.25 285);
+	--primary-foreground: oklch(0.985 0.01 290);
 
-  /* ── Secondary ── */
-  --secondary: oklch(0.22 0.05 280);
-  --secondary-foreground: oklch(0.9 0.02 290);
+	/* ── Secondary ── */
+	--secondary: oklch(0.22 0.05 280);
+	--secondary-foreground: oklch(0.9 0.02 290);
 
-  /* ── Muted ── */
-  --muted: oklch(0.2 0.04 280);
-  --muted-foreground: oklch(0.6 0.04 280);
+	/* ── Muted ── */
+	--muted: oklch(0.2 0.04 280);
+	--muted-foreground: oklch(0.6 0.04 280);
 
-  /* ── Accent — warm rose/pink on dark ── */
-  --accent: oklch(0.26 0.06 350);
-  --accent-foreground: oklch(0.92 0.04 0);
+	/* ── Accent — warm rose/pink on dark ── */
+	--accent: oklch(0.26 0.06 350);
+	--accent-foreground: oklch(0.92 0.04 0);
 
-  /* ── Destructive ── */
-  --destructive: oklch(0.62 0.22 25);
-  --destructive-foreground: oklch(0.14 0.02 25);
+	/* ── Destructive ── */
+	--destructive: oklch(0.62 0.22 25);
+	--destructive-foreground: oklch(0.14 0.02 25);
 
-  /* ── Chrome ── */
-  --border: oklch(0.26 0.04 280);
-  --input: oklch(0.26 0.04 280);
-  --ring: oklch(0.66 0.25 285);
+	/* ── Chrome ── */
+	--border: oklch(0.26 0.04 280);
+	--input: oklch(0.26 0.04 280);
+	--ring: oklch(0.66 0.25 285);
 
-  /* ── Brand extras ── */
-  --brand-primary-glow: oklch(0.66 0.25 285 / 0.3);
-  --brand-accent-glow: oklch(0.72 0.22 350 / 0.25);
+	/* ── Brand extras ── */
+	--brand-primary-glow: oklch(0.66 0.25 285 / 0.3);
+	--brand-accent-glow: oklch(0.72 0.22 350 / 0.25);
 }
 
 @layer base {
@@ -184,6 +186,8 @@
 		outline: 2px solid var(--ring);
 		outline-offset: 2px;
 		box-shadow: 0 0 0 2px var(--ring);
-		transition: outline-color 0.2s, box-shadow 0.2s;
+		transition:
+			outline-color 0.2s,
+			box-shadow 0.2s;
 	}
 }
