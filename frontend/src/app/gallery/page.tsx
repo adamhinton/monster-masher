@@ -1,3 +1,7 @@
+// ______________
+// Here the user can see their created monsters in a gallery format. This page is currently a placeholder and will be fleshed out as the project progresses.
+// ______________
+
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -5,6 +9,11 @@ import Link from "next/link";
 
 export const metadata = { title: "Monster Gallery" };
 
+/**
+ * Displays the user's created Monsters.
+ *
+ * Just a placeholder for now; will be fleshed out as the project progresses.
+ */
 export default function GalleryPage() {
 	return (
 		<PageContainer size="marketing">

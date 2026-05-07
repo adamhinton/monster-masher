@@ -1,3 +1,7 @@
+// ______________
+// This page is a simple smoke test for the Django API. It allows you to click a button to call the /health endpoint on the Django backend and displays the response. This is useful for verifying that the frontend can communicate with the backend and that the backend is running correctly.
+// ______________
+
 "use client";
 
 import { useState } from "react";
@@ -11,6 +15,9 @@ type HealthCheckState =
 	| { status: "success"; data: HealthResponse }
 	| { status: "error"; message: string };
 
+/**
+ * Simple smoke test page to verify that Django API is working and connected
+ */
 export default function DjangoTestPage() {
 	const [state, setState] = useState<HealthCheckState>({ status: "idle" });
 

@@ -1,3 +1,5 @@
+// TODO fill this out when project is more defined
+
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
@@ -26,7 +28,7 @@ export function Footer() {
 						</p>
 					</div>
 
-					{/* Links — uncomment and fill in once repo is public */}
+					{/* Links — TODO uncomment and fill in once repo is public */}
 					<div className="flex flex-col gap-2 text-sm text-muted-foreground">
 						{/* <Link
 							href="https://github.com/YOUR_USERNAME/monster-masher"

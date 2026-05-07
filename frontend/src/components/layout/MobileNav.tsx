@@ -1,3 +1,5 @@
+// TODO flesh this out when project is more defined
+
 "use client";
 
 import { useState } from "react";
@@ -11,7 +13,7 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@/components/darkTheming/ThemeToggle";
 import { Separator } from "@/components/ui/separator";
 
 const navLinks = [

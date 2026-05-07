@@ -1,7 +1,9 @@
+// TODO flesh this out when project is more defined
+
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@/components/darkTheming/ThemeToggle";
 import { MobileNav } from "@/components/layout/MobileNav";
 
 const navLinks = [
