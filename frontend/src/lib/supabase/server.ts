@@ -1,3 +1,14 @@
+// `createClientSSROnly()` may be used for:
+
+// - auth callback route
+// - logout route
+// - sign-in route
+// - protected page checks
+// - server-only Django helper
+// - deriving initial safe auth UI state
+
+// Server auth checks should prefer verified user/claims checks for access decisions.
+
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";

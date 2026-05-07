@@ -4,7 +4,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-import { env } from "@/lib/env";
+import { env } from "@/lib/env/env";
 import { HealthResponse, HealthResponseSchema } from "./schemas/health";
 
 /**Frontend helper to make sure the backend is healthy via /health endpoint */
