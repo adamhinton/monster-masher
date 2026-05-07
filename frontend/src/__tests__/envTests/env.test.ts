@@ -23,8 +23,7 @@ describe("env.ts", () => {
 
 	it("throws when NEXT_PUBLIC_DJANGO_API_BASE_URL is missing", async () => {
 		delete process.env.NEXT_PUBLIC_DJANGO_API_BASE_URL;
-		await expect(import("@/lib/env")).rejects.toThrow(
-			"Missing NEXT_PUBLIC_DJANGO_API_BASE_URL",
-		);
+		const { env } = await import("@/lib/env");
+		expect(() => env.djangoApiBaseUrl).toThrow("Missing NEXT_PUBLIC_DJANGO_API_BASE_URL");
 	});
 });
