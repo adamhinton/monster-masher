@@ -94,12 +94,36 @@ export function AuthWatcher() {
 		[dispatch, router],
 	);
 
+	/**Returns true if there's a logged in user, false if no logged in user */
+	async function hasClientSession(): Promise<boolean> {
+		const supabase = createClientCSROnly();
+
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
+
+		return session !== null;
+	}
+
 	// Listen for auth changes (login, logout etc) and propagate to global redux state
 	useEffect(() => {
 		const supabase = createClientCSROnly();
 
-		void bootstrapProfile({ refreshServerComponents: false });
+		// If there's a logged in user on page load, this gets their profile info from Django and sets in global redux state
+		void (async () => {
+			dispatch(authCheckStarted());
 
+			const hasSession = await hasClientSession();
+
+			if (!hasSession) {
+				dispatch(authSignedOut());
+				return;
+			}
+
+			await bootstrapProfile({ refreshServerComponents: false });
+		})();
+
+		// Auth event listeners after initial page load
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((event) => {

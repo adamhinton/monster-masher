@@ -49,8 +49,7 @@ export async function POST(): Promise<
 	const { data: claimsData, error: claimsError } =
 		await supabase.auth.getClaims();
 
-	// Shouldn't happen since user is already logged in
-	if (claimsError || !claimsData!.claims.sub) {
+	if (claimsError || !claimsData?.claims.sub) {
 		return jsonError({
 			status: 401,
 			code: "not_authenticated",
