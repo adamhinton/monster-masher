@@ -1,11 +1,5 @@
+import { UserProfile } from "@/lib/api/schemas/UserProfile";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-
-// TODO hook this up to Django user data
-/**Logged in user */
-export type AuthUser = {
-	id: string;
-	email: string;
-};
 
 /**Auth state is still loading */
 type AuthStateLoading = {
@@ -20,7 +14,8 @@ type AuthStateAnonymous = {
 /**User logged in */
 type AuthStateAuthenticated = {
 	status: "authenticated";
-	user: AuthUser;
+	/**Gotten from django */
+	user: UserProfile;
 };
 
 /**All possible global auth state configurations */
@@ -40,6 +35,7 @@ const authSlice = createSlice({
 	name: "auth",
 	initialState: createInitialAuthState(),
 	reducers: {
+		/**Loading while checking if user is logged in and getting their profile info from django */
 		authCheckStarted(): AuthStateLoading {
 			return { status: "loading" };
 		},
@@ -52,10 +48,10 @@ const authSlice = createSlice({
 			return action.payload;
 		},
 
-		/**Logged in */
+		/**Logged in with Supabase Auth; user profile retrieved from django*/
 		authSignedIn(
 			_state,
-			action: PayloadAction<AuthUser>,
+			action: PayloadAction<UserProfile>,
 		): AuthStateAuthenticated {
 			return {
 				status: "authenticated",
