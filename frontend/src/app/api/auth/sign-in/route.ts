@@ -74,7 +74,6 @@ export async function POST(
 	});
 
 	if (error) {
-		console.log("error:", error);
 		return NextResponse.json<SignInResponse>(
 			{
 				error: {

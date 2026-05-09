@@ -33,8 +33,6 @@ urlpatterns = [
     re_path(r"^health/?$", health, name="health"),
     # All API routes are namespaced under /api/ — add new endpoints in apps/common/urls.py
     path("api/", include("apps.common.urls")),
-    # Example endpoint that triggers Sentry error
-    path("sentry-debug/", trigger_error),
 ]
 
 # Sentry has a /sentry-debug endpoint that intentionally throws an error to show that its logging works
