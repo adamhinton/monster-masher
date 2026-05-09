@@ -1,5 +1,5 @@
 // ____________
-// bootstrap-auth calls Django's /api/me/bootstrap endpoint to get the current user's profile information.
+// /auth/bootstrap-auth calls Django's /api/me/bootstrap endpoint to get the current user's profile information.
 // NOTE The user will be already logged in, since Next will have gotten auth from Supabase Auth directly.
 // This just gets further profile info.
 // ____________
