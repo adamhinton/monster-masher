@@ -9,6 +9,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getSafeNextPath } from "@/lib/auth/redirects";
 import { createClientSSROnly } from "@/lib/supabase/server";
+import { Route } from "next";
 
 /**
  * Magic link login redirects here.
@@ -31,11 +32,13 @@ export async function GET(request: NextRequest) {
 	const { error } = await supabase.auth.exchangeCodeForSession(code);
 
 	if (error) {
+		/**Won't compile if routes drift and this isn't valid anymore */
+		const route: Route = "/api/auth/callback";
 		Sentry.captureMessage("auth.callback_exchange_failed", {
 			level: "warning",
 			tags: {
 				feature_area: "auth",
-				route: "/api/auth/callback",
+				route: route,
 			},
 			extra: {
 				supabaseErrorCode: error.code,

@@ -26,11 +26,14 @@ export async function POST(): Promise<NextResponse<LogoutResponse>> {
 	const { error } = await supabase.auth.signOut();
 
 	if (error) {
+		// Won't compile if the route path drifts
+		const logoutRoute = "/api/auth/logout";
+
 		Sentry.captureMessage("auth.logout_failed", {
 			level: "warning",
 			tags: {
 				feature_area: "auth",
-				route: "/api/auth/logout",
+				route: logoutRoute,
 			},
 			extra: {
 				supabaseErrorCode: error.code,

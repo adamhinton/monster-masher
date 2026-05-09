@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { getSafeNextPath } from "@/lib/auth/redirects";
 import { createClientSSROnly } from "@/lib/supabase/server";
+import { Route } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,8 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
 	const { data } = await supabase.auth.getUser();
 
 	if (data.user) {
-		redirect(next);
+		// Statically generated nextjs urls aren't smart enough to recognize this dynamic auth link
+		redirect(next as unknown as Route);
 	}
 
 	return <AuthCard nextPath={next} errorCode={errorCode} />;

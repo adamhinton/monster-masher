@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/lib/store/hooks";
 import { useAppDispatch } from "../../../../store/hooks";
 import { authSignedOut } from "../../../../store/authSlice";
+import { Route } from "next";
 
 function getEmailInitial(email: string): string {
 	return email[0]?.toUpperCase() ?? "?";
@@ -73,7 +74,8 @@ export default function HeaderAuthButton() {
 		if (isLoggingOut) return;
 		setIsLoggingOut(true);
 		try {
-			await fetch("/api/auth/logout", { method: "POST" });
+			const logOutRoute: Route = "/api/auth/logout"; // Won't compile if the route drifts
+			await fetch(logOutRoute, { method: "POST" });
 			router.push("/");
 			router.refresh();
 		} finally {

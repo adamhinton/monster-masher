@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Route } from "next";
 
 type EmailAuthFormProps = {
 	readonly nextPath: string;
@@ -57,7 +58,9 @@ export function EmailAuthForm({ nextPath }: EmailAuthFormProps) {
 		setFormState({ status: "submitting" });
 
 		try {
-			const response = await fetch("/api/auth/sign-in", {
+			// Won't compile if the route path drifts
+			const signInAuthRoute: Route = "/api/auth/sign-in";
+			const response = await fetch(signInAuthRoute, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({

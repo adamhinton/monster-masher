@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAppSelector } from "@/lib/store/hooks";
 import { useAppDispatch } from "../../../store/hooks";
 import { authSignedOut } from "../../../store/authSlice";
+import { Route } from "next";
 
 const navLinks = [
 	{ href: "/create", label: "Create" },
@@ -38,7 +39,8 @@ export function MobileNav() {
 		if (isLoggingOut) return;
 		setIsLoggingOut(true);
 		try {
-			await fetch("/api/auth/logout", { method: "POST" });
+			const logOutRoute: Route = "/api/auth/logout"; // Won't compile if the route drifts
+			await fetch(logOutRoute, { method: "POST" });
 			router.push("/");
 			router.refresh();
 		} finally {

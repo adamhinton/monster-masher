@@ -19,6 +19,7 @@ import {
 	authSignedIn,
 	authSignedOut,
 } from "../../../store/authSlice";
+import { Route } from "next";
 
 // From /api/auth/bootstrap-profile
 // TODO write a helper that gets this and has a defined function signature
@@ -51,6 +52,7 @@ export function AuthWatcher() {
 		}: {
 			refreshServerComponents: boolean;
 		}) => {
+			const bootStrapAuthRoute: Route = "/api/auth/bootstrap-auth"; // Won't compile if the route path drifts
 			activeRequestRef.current?.abort();
 
 			const abortController = new AbortController();
@@ -60,9 +62,11 @@ export function AuthWatcher() {
 			dispatch(authCheckStarted());
 
 			try {
+				// Won't compile if the route path drifts
+				const bootStrapAuthRoute: Route = "/api/auth/bootstrap-auth";
 				// TODO write helper for this API call
 				// This gets further profile info from Django
-				const response = await fetch("/api/auth/bootstrap-auth", {
+				const response = await fetch(bootStrapAuthRoute, {
 					method: "POST",
 					signal: abortController.signal,
 				});
@@ -73,7 +77,7 @@ export function AuthWatcher() {
 							level: "warning",
 							tags: {
 								feature_area: "auth",
-								route: "/api/auth/bootstrap-auth",
+								route: bootStrapAuthRoute,
 								auth_state: "authenticated",
 							},
 							extra: {
@@ -94,7 +98,7 @@ export function AuthWatcher() {
 						level: "error",
 						tags: {
 							feature_area: "auth",
-							route: "/api/auth/bootstrap-auth",
+							route: bootStrapAuthRoute,
 							auth_state: "authenticated",
 						},
 						extra: {
@@ -117,7 +121,7 @@ export function AuthWatcher() {
 					Sentry.captureException(error, {
 						tags: {
 							feature_area: "auth",
-							route: "/api/auth/bootstrap-auth",
+							route: bootStrapAuthRoute,
 							auth_state: "authenticated",
 						},
 					});
