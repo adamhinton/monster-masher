@@ -1,3 +1,5 @@
+import "server-only";
+
 // `createClientSSROnly()` may be used for:
 
 // - auth callback route
@@ -8,8 +10,6 @@
 // - deriving initial safe auth UI state
 
 // Server auth checks should prefer verified user/claims checks for access decisions.
-
-import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import type { SetAllCookies } from "@supabase/ssr";

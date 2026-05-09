@@ -3,7 +3,7 @@ import "server-only";
 import { userProfileSchema } from "@/lib/api/schemas/UserProfile";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import type { ReduxAuthState } from "../../../store/authSlice";
-import { fetchFromDjango } from "../django/fetchFromDjango";
+import { fetchLoggedInDjangoUserProfile } from "../django/fetchFromDjango";
 
 /**Checks if there's a logged-in user on first page load, and fetches their profile info if so */
 export async function fetchInitialAuthState(): Promise<ReduxAuthState> {
@@ -18,18 +18,16 @@ export async function fetchInitialAuthState(): Promise<ReduxAuthState> {
 	}
 
 	try {
-		// User is logged in; get profile info
-		const response = await fetchFromDjango("/api/me/bootstrap", {
-			method: "POST",
-		});
-
-		if (!response.ok) {
+		const loggedInUser = await fetchLoggedInDjangoUserProfile();
+		if (userProfileSchema.safeParse(loggedInUser).success) {
+			return {
+				status: "authenticated",
+				user: loggedInUser,
+			};
+		} else {
+			console.error("Invalid user profile data:", loggedInUser);
 			return { status: "anonymous" };
 		}
-
-		const raw: unknown = await response.json();
-		const user = userProfileSchema.parse(raw);
-		return { status: "authenticated", user };
 	} catch {
 		// Validation failure or network error — safe fallback
 		return { status: "anonymous" };

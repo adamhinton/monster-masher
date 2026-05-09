@@ -10,8 +10,8 @@ import { NextResponse } from "next/server";
 
 import { UserProfile, userProfileSchema } from "@/lib/api/schemas/UserProfile";
 import { createClientSSROnly } from "@/lib/supabase/server";
-import { env } from "@/lib/env/env";
 import { NextApiError } from "@/lib/api/errors";
+import { fetchLoggedInDjangoUserProfile } from "@/lib/django/fetchFromDjango";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +37,8 @@ function jsonError({
 
 /**
  * Get user profile info from Django
+ *
+ * Doesn't take any parameters because Supabase Auth detects which user is logged-in, and gets info for that user.
  *
  * User is already logged in via supabase auth but that only gives us their email and ID; this just gets further info about their profile.
  *
@@ -75,38 +77,33 @@ export async function POST(): Promise<
 
 	// Get db profile info of logged-in user
 	// Supabase auth has only given us their email and id; this gets further info about their profile from Django, which is where our main user database lives.
-	const djangoResponse = await fetch(
-		`${env.djangoApiBaseUrl}/api/me/bootstrap/`,
-		{
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${accessToken}`,
-				Accept: "application/json",
-			},
-			cache: "no-store",
-		},
-	);
 
-	if (!djangoResponse.ok) {
+	const user = await fetchLoggedInDjangoUserProfile().catch((error) => {
+		console.error("Error fetching user profile from Django:", error);
 		return jsonError({
-			status: djangoResponse.status === 401 ? 401 : 502,
-			code: "django_bootstrap_failed",
-			message: "Could not bootstrap user profile from Django.",
+			status: 500,
+			code: "django_fetch_failed",
+			message: "Failed to fetch user profile from Django.",
 		});
-	}
-
-	const raw: unknown = await djangoResponse.json();
-	const parsed = userProfileSchema.safeParse(raw);
-
-	if (!parsed.success) {
-		return jsonError({
-			status: 502,
-			code: "invalid_django_user_profile",
-			message: "Django returned an invalid user profile.",
-		});
-	}
-
-	return NextResponse.json({
-		user: parsed.data,
 	});
+
+	// Shouldn't happen since fetchLoggedInDjangoUserProfile should have already parsed
+	if (!isValidUser(user)) {
+		return jsonError({
+			status: 500,
+			code: "invalid_user_profile",
+			message: "Received invalid user profile from Django.",
+		});
+	}
+
+	return NextResponse.json({ user: user });
 }
+
+const isValidUser = (user: unknown): user is UserProfile => {
+	const validationResult = userProfileSchema.safeParse(user);
+	if (!validationResult.success) {
+		console.error("User profile validation failed:", validationResult.error);
+		return false;
+	}
+	return true;
+};
