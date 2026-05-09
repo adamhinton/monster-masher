@@ -14,7 +14,7 @@ export const userProfileSchema = z
 		id: z.uuid(),
 		supabase_user_id: z.uuid(),
 		email: z.email(),
-		display_name: z.string(),
+		display_name: z.string().nullable(),
 		// These two are actually Dates but the openAPI generator says they're strings
 		// I couldn't get zod to play nice with the dates, so we'll just call them strings; I highly doubt Django/supabase will return them as anything but strings anyway so no validation needed
 		created_at: z.string(),

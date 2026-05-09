@@ -78,7 +78,7 @@ export interface components {
             readonly supabase_user_id: string;
             /** Format: email */
             readonly email: string;
-            readonly display_name: string;
+            readonly display_name: string | null;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */

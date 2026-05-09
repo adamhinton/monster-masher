@@ -15,7 +15,7 @@ class UserProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     supabase_user_id = models.UUIDField(unique=True, db_index=True)
     email = models.EmailField()
-    display_name = models.CharField(max_length=100, blank=True)
+    display_name = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
