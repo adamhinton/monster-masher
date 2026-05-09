@@ -3,7 +3,7 @@
 
 // 1. User submits email to this endpoint to sign in
 // 2. Supabase sends a magic signin link to user
-// 3. User clicks link, which goes to /auth/callback, finishing the signin process
+// 3. User clicks link, which goes to /api/auth/callback, finishing the signin process
 // 4. AuthWatcher component detects the user is signed in, gets their profile info from Django
 // and propagates it to redux state
 // 5. User is redirected to "next" path, probably /gallery
@@ -29,7 +29,7 @@ type SignInResponse = { ok: true } | NextApiError;
 
 /**Call this from the browser to sign a user in by email magic link
  *
- * This will trigger Supabase Auth to send a magic link email to the user. The link will redirect to /auth/callback, which will finish the sign-in process and then redirect to the "next" path (which defaults to "/").
+ * This will trigger Supabase Auth to send a magic link email to the user. The link will redirect to /api/auth/callback, which will finish the sign-in process and then redirect to the "next" path (which defaults to "/").
  *
  * TODO write a client-side util that calls this for us
  */
@@ -62,17 +62,19 @@ export async function POST(
 	const next = getSafeNextPath(rawNext ?? null);
 
 	const origin = request.nextUrl.origin;
+	console.log("origin:", origin);
 	const supabase = await createClientSSROnly();
 
 	// Here we send the user a magic link email to sign in
 	const { error } = await supabase.auth.signInWithOtp({
 		email,
 		options: {
-			emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+			emailRedirectTo: `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`,
 		},
 	});
 
 	if (error) {
+		console.log("error:", error);
 		return NextResponse.json<SignInResponse>(
 			{
 				error: {
