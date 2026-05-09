@@ -2,10 +2,9 @@ import "server-only";
 
 /**
  * SSR-safe fetch utility for Django API endpoints.
- * Forwards cookies and headers as needed for authentication.
+ * Sends only explicitly provided request headers.
  * Usage: fetchFromDjango("/api/endpoint", { method: "POST", body: ... })
  */
-import { cookies, headers } from "next/headers";
 import { env } from "../env/env";
 import { UserProfile, userProfileSchema } from "../api/schemas/UserProfile";
 
@@ -18,24 +17,11 @@ export async function fetchFromDjango(
 	path: string,
 	init?: RequestInit,
 ): Promise<Response> {
-	const baseUrl = env.djangoApiBaseUrl;
-	const url = baseUrl + path;
-
-	// Forward cookies for SSR authentication
-	const cookieHeader = (await cookies()).toString();
-	const incomingHeaders = await headers();
-
-	// Merge headers: incoming (for SSR), user-provided, and cookies
-	const mergedHeaders = {
-		...Object.fromEntries(incomingHeaders.entries()),
-		...init?.headers,
-		...(cookieHeader ? { Cookie: cookieHeader } : {}),
-	};
+	const url = `${env.djangoApiBaseUrl}${path}`;
 
 	return fetch(url, {
 		...init,
-		headers: mergedHeaders,
-		credentials: "include", // Always include cookies
+		headers: init?.headers,
 	});
 }
 
@@ -59,10 +45,7 @@ export async function fetchLoggedInDjangoUserProfile(
 		});
 
 		if (!response.ok) {
-			const errorText = await response.text();
-			throw new Error(
-				`Failed to fetch profile. Status: ${response.status}, Message: ${errorText}`,
-			);
+			throw new Error(`Failed to fetch profile. Status: ${response.status}`);
 		}
 
 		const raw: unknown = await response.json();

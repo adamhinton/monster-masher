@@ -4,6 +4,7 @@
  * User logs in by clicking a magic link email. They're then redirected to this endpoint by supabase, which verifies the login and then redirects them to the app.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getSafeNextPath } from "@/lib/auth/redirects";
@@ -30,6 +31,19 @@ export async function GET(request: NextRequest) {
 	const { error } = await supabase.auth.exchangeCodeForSession(code);
 
 	if (error) {
+		Sentry.captureMessage("auth.callback_exchange_failed", {
+			level: "warning",
+			tags: {
+				feature_area: "auth",
+				route: "/api/auth/callback",
+			},
+			extra: {
+				supabaseErrorCode: error.code,
+				supabaseErrorName: error.name,
+				nextPath: next,
+			},
+		});
+
 		return NextResponse.redirect(
 			new URL("/auth?error=callback_failed", request.url),
 		);

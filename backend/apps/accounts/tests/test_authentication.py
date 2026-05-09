@@ -86,13 +86,23 @@ class SupabaseJWTAuthenticationTests(TestCase):
         claims = _make_claims(uid)
         with patch(
             "apps.accounts.authentication.verify_supabase_jwt", return_value=claims
-        ):
+        ), patch("apps.accounts.authentication.sentry_logger.info") as sentry_info:
             profile, returned_claims = self.auth.authenticate(
                 self._request("Bearer valid-token")
             )
         self.assertEqual(str(profile.supabase_user_id), str(uid))
         self.assertEqual(profile.email, "test@example.com")
         self.assertTrue(UserProfile.objects.filter(supabase_user_id=uid).exists())
+        sentry_info.assert_called_once_with(
+            "auth.user_profile_created",
+            attributes={
+                "feature_area": "auth",
+                "event": "user_profile_created",
+                "user_profile_id": str(profile.id),
+                "supabase_user_id": str(profile.supabase_user_id),
+                "email_domain": "example.com",
+            },
+        )
 
     def test_valid_token_reuses_existing_profile(self):
         uid = uuid.uuid4()

@@ -39,8 +39,8 @@ def traces_sampler(sampling_context):
     wsgi_environ = sampling_context.get("wsgi_environ", {})
     # Ensure Sentry ignores /health pings in logs. Both paths are registered.
     if wsgi_environ.get("PATH_INFO") in ("/health", "/health/"):
-        return 0  # drop it
-    return 1.0  # your normal sample rate
+        return 0.0  # drop it
+    return 0.1 if IS_RENDER else 1.0
 
 
 # Sentry error monitoring and logging

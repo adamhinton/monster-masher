@@ -1,5 +1,6 @@
 import "server-only";
 
+import * as Sentry from "@sentry/nextjs";
 import { userProfileSchema } from "@/lib/api/schemas/UserProfile";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import type { ReduxAuthState } from "../../../store/authSlice";
@@ -26,15 +27,31 @@ export async function fetchInitialAuthState(): Promise<ReduxAuthState> {
 
 	try {
 		const loggedInUser = await fetchLoggedInDjangoUserProfile(accessToken);
-		if (userProfileSchema.safeParse(loggedInUser).success) {
+		const parsed = userProfileSchema.safeParse(loggedInUser);
+
+		if (parsed.success) {
 			return {
 				status: "authenticated",
-				user: loggedInUser,
+				user: parsed.data,
 			};
-		} else {
-			console.error("Invalid user profile data:", loggedInUser);
-			return { status: "anonymous" };
 		}
+
+		Sentry.captureMessage("auth.initial_profile_schema_invalid", {
+			level: "error",
+			tags: {
+				feature_area: "auth",
+				auth_state: "authenticated",
+			},
+			extra: {
+				issues: parsed.error.issues.map((issue) => ({
+					path: issue.path.join("."),
+					message: issue.message,
+					code: issue.code,
+				})),
+			},
+		});
+
+		return { status: "anonymous" };
 	} catch {
 		// Validation failure or network error — safe fallback
 		return { status: "anonymous" };

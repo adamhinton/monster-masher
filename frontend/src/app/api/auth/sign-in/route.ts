@@ -62,7 +62,6 @@ export async function POST(
 	const next = getSafeNextPath(rawNext ?? null);
 
 	const origin = request.nextUrl.origin;
-	console.log("origin:", origin);
 	const supabase = await createClientSSROnly();
 
 	// Here we send the user a magic link email to sign in

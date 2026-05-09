@@ -6,6 +6,7 @@
 
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -50,7 +51,6 @@ export function AuthWatcher() {
 		}: {
 			refreshServerComponents: boolean;
 		}) => {
-			console.log("blah blah blah");
 			activeRequestRef.current?.abort();
 
 			const abortController = new AbortController();
@@ -68,6 +68,20 @@ export function AuthWatcher() {
 				});
 
 				if (!response.ok) {
+					if (response.status >= 500) {
+						Sentry.captureMessage("auth.bootstrap_request_failed", {
+							level: "warning",
+							tags: {
+								feature_area: "auth",
+								route: "/api/auth/bootstrap-auth",
+								auth_state: "authenticated",
+							},
+							extra: {
+								status: response.status,
+							},
+						});
+					}
+
 					dispatch(authSignedOut());
 					return;
 				}
@@ -76,6 +90,22 @@ export function AuthWatcher() {
 				const parsed = bootstrapProfileResponseSchema.safeParse(raw);
 
 				if (!parsed.success) {
+					Sentry.captureMessage("auth.bootstrap_response_schema_invalid", {
+						level: "error",
+						tags: {
+							feature_area: "auth",
+							route: "/api/auth/bootstrap-auth",
+							auth_state: "authenticated",
+						},
+						extra: {
+							issues: parsed.error.issues.map((issue) => ({
+								path: issue.path.join("."),
+								message: issue.message,
+								code: issue.code,
+							})),
+						},
+					});
+
 					dispatch(authSignedOut());
 					return;
 				}
@@ -84,6 +114,14 @@ export function AuthWatcher() {
 				dispatch(authSignedIn(parsed.data.user));
 			} catch (error) {
 				if (!isAbortError(error)) {
+					Sentry.captureException(error, {
+						tags: {
+							feature_area: "auth",
+							route: "/api/auth/bootstrap-auth",
+							auth_state: "authenticated",
+						},
+					});
+
 					dispatch(authSignedOut());
 				}
 			} finally {
@@ -128,7 +166,6 @@ export function AuthWatcher() {
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((event) => {
-			console.log("event:", event);
 			// Signed in; get profile info from Django and set in global redux state
 			if (event === "SIGNED_IN" || event === "USER_UPDATED") {
 				void bootstrapProfile({ refreshServerComponents: true });

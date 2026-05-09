@@ -6,6 +6,7 @@
 // This just gets further profile info.
 // ____________
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 
 import { UserProfile } from "@/lib/api/schemas/UserProfile";
@@ -82,7 +83,17 @@ export async function POST(): Promise<
 	try {
 		user = await fetchLoggedInDjangoUserProfile(accessToken);
 	} catch (error) {
-		console.error("Error fetching user profile from Django:", error);
+		Sentry.captureException(error, {
+			tags: {
+				feature_area: "auth",
+				route: "/api/auth/bootstrap-auth",
+				upstream: "django",
+			},
+			extra: {
+				errorName: error instanceof Error ? error.name : "unknown",
+			},
+		});
+
 		return jsonError({
 			status: 500,
 			code: "django_fetch_failed",

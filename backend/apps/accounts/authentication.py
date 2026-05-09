@@ -16,6 +16,7 @@ from django.conf import settings
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.request import Request
+from sentry_sdk import logger as sentry_logger
 
 from .models import UserProfile
 from drf_spectacular.extensions import OpenApiAuthenticationExtension
@@ -88,17 +89,17 @@ def verify_supabase_jwt(token: str) -> dict[str, Any]:
 
 
 def _log_profile_created(profile: UserProfile) -> None:
-    """Structured log for a new user profile. Called once at creation."""
-    logger.info(
-        "user_profile_created",
-        extra={
+    """Structured Sentry log for a new user profile. Called once at creation."""
+    email_domain = profile.email.split("@")[-1] if "@" in profile.email else ""
+
+    sentry_logger.info(
+        "auth.user_profile_created",
+        attributes={
+            "feature_area": "auth",
             "event": "user_profile_created",
             "user_profile_id": str(profile.id),
             "supabase_user_id": str(profile.supabase_user_id),
-            # email_domain only — avoid sending full PII to logs by default.
-            "email_domain": (
-                profile.email.split("@")[-1] if "@" in profile.email else ""
-            ),
+            "email_domain": email_domain,
         },
     )
 

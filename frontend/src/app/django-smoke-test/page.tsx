@@ -27,12 +27,10 @@ export default function DjangoTestPage() {
 		try {
 			const data = await fetchDjangoHealth();
 			setState({ status: "success", data });
-			console.log("Django health response:", data);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 
 			setState({ status: "error", message });
-			console.error("Django health check failed:", error);
 		}
 	}
 

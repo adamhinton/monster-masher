@@ -7,6 +7,7 @@
 // TODO write a client-side uti to call this
 // __________
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 
 import { createClientSSROnly } from "@/lib/supabase/server";
@@ -25,6 +26,18 @@ export async function POST(): Promise<NextResponse<LogoutResponse>> {
 	const { error } = await supabase.auth.signOut();
 
 	if (error) {
+		Sentry.captureMessage("auth.logout_failed", {
+			level: "warning",
+			tags: {
+				feature_area: "auth",
+				route: "/api/auth/logout",
+			},
+			extra: {
+				supabaseErrorCode: error.code,
+				supabaseErrorName: error.name,
+			},
+		});
+
 		return NextResponse.json<LogoutResponse>(
 			{
 				error: {

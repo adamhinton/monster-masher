@@ -12,17 +12,26 @@ class SentryExampleFrontendError extends Error {
 }
 
 export default function Page() {
+  const isDevelopment = process.env.NODE_ENV === "development";
   const [hasSentError, setHasSentError] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
 
   useEffect(() => {
+    if (!isDevelopment) {
+      return;
+    }
+
     Sentry.logger.info("Sentry example page loaded");
     async function checkConnectivity() {
       const result = await Sentry.diagnoseSdkConnectivity();
       setIsConnected(result !== "sentry-unreachable");
     }
     checkConnectivity();
-  }, []);
+  }, [isDevelopment]);
+
+  if (!isDevelopment) {
+    return <main>Not found.</main>;
+  }
 
   return (
     <div>
