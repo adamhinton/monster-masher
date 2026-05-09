@@ -17,8 +17,15 @@ export async function fetchInitialAuthState(): Promise<ReduxAuthState> {
 		return { status: "anonymous" };
 	}
 
+	const { data: sessionData } = await supabase.auth.getSession();
+	const accessToken = sessionData.session?.access_token;
+
+	if (!accessToken) {
+		return { status: "anonymous" };
+	}
+
 	try {
-		const loggedInUser = await fetchLoggedInDjangoUserProfile();
+		const loggedInUser = await fetchLoggedInDjangoUserProfile(accessToken);
 		if (userProfileSchema.safeParse(loggedInUser).success) {
 			return {
 				status: "authenticated",

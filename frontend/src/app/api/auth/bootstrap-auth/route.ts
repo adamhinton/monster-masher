@@ -8,7 +8,7 @@
 
 import { NextResponse } from "next/server";
 
-import { UserProfile, userProfileSchema } from "@/lib/api/schemas/UserProfile";
+import { UserProfile } from "@/lib/api/schemas/UserProfile";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { NextApiError } from "@/lib/api/errors";
 import { fetchLoggedInDjangoUserProfile } from "@/lib/django/fetchFromDjango";
@@ -78,32 +78,17 @@ export async function POST(): Promise<
 	// Get db profile info of logged-in user
 	// Supabase auth has only given us their email and id; this gets further info about their profile from Django, which is where our main user database lives.
 
-	const user = await fetchLoggedInDjangoUserProfile().catch((error) => {
+	let user: UserProfile;
+	try {
+		user = await fetchLoggedInDjangoUserProfile(accessToken);
+	} catch (error) {
 		console.error("Error fetching user profile from Django:", error);
 		return jsonError({
 			status: 500,
 			code: "django_fetch_failed",
 			message: "Failed to fetch user profile from Django.",
 		});
-	});
-
-	// Shouldn't happen since fetchLoggedInDjangoUserProfile should have already parsed
-	if (!isValidUser(user)) {
-		return jsonError({
-			status: 500,
-			code: "invalid_user_profile",
-			message: "Received invalid user profile from Django.",
-		});
 	}
 
 	return NextResponse.json({ user: user });
 }
-
-const isValidUser = (user: unknown): user is UserProfile => {
-	const validationResult = userProfileSchema.safeParse(user);
-	if (!validationResult.success) {
-		console.error("User profile validation failed:", validationResult.error);
-		return false;
-	}
-	return true;
-};

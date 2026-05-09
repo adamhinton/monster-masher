@@ -22,12 +22,12 @@ export async function fetchFromDjango(
 	const url = baseUrl + path;
 
 	// Forward cookies for SSR authentication
-	const cookieHeader = cookies().toString();
-	const incomingHeaders = headers();
+	const cookieHeader = (await cookies()).toString();
+	const incomingHeaders = await headers();
 
 	// Merge headers: incoming (for SSR), user-provided, and cookies
 	const mergedHeaders = {
-		...Object.fromEntries((await incomingHeaders).entries()),
+		...Object.fromEntries(incomingHeaders.entries()),
 		...init?.headers,
 		...(cookieHeader ? { Cookie: cookieHeader } : {}),
 	};
@@ -49,9 +49,14 @@ export async function fetchFromDjango(
  *
  * Note that the user is logged in through Supabase Auth already, but that only gives us their email and supabase id. Django now gives us their username, display name, and eventually monsters when we add that.
  */
-export async function fetchLoggedInDjangoUserProfile(): Promise<UserProfile> {
+export async function fetchLoggedInDjangoUserProfile(
+	accessToken: string,
+): Promise<UserProfile> {
 	try {
-		const response = await fetchFromDjango("/api/me/bootstrap");
+		const response = await fetchFromDjango("/api/me/bootstrap/", {
+			method: "POST",
+			headers: { Authorization: `Bearer ${accessToken}` },
+		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
