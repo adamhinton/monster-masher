@@ -50,6 +50,7 @@ export function AuthWatcher() {
 		}: {
 			refreshServerComponents: boolean;
 		}) => {
+			console.log("blah blah blah");
 			activeRequestRef.current?.abort();
 
 			const abortController = new AbortController();
@@ -61,7 +62,7 @@ export function AuthWatcher() {
 			try {
 				// TODO write helper for this API call
 				// This gets further profile info from Django
-				const response = await fetch("/api/auth/bootstrap-profile", {
+				const response = await fetch("/api/auth/bootstrap-auth", {
 					method: "POST",
 					signal: abortController.signal,
 				});
@@ -127,6 +128,7 @@ export function AuthWatcher() {
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((event) => {
+			console.log("event:", event);
 			// Signed in; get profile info from Django and set in global redux state
 			if (event === "SIGNED_IN" || event === "USER_UPDATED") {
 				void bootstrapProfile({ refreshServerComponents: true });

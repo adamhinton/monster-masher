@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/darkTheming/ThemeToggle";
 import { MobileNav } from "@/components/layout/MobileNav";
+import HeaderAuthButton from "@/components/layout/Header/HeaderAuthButton";
 
 const navLinks = [
 	{ href: "/create", label: "Create" },
@@ -45,10 +45,7 @@ export function Header() {
 				<div className="flex items-center gap-2">
 					<div className="hidden md:flex md:items-center md:gap-2">
 						<ThemeToggle />
-						{/* Auth slot — populated in Phase 4 */}
-						<Button variant="outline" size="sm" disabled>
-							Sign in
-						</Button>
+						<HeaderAuthButton />
 					</div>
 					{/* Mobile nav (hidden on md+) */}
 					<div className="md:hidden">

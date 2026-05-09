@@ -1,5 +1,5 @@
 // ____________
-// POST /api/auth/bootstrap-profile
+// POST /api/auth/bootstrap-auth
 // Verifies the Supabase session, forwards the access token to Django,
 // and returns the app-level user profile.
 // NOTE The user will be already logged in, since Next will have gotten auth from Supabase Auth directly.
