@@ -50,3 +50,49 @@ For every new API endpoint call:
    ```
 
 See `src/lib/api/schemas/health.ts` and `src/lib/api/health.ts` for a working example.
+
+---
+
+## Auth
+
+Auth is handled by Next.js + Supabase Auth. Magic links are delivered by Resend. Django verifies the Supabase JWT on protected requests and owns the user profile record.
+
+### Sign-in flow
+
+1. User visits `/auth` and submits their email.
+2. `POST /api/auth/sign-in` calls Supabase, which sends a magic link email via Resend.
+3. User clicks the link — browser hits `GET /api/auth/callback?code=...&next=...`.
+4. Callback exchanges the code for a Supabase session (sets auth cookies) and redirects to the safe `next` path.
+5. `AuthWatcher` (mounted in the root layout) detects the `SIGNED_IN` event from the Supabase client.
+6. `AuthWatcher` calls `POST /api/auth/bootstrap-auth`, which verifies the JWT server-side, fetches or creates the Django `UserProfile`, and returns it.
+7. Redux dispatches `authSignedIn(profile)` — the app now has auth state.
+
+### Logout flow
+
+1. User clicks logout — header calls `POST /api/auth/logout`.
+2. Route calls `supabase.auth.signOut()`, clearing session cookies.
+3. `AuthWatcher` detects `SIGNED_OUT` and dispatches `authSignedOut()` to Redux.
+
+### SSR cookie refresh
+
+`proxy.ts` (Next.js middleware) runs on every non-static request. It validates the Supabase JWT and refreshes session cookies so server components always see a current session.
+
+### Auth endpoints
+
+| Method | Path                       | Description                                                                                                                                                           |
+| ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/api/auth/sign-in`        | Accepts `{ email, next }`. Initiates magic link via Supabase; does not return a token.                                                                                |
+| `GET`  | `/api/auth/callback`       | Receives `?code=` from the magic link. Exchanges it for a session and redirects to the safe `next` path.                                                              |
+| `POST` | `/api/auth/bootstrap-auth` | Server-side only. Verifies the Supabase session, fetches or creates the Django `UserProfile`, returns `{ user: UserProfile }`. Called by `AuthWatcher` after sign-in. |
+| `POST` | `/api/auth/logout`         | Signs out via Supabase Auth and clears session cookies.                                                                                                               |
+
+### Auth state (Redux)
+
+```ts
+type AuthState =
+	| { status: "loading" }
+	| { status: "anonymous" }
+	| { status: "authenticated"; user: UserProfile };
+```
+
+Initial state is derived server-side in the root layout: Supabase session checked → Django `UserProfile` fetched and Zod-validated → hydrated into Redux before first render.
