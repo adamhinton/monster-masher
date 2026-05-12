@@ -47,6 +47,7 @@ COMPLETED-phase-0-styling-foundations.md
 phase-1-auth-foundations.md
 phase-4-auth-ui-implementation-plan.md
 monster-image-generation-build-plan.md
+.agents/skills/branching-image-gen/SKILL.md
 
 # Database
 db.sqlite3
