@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "apps.common.apps.CommonConfig",
     "apps.accounts.apps.AccountsConfig",
+    "apps.monsters.apps.MonstersConfig",
 ]
 
 MIDDLEWARE = [
@@ -272,3 +273,14 @@ if "test" in sys.argv:
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     }
+
+# ── Development / admin tooling guard ────────────────────────────────────────
+# Enables seeding and admin actions that create fake data for development and
+# smoke-testing. Guards the management command `seed_fake_monsters` and the
+# Django admin actions on UserProfileAdmin and MonsterAdmin.
+#
+# Must be explicitly opted into via environment variable. Defaults to False so
+# production environments are safe unless deliberately configured otherwise.
+ENABLE_DEV_ADMIN_ACTIONS = (
+    os.environ.get("ENABLE_DEV_ADMIN_ACTIONS", "false").lower() == "true"
+)

@@ -4,6 +4,156 @@
  */
 
 export interface paths {
+    "/api/image-generation-jobs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create an image generation job
+         * @description POST /api/image-generation-jobs/ — create a generation job.
+         *
+         *     Uses create_generation_job() service.  Defaults to fake mode for the
+         *     contract phase; real provider wiring happens in a later step.
+         */
+        post: operations["api_image_generation_jobs_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/image-generation-jobs/{job_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an image generation job
+         * @description GET /api/image-generation-jobs/{job_id}/ — retrieve a generation job.
+         *
+         *     Returns 404 (not 403) when the job does not exist or belongs to another
+         *     user.
+         */
+        get: operations["api_image_generation_jobs_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/image-generation-jobs/{job_id}/mark-blocked/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [Stub] Mark job as blocked
+         * @description Not yet implemented. Reserved for trusted-server use only.
+         */
+        post: operations["api_image_generation_jobs_mark_blocked_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/image-generation-jobs/{job_id}/mark-failed/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [Stub] Mark job as failed
+         * @description Not yet implemented. Reserved for trusted-server use only.
+         */
+        post: operations["api_image_generation_jobs_mark_failed_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/image-generation-jobs/{job_id}/mark-running/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [Stub] Mark job as running
+         * @description Not yet implemented. Reserved for trusted-server use only.
+         */
+        post: operations["api_image_generation_jobs_mark_running_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/image-generation-jobs/{job_id}/mark-succeeded/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * [Stub] Mark job as succeeded
+         * @description Not yet implemented. Reserved for trusted-server use only.
+         */
+        post: operations["api_image_generation_jobs_mark_succeeded_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/image-generation-jobs/{job_id}/notification/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Toggle email notification preference for a job
+         * @description PATCH /api/image-generation-jobs/{job_id}/notification/ — toggle email
+         *     notification preference.
+         *
+         *     Returns 400 if the job is already in a terminal state (succeeded, failed,
+         *     or blocked) because the notification window has closed.
+         */
+        patch: operations["api_image_generation_jobs_notification_partial_update"];
+        trace?: never;
+    };
     "/api/me/": {
         parameters: {
             query?: never;
@@ -44,6 +194,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/monsters/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List current user's monsters
+         * @description GET  /api/monsters/   — list the authenticated user's monsters.
+         *     POST /api/monsters/   — create a monster owned by the authenticated user.
+         */
+        get: operations["api_monsters_list"];
+        put?: never;
+        /**
+         * Create a monster
+         * @description GET  /api/monsters/   — list the authenticated user's monsters.
+         *     POST /api/monsters/   — create a monster owned by the authenticated user.
+         */
+        post: operations["api_monsters_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a monster
+         * @description GET    /api/monsters/{monster_id}/ — retrieve a monster.
+         *     PATCH  /api/monsters/{monster_id}/ — partial-update a monster.
+         *     DELETE /api/monsters/{monster_id}/ — delete a monster.
+         *
+         *     Returns 404 (not 403) when the monster does not exist or belongs to
+         *     another user.
+         */
+        get: operations["api_monsters_retrieve"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete a monster
+         * @description GET    /api/monsters/{monster_id}/ — retrieve a monster.
+         *     PATCH  /api/monsters/{monster_id}/ — partial-update a monster.
+         *     DELETE /api/monsters/{monster_id}/ — delete a monster.
+         *
+         *     Returns 404 (not 403) when the monster does not exist or belongs to
+         *     another user.
+         */
+        delete: operations["api_monsters_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * Partial-update a monster
+         * @description GET    /api/monsters/{monster_id}/ — retrieve a monster.
+         *     PATCH  /api/monsters/{monster_id}/ — partial-update a monster.
+         *     DELETE /api/monsters/{monster_id}/ — delete a monster.
+         *
+         *     Returns 404 (not 403) when the monster does not exist or belongs to
+         *     another user.
+         */
+        patch: operations["api_monsters_partial_update"];
+        trace?: never;
+    };
     "/health/": {
         parameters: {
             query?: never;
@@ -68,9 +287,221 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description * `fake` - Fake
+         *     * `real` - Real
+         * @enum {string}
+         */
+        GenerationModeEnum: "fake" | "real";
         HealthResponse: {
             status: string;
         };
+        /**
+         * @description Nested generation_metadata sub-object on MonsterImageGenerationJob.
+         *
+         *     sanitized_prompt is intentionally excluded from the frontend-facing
+         *     response (Step 2f decision). prompt_version and prompt_hash are safe
+         *     identifiers useful for debugging/drift detection.
+         */
+        JobGenerationMetadata: {
+            readonly prompt_version: string;
+            readonly prompt_hash: string;
+        };
+        /**
+         * @description Nested notify_when_done sub-object on MonsterImageGenerationJob.
+         *
+         *     notification_error is null when no notification error has occurred.
+         *     When present, it carries only safe code/message — no internal details.
+         */
+        JobNotifyWhenDone: {
+            readonly should_email_when_done: boolean;
+            /** Format: date-time */
+            readonly notified_at: string | null;
+            /** @description Null when no notification error has occurred. Present only when email delivery failed. */
+            readonly notification_error: {
+                code: string;
+                message: string;
+            } | null;
+        };
+        /**
+         * @description Nested provider_info sub-object on MonsterImageGenerationJob.
+         *     Maps to provider, provider_model, provider_request_id on the model.
+         */
+        JobProviderInfo: {
+            readonly provider: string;
+            readonly provider_model: string;
+            readonly provider_request_id: string;
+        };
+        /**
+         * @description Nested timestamps sub-object on MonsterImageGenerationJob.
+         *     Groups all lifecycle timestamps together.
+         */
+        JobTimestamps: {
+            /** Format: date-time */
+            readonly started_at: string | null;
+            /** Format: date-time */
+            readonly finished_at: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description Read/response serializer for Monster.
+         *
+         *     Exposes traits as a nested object even though they are stored as flat
+         *     columns on the model. source="*" passes the whole instance to the nested
+         *     serializer so each trait field reads from the instance attribute directly.
+         */
+        Monster: {
+            /** Format: uuid */
+            readonly id: string;
+            display_name: string;
+            readonly traits: components["schemas"]["MonsterTraits"];
+            flavor_text?: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        /**
+         * @description POST request serializer for Monster.
+         *
+         *     Owner is always set from request context. Never accepted from client input.
+         */
+        MonsterCreate: {
+            display_name: string;
+            traits: components["schemas"]["MonsterTraits"];
+            /** @default  */
+            flavor_text: string;
+        };
+        /**
+         * @description Read/response serializer for MonsterImage.
+         *
+         *     Exposes safe image display metadata. image_storage_path is intentionally
+         *     included per explicit decision (see Step 2e).
+         *     No image bytes, no base64, no raw provider response.
+         */
+        MonsterImage: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uri */
+            readonly public_image_url: string | null;
+            /** @description Object storage path used for cleanup. Intentionally exposed per Step 2e decision. */
+            readonly image_storage_path: string;
+            readonly provider: string;
+            readonly provider_model: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        /**
+         * @description Read/response serializer for MonsterImageGenerationJob.
+         *
+         *     Flat model columns are exposed as nested sub-objects to match
+         *     the groupings annotated in models.py:
+         *
+         *         provider_info     — provider, provider_model, provider_request_id
+         *         generation_metadata — prompt_version, prompt_hash
+         *                               (sanitized_prompt excluded per Step 2f)
+         *         notify_when_done  — should_email_when_done, notified_at, notification_error
+         *         error_info        — null unless job failed/blocked
+         *         timestamps        — started_at, finished_at, created_at, updated_at
+         *         image             — nested MonsterImage when succeeded, else null
+         */
+        MonsterImageGenerationJob: {
+            /** Format: uuid */
+            readonly id: string;
+            /**
+             * Format: uuid
+             * @description UUID of the associated Monster, or null if the job failed before a Monster was created.
+             */
+            readonly monster: string | null;
+            /**
+             * @description Lifecycle state: queued → running → succeeded | failed | blocked.
+             *
+             *     * `queued` - Queued
+             *     * `running` - Running
+             *     * `succeeded` - Succeeded
+             *     * `failed` - Failed
+             *     * `blocked` - Blocked
+             */
+            readonly status: components["schemas"]["StatusEnum"];
+            /**
+             * @description fake uses fixture images (no provider cost). real calls the configured image provider.
+             *
+             *     * `fake` - Fake
+             *     * `real` - Real
+             */
+            readonly generation_mode: components["schemas"]["GenerationModeEnum"];
+            readonly provider_info: components["schemas"]["JobProviderInfo"];
+            readonly generation_metadata: components["schemas"]["JobGenerationMetadata"];
+            readonly notify_when_done: components["schemas"]["JobNotifyWhenDone"];
+            /** @description Null for queued/running/succeeded jobs. Present with code and message when status is failed or blocked. */
+            readonly error_info: {
+                code: string;
+                message: string;
+            } | null;
+            readonly image: components["schemas"]["MonsterImage"] | null;
+            readonly timestamps: components["schemas"]["JobTimestamps"];
+        };
+        /**
+         * @description POST request serializer for MonsterImageGenerationJob.
+         *
+         *     Owner is always set from request context. Status, provider, prompt,
+         *     and all other internal fields are never accepted from client input.
+         */
+        MonsterImageGenerationJobCreate: {
+            /** @default false */
+            should_email_when_done: boolean;
+            /**
+             * Format: uuid
+             * @description Optional: attach this job to an existing monster owned by the requesting user.
+             */
+            monster_id?: string | null;
+        };
+        /**
+         * @description Nested traits sub-object. Maps to flat columns on Monster.
+         *
+         *     CharField defaults (trim_whitespace=True, allow_blank=False) enforce
+         *     trimmed, non-blank values on all four fields.
+         */
+        MonsterTraits: {
+            /** @description Free-text element descriptor. Not an enum — frontend may suggest values but any text is accepted. */
+            element: string;
+            habitat: string;
+            personality: string;
+            color_palette: string;
+        };
+        /**
+         * @description PATCH request serializer for the notification toggle endpoint.
+         *
+         *     Only allows setting should_email_when_done. Owner, status, and all
+         *     other job fields are structurally impossible to change via this serializer.
+         */
+        PatchedMonsterImageGenerationJobNotificationUpdate: {
+            should_email_when_done?: boolean;
+        };
+        /**
+         * @description PATCH request serializer for Monster.
+         *
+         *     All fields are optional so any subset can be updated.
+         *     If traits is provided, all four trait fields within it are required.
+         *     Owner cannot be changed.
+         */
+        PatchedMonsterUpdate: {
+            display_name?: string;
+            traits?: components["schemas"]["MonsterTraits"];
+            flavor_text?: string;
+        };
+        /**
+         * @description * `queued` - Queued
+         *     * `running` - Running
+         *     * `succeeded` - Succeeded
+         *     * `failed` - Failed
+         *     * `blocked` - Blocked
+         * @enum {string}
+         */
+        StatusEnum: "queued" | "running" | "succeeded" | "failed" | "blocked";
         UserProfile: {
             /** Format: uuid */
             readonly id: string;
@@ -93,6 +524,166 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    api_image_generation_jobs_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MonsterImageGenerationJobCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["MonsterImageGenerationJobCreate"];
+                "multipart/form-data": components["schemas"]["MonsterImageGenerationJobCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+        };
+    };
+    api_image_generation_jobs_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+        };
+    };
+    api_image_generation_jobs_mark_blocked_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_image_generation_jobs_mark_failed_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_image_generation_jobs_mark_running_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_image_generation_jobs_mark_succeeded_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_image_generation_jobs_notification_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+            /** @description No response body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     api_me_retrieve: {
         parameters: {
             query?: never;
@@ -127,6 +718,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+        };
+    };
+    api_monsters_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Monster"][];
+                };
+            };
+        };
+    };
+    api_monsters_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonsterCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["MonsterCreate"];
+                "multipart/form-data": components["schemas"]["MonsterCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Monster"];
+                };
+            };
+        };
+    };
+    api_monsters_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Monster"];
+                };
+            };
+        };
+    };
+    api_monsters_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_monsters_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedMonsterUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedMonsterUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedMonsterUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Monster"];
                 };
             };
         };

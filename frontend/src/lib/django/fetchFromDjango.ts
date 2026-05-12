@@ -6,7 +6,10 @@ import "server-only";
  * Usage: fetchFromDjango("/api/endpoint", { method: "POST", body: ... })
  */
 import { env } from "../env/env";
-import { UserProfile, userProfileSchema } from "../api/schemas/UserProfile";
+import {
+	UserProfile,
+	userProfileSchema,
+} from "../api/schemas/UserProfileSchema";
 
 /**
  * Fetch from Django backend, forwarding cookies and headers for SSR.

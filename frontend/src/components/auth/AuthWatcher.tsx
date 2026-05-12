@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 
-import { userProfileSchema } from "@/lib/api/schemas/UserProfile";
+import { userProfileSchema } from "@/lib/api/schemas/UserProfileSchema";
 import { createClientCSROnly } from "@/lib/supabase/client";
 import { useAppDispatch } from "@/lib/store/hooks";
 import {

@@ -1,7 +1,7 @@
 import "server-only";
 
 import * as Sentry from "@sentry/nextjs";
-import { userProfileSchema } from "@/lib/api/schemas/UserProfile";
+import { userProfileSchema } from "@/lib/api/schemas/UserProfileSchema";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import type { ReduxAuthState } from "../../../store/authSlice";
 import { fetchLoggedInDjangoUserProfile } from "../django/fetchFromDjango";

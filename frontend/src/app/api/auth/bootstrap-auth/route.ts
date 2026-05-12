@@ -9,7 +9,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 
-import { UserProfile } from "@/lib/api/schemas/UserProfile";
+import { UserProfile } from "@/lib/api/schemas/UserProfileSchema";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { NextApiError } from "@/lib/api/errors";
 import { fetchLoggedInDjangoUserProfile } from "@/lib/django/fetchFromDjango";

@@ -2,7 +2,7 @@
 // Shared test fixtures for auth-related tests.
 // Exports a validUserProfile matching the UserProfile schema.
 // ________
-import type { UserProfile } from "@/lib/api/schemas/UserProfile";
+import type { UserProfile } from "@/lib/api/schemas/UserProfileSchema";
 
 /**Example UserProfile for testing */
 export const validUserProfile: UserProfile = {
