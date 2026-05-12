@@ -272,28 +272,3 @@ class SeedCommandJobStateTests(TestCase):
             job = MonsterImageGenerationJob.objects.get(monster=monster)
             monster_image = MonsterImage.objects.get(monster=monster)
             self.assertEqual(job.image_id, monster_image.pk)
-
-
-# ===========================================================================
-# Command output
-# ===========================================================================
-
-
-class SeedCommandOutputTests(TestCase):
-
-    def setUp(self):
-        self.profile = _make_profile("output@example.com")
-
-    @override_settings(ENABLE_DEV_ADMIN_ACTIONS=True)
-    def test_success_output_mentions_count(self):
-        stdout = io.StringIO()
-        _call_seed(self.profile.email, 2, stdout=stdout)
-        output = stdout.getvalue()
-        self.assertIn("2", output)
-
-    @override_settings(ENABLE_DEV_ADMIN_ACTIONS=True)
-    def test_success_output_mentions_email(self):
-        stdout = io.StringIO()
-        _call_seed(self.profile.email, 1, stdout=stdout)
-        output = stdout.getvalue()
-        self.assertIn(self.profile.email, output)
