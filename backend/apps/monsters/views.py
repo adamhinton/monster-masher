@@ -269,6 +269,7 @@ class ImageGenerationJobMarkRunningView(_TransitionStubView):
     @extend_schema(
         summary="[Stub] Mark job as running",
         description="Not yet implemented. Reserved for trusted-server use only.",
+        request=None,
         responses={501: None},
     )
     def post(self, request: Request, job_id) -> Response:
@@ -279,6 +280,7 @@ class ImageGenerationJobMarkSucceededView(_TransitionStubView):
     @extend_schema(
         summary="[Stub] Mark job as succeeded",
         description="Not yet implemented. Reserved for trusted-server use only.",
+        request=None,
         responses={501: None},
     )
     def post(self, request: Request, job_id) -> Response:
@@ -289,6 +291,7 @@ class ImageGenerationJobMarkFailedView(_TransitionStubView):
     @extend_schema(
         summary="[Stub] Mark job as failed",
         description="Not yet implemented. Reserved for trusted-server use only.",
+        request=None,
         responses={501: None},
     )
     def post(self, request: Request, job_id) -> Response:
@@ -299,6 +302,7 @@ class ImageGenerationJobMarkBlockedView(_TransitionStubView):
     @extend_schema(
         summary="[Stub] Mark job as blocked",
         description="Not yet implemented. Reserved for trusted-server use only.",
+        request=None,
         responses={501: None},
     )
     def post(self, request: Request, job_id) -> Response:
