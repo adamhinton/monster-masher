@@ -51,10 +51,6 @@ class Monster(models.Model):
     habitat = models.CharField(max_length=60)
     personality = models.CharField(max_length=60)
     color_palette = models.CharField(max_length=80)
-<<<<<<< HEAD
-    flavor_text = models.TextField(blank=True)
-=======
->>>>>>> image-gen-contract-foundation
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -345,11 +341,6 @@ class MonsterImageGenerationJob(models.Model):
         # ── Timestamp rules ──────────────────────────────────────────────────
         if self.status == S.QUEUED:
             if self.started_at is not None:
-<<<<<<< HEAD
-                errors["started_at"] = "Queued jobs must not have a started_at timestamp."
-            if self.finished_at is not None:
-                errors["finished_at"] = "Queued jobs must not have a finished_at timestamp."
-=======
                 errors["started_at"] = (
                     "Queued jobs must not have a started_at timestamp."
                 )
@@ -357,19 +348,10 @@ class MonsterImageGenerationJob(models.Model):
                 errors["finished_at"] = (
                     "Queued jobs must not have a finished_at timestamp."
                 )
->>>>>>> image-gen-contract-foundation
         elif self.status == S.RUNNING:
             if self.started_at is None:
                 errors["started_at"] = "Running jobs must have a started_at timestamp."
             if self.finished_at is not None:
-<<<<<<< HEAD
-                errors["finished_at"] = "Running jobs must not have a finished_at timestamp."
-        elif self.status == S.SUCCEEDED:
-            if self.started_at is None:
-                errors["started_at"] = "Succeeded jobs must have a started_at timestamp."
-            if self.finished_at is None:
-                errors["finished_at"] = "Succeeded jobs must have a finished_at timestamp."
-=======
                 errors["finished_at"] = (
                     "Running jobs must not have a finished_at timestamp."
                 )
@@ -382,7 +364,6 @@ class MonsterImageGenerationJob(models.Model):
                 errors["finished_at"] = (
                     "Succeeded jobs must have a finished_at timestamp."
                 )
->>>>>>> image-gen-contract-foundation
         elif self.status == S.FAILED:
             if self.finished_at is None:
                 errors["finished_at"] = "Failed jobs must have a finished_at timestamp."
@@ -390,13 +371,9 @@ class MonsterImageGenerationJob(models.Model):
             if self.started_at is None:
                 errors["started_at"] = "Blocked jobs must have a started_at timestamp."
             if self.finished_at is None:
-<<<<<<< HEAD
-                errors["finished_at"] = "Blocked jobs must have a finished_at timestamp."
-=======
                 errors["finished_at"] = (
                     "Blocked jobs must have a finished_at timestamp."
                 )
->>>>>>> image-gen-contract-foundation
 
         # ── Error code rules ─────────────────────────────────────────────────
         if self.status in (S.QUEUED, S.RUNNING, S.SUCCEEDED):
