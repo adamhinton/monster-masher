@@ -4,6 +4,7 @@ Models for monster metadata, monster images, and monster image generation jobs.
 
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
@@ -179,42 +180,127 @@ class MonsterImageGenerationJob(models.Model):
             models.Index(fields=["generation_mode", "status"]),
         ]
         constraints = [
-            # queued jobs must not have lifecycle timestamps
+            # ── Timestamp rules ──────────────────────────────────────────────────
+            # queued: no lifecycle timestamps at all
             models.CheckConstraint(
                 condition=~(
                     Q(status=MonsterImageGenerationStatus.QUEUED)
                     & (Q(started_at__isnull=False) | Q(finished_at__isnull=False))
                 ),
-                name="job_queued_has_no_timestamps",
+                name="job_queued_no_timestamps",
             ),
-            # running jobs must have started_at and must not have finished_at
+            # running: started_at set, finished_at not yet set
             models.CheckConstraint(
                 condition=~(
                     Q(status=MonsterImageGenerationStatus.RUNNING)
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=False))
                 ),
-                name="job_running_has_started_at_only",
+                name="job_running_started_not_finished",
             ),
-            # succeeded jobs must have both timestamps
+            # succeeded: both timestamps required
             models.CheckConstraint(
                 condition=~(
                     Q(status=MonsterImageGenerationStatus.SUCCEEDED)
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=True))
                 ),
-                name="job_succeeded_has_both_timestamps",
+                name="job_succeeded_both_timestamps",
             ),
-            # failed and blocked jobs must have both timestamps
+            # failed: finished_at required; started_at may be null if job failed
+            # before it was ever started (QUEUED → FAILED is a valid transition)
             models.CheckConstraint(
                 condition=~(
-                    (
-                        Q(status=MonsterImageGenerationStatus.FAILED)
-                        | Q(status=MonsterImageGenerationStatus.BLOCKED)
-                    )
+                    Q(status=MonsterImageGenerationStatus.FAILED)
+                    & Q(finished_at__isnull=True)
+                ),
+                name="job_failed_has_finished_at",
+            ),
+            # blocked: both timestamps required; blocked only transitions from RUNNING
+            models.CheckConstraint(
+                condition=~(
+                    Q(status=MonsterImageGenerationStatus.BLOCKED)
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=True))
                 ),
-                name="job_failed_blocked_have_both_timestamps",
+                name="job_blocked_both_timestamps",
             ),
-            # notification error fields must only be set when email was requested
+            # ── Error code rules ─────────────────────────────────────────────────
+            # queued and running: no error yet
+            models.CheckConstraint(
+                condition=~(
+                    Q(
+                        status__in=[
+                            MonsterImageGenerationStatus.QUEUED,
+                            MonsterImageGenerationStatus.RUNNING,
+                        ]
+                    )
+                    & ~Q(error_code="")
+                ),
+                name="job_active_no_error",
+            ),
+            # succeeded: no error (success and error are mutually exclusive)
+            models.CheckConstraint(
+                condition=~(
+                    Q(status=MonsterImageGenerationStatus.SUCCEEDED) & ~Q(error_code="")
+                ),
+                name="job_succeeded_no_error",
+            ),
+            # failed: must have an error_code
+            models.CheckConstraint(
+                condition=~(
+                    Q(status=MonsterImageGenerationStatus.FAILED) & Q(error_code="")
+                ),
+                name="job_failed_has_error_code",
+            ),
+            # blocked: must have an error_code
+            models.CheckConstraint(
+                condition=~(
+                    Q(status=MonsterImageGenerationStatus.BLOCKED) & Q(error_code="")
+                ),
+                name="job_blocked_has_error_code",
+            ),
+            # ── Image rules ──────────────────────────────────────────────────────
+            # queued and running: image is not yet produced
+            models.CheckConstraint(
+                condition=~(
+                    Q(
+                        status__in=[
+                            MonsterImageGenerationStatus.QUEUED,
+                            MonsterImageGenerationStatus.RUNNING,
+                        ]
+                    )
+                    & Q(image_id__isnull=False)
+                ),
+                name="job_active_no_image",
+            ),
+            # succeeded: must have an attached image
+            models.CheckConstraint(
+                condition=~(
+                    Q(status=MonsterImageGenerationStatus.SUCCEEDED)
+                    & Q(image_id__isnull=True)
+                ),
+                name="job_succeeded_has_image",
+            ),
+            # failed and blocked: no image (job did not produce one)
+            models.CheckConstraint(
+                condition=~(
+                    Q(
+                        status__in=[
+                            MonsterImageGenerationStatus.FAILED,
+                            MonsterImageGenerationStatus.BLOCKED,
+                        ]
+                    )
+                    & Q(image_id__isnull=False)
+                ),
+                name="job_terminal_error_no_image",
+            ),
+            # ── Notification rules ───────────────────────────────────────────────
+            # notified_at can only be set when email delivery was requested
+            models.CheckConstraint(
+                condition=~(
+                    Q(should_email_when_done=False) & Q(notified_at__isnull=False)
+                ),
+                name="job_notified_at_only_when_email_enabled",
+            ),
+            # notification error fields can only be set when email delivery was requested
             models.CheckConstraint(
                 condition=~(
                     Q(should_email_when_done=False)
@@ -226,6 +312,102 @@ class MonsterImageGenerationJob(models.Model):
                 name="job_notification_error_only_when_email_enabled",
             ),
         ]
+
+    # ── State validation ─────────────────────────────────────────────────────
+
+    def clean(self) -> None:
+        """
+        Enforce the job status state machine at the Django level.
+
+        This mirrors the DB-level CheckConstraints but provides human-readable
+        error messages in admin forms and serializer validation.
+
+        Valid states per status:
+
+            QUEUED   — no timestamps, no error, no image
+            RUNNING  — started_at set, no finished_at, no error, no image
+            SUCCEEDED — both timestamps set, no error, image attached
+            FAILED   — finished_at set, error_code set, no image
+                       (started_at optional: job may have failed before running)
+            BLOCKED  — both timestamps set, error_code set, no image
+                       (always transitions from RUNNING so started_at required)
+        """
+        S = MonsterImageGenerationStatus
+        errors: dict = {}
+
+        # ── Timestamp rules ──────────────────────────────────────────────────
+        if self.status == S.QUEUED:
+            if self.started_at is not None:
+                errors["started_at"] = "Queued jobs must not have a started_at timestamp."
+            if self.finished_at is not None:
+                errors["finished_at"] = "Queued jobs must not have a finished_at timestamp."
+        elif self.status == S.RUNNING:
+            if self.started_at is None:
+                errors["started_at"] = "Running jobs must have a started_at timestamp."
+            if self.finished_at is not None:
+                errors["finished_at"] = "Running jobs must not have a finished_at timestamp."
+        elif self.status == S.SUCCEEDED:
+            if self.started_at is None:
+                errors["started_at"] = "Succeeded jobs must have a started_at timestamp."
+            if self.finished_at is None:
+                errors["finished_at"] = "Succeeded jobs must have a finished_at timestamp."
+        elif self.status == S.FAILED:
+            if self.finished_at is None:
+                errors["finished_at"] = "Failed jobs must have a finished_at timestamp."
+        elif self.status == S.BLOCKED:
+            if self.started_at is None:
+                errors["started_at"] = "Blocked jobs must have a started_at timestamp."
+            if self.finished_at is None:
+                errors["finished_at"] = "Blocked jobs must have a finished_at timestamp."
+
+        # ── Error code rules ─────────────────────────────────────────────────
+        if self.status in (S.QUEUED, S.RUNNING, S.SUCCEEDED):
+            if self.error_code:
+                errors["error_code"] = (
+                    f"{self.get_status_display()} jobs must not have an error_code."
+                )
+        elif self.status in (S.FAILED, S.BLOCKED):
+            if not self.error_code:
+                errors["error_code"] = (
+                    f"{self.get_status_display()} jobs must have an error_code."
+                )
+
+        # ── Image rules ──────────────────────────────────────────────────────
+        if self.status in (S.QUEUED, S.RUNNING):
+            if self.image_id is not None:
+                errors["image"] = (
+                    f"{self.get_status_display()} jobs must not have an attached image."
+                )
+        elif self.status == S.SUCCEEDED:
+            if self.image_id is None:
+                errors["image"] = "Succeeded jobs must have an attached image."
+        elif self.status in (S.FAILED, S.BLOCKED):
+            if self.image_id is not None:
+                errors["image"] = (
+                    f"{self.get_status_display()} jobs must not have an attached image."
+                )
+
+        # ── Notification rules ───────────────────────────────────────────────
+        if not self.should_email_when_done:
+            if self.notified_at is not None:
+                errors["notified_at"] = (
+                    "notified_at can only be set when should_email_when_done is True."
+                )
+            if self.notification_error_code:
+                errors["notification_error_code"] = (
+                    "notification_error_code can only be set when should_email_when_done is True."
+                )
+            if self.notification_error_message:
+                errors["notification_error_message"] = (
+                    "notification_error_message can only be set when should_email_when_done is True."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs) -> None:
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"Job {self.id} [{self.status}] for owner {self.owner_id}"
