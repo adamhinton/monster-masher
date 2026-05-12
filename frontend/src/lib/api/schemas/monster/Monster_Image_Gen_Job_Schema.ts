@@ -14,7 +14,7 @@
 import z from "zod";
 import { components } from "../../__generated__/types";
 import { MonsterImageSchema } from "./MonsterImageSchema";
-import { Assert, AssertExact } from "../../type-assertions";
+import { Assert, AssertExact, IsAssignableTo } from "../../type-assertions";
 
 type _MonsterImageGenJobFromAPI =
 	components["schemas"]["MonsterImageGenerationJob"];
@@ -48,8 +48,8 @@ const _Monster_Image_Gen_Job_Schema = z.object({
 	}),
 
 	generation_metadata: z.object({
-		prompt_version: z.string(),
-		prompt_hash: z.string(),
+		prompt_version: z.string().max(40).trim(),
+		prompt_hash: z.string().max(64).trim(),
 	}),
 
 	// TODO notify_when_done can be two different structures based on whether should_email_when_done is true or false. Can make this a discriminated union schema but I'm too lazy right now
@@ -131,6 +131,12 @@ export type Queued_Monster_Image_Gen_Job = z.output<
 	typeof Queued_Monster_Image_Gen_Job_Schema
 >;
 
+/**Fails to compile if queued subtype drifts from parent type */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _QueuedSatisfiesBase = Assert<
+	IsAssignableTo<Queued_Monster_Image_Gen_Job, _MonsterImageGenJob>
+>;
+
 /**
  * See notes on Running_Monster_Image_Gen_Job.
  */
@@ -158,6 +164,12 @@ export type Running_Monster_Image_Gen_Job = z.output<
 	typeof Running_Monster_Image_Gen_Job_Schema
 >;
 
+/**Fails to compile if running subtype drifts from parent type */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _RunningSatisfiesBase = Assert<
+	IsAssignableTo<Running_Monster_Image_Gen_Job, _MonsterImageGenJob>
+>;
+
 /**
  * See notes on Succeeded_Monster_Image_Gen_Job.
  */
@@ -183,6 +195,12 @@ export const Succeeded_Monster_Image_Gen_Job_Schema =
  */
 export type Succeeded_Monster_Image_Gen_Job = z.output<
 	typeof Succeeded_Monster_Image_Gen_Job_Schema
+>;
+
+/**Fails to compile if succeeded subtype drifts from parent type */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _SucceededSatisfiesBase = Assert<
+	IsAssignableTo<Succeeded_Monster_Image_Gen_Job, _MonsterImageGenJob>
 >;
 
 /**
@@ -216,6 +234,12 @@ export type Failed_Monster_Image_Gen_Job = z.output<
 	typeof Failed_Monster_Image_Gen_Job_Schema
 >;
 
+/**Fails to compile if failed subtype drifts from parent type */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _FailedSatisfiesBase = Assert<
+	IsAssignableTo<Failed_Monster_Image_Gen_Job, _MonsterImageGenJob>
+>;
+
 /**
  * See notes on Blocked_Monster_Image_Gen_Job.
  */
@@ -243,6 +267,12 @@ export const Blocked_Monster_Image_Gen_Job_Schema =
  */
 export type BlockedMonsterImageGenJob = z.output<
 	typeof Blocked_Monster_Image_Gen_Job_Schema
+>;
+
+/**Fails to compile if blocked subtype drifts from parent type */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type _BlockedSatisfiesBase = Assert<
+	IsAssignableTo<BlockedMonsterImageGenJob, _MonsterImageGenJob>
 >;
 
 // ─── Union ────────────────────────────────────────────────────────────────────

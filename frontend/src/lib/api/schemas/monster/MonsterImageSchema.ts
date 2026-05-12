@@ -21,9 +21,10 @@ type _MonsterImageFromAPI = components["schemas"]["MonsterImage"];
 export const MonsterImageSchema = z.object({
 	id: z.uuid(),
 	public_image_url: z.url().nullable(),
-	image_storage_path: z.string(),
-	provider: z.string(),
-	provider_model: z.string(),
+	image_storage_path: z.string().trim(),
+	provider: z.string().max(50).trim(),
+	provider_model: z.string().max(100).trim(),
+	// Date
 	created_at: z.string(),
 });
 

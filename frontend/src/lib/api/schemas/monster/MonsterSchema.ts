@@ -24,14 +24,15 @@ type _MonsterFromAPI = components["schemas"]["Monster"];
 
 export const MonsterSchema = z.object({
 	id: z.uuid(),
-	display_name: z.string(),
+	display_name: z.string().max(80).trim(),
 	traits: z.object({
-		element: z.string(),
-		habitat: z.string(),
-		personality: z.string(),
-		color_palette: z.string(),
+		element: z.string().max(20).trim(),
+		habitat: z.string().max(60).trim(),
+		personality: z.string().max(60).trim(),
+		color_palette: z.string().max(80).trim(),
 	}),
-	flavor_text: z.string().optional(),
+	flavor_text: z.string().max(600).trim().optional(),
+	// These are dates
 	created_at: z.string(),
 	updated_at: z.string(),
 });

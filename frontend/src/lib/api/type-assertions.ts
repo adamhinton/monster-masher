@@ -17,6 +17,14 @@
 
 export type Assert<T extends true> = T;
 
+/**
+ * Resolves to `true` if `A` is assignable to `B` (i.e. A extends B), `false` otherwise.
+ * Use with `Assert` to get a compile-time failure when a narrower type no longer satisfies a wider one.
+ *
+ * Usage: type _Check = Assert<IsAssignableTo<NarrowType, WiderType>>;
+ */
+export type IsAssignableTo<A, B> = A extends B ? true : false;
+
 /** Don't use IsExact directly — it's a helper for AssertExact */
 export type IsExact<A, B> =
 	(<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2

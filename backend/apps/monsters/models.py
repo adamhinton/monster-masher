@@ -41,7 +41,7 @@ class Monster(models.Model):
     )
 
     display_name = models.CharField(max_length=80)
-    flavor_text = models.TextField(blank=True)
+    flavor_text = models.TextField(blank=True, max_length=600)
 
     # This stuff will be a `traits` sub-object in the serializers
     element = models.CharField(max_length=20)
