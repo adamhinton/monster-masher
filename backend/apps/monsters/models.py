@@ -1,3 +1,7 @@
+"""
+Models for monster metadata, monster images, and monster image generation jobs.
+"""
+
 import uuid
 
 from django.db import models
