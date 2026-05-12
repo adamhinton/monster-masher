@@ -133,9 +133,9 @@ class Command(BaseCommand):
 
             created_ids.append(str(monster.id))
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Created {num_monsters} fake monster(s) for {email}:\n"
-                + "\n".join(f"  monster_id={mid}" for mid in created_ids)
-            )
-        )
+        # self.stdout.write(
+        #     self.style.SUCCESS(
+        #         f"Created {num_monsters} fake monster(s) for {email}:\n"
+        #         + "\n".join(f"  monster_id={mid}" for mid in created_ids)
+        #     )
+        # )
