@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "apps.common.apps.CommonConfig",
     "apps.accounts.apps.AccountsConfig",
+    "apps.monsters.apps.MonstersConfig",
 ]
 
 MIDDLEWARE = [
