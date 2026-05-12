@@ -17,6 +17,7 @@ urlpatterns = [
     path("schema/", SpectacularAPIView.as_view(), name="schema"),
     path("docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("", include("apps.accounts.urls")),
+    path("", include("apps.monsters.urls")),
     # Future app routes go here above the catch-all.
     re_path(r"^.*$", api_not_found),  # Any routes that are not found get handled here
 ]

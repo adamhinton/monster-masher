@@ -4,6 +4,181 @@ info:
   version: 0.1.0
   description: Django REST API for Monster Masher.
 paths:
+  /api/image-generation-jobs/:
+    post:
+      operationId: api_image_generation_jobs_create
+      description: |-
+        POST /api/image-generation-jobs/ — create a generation job.
+
+        Uses create_generation_job() service.  Defaults to fake mode for the
+        contract phase; real provider wiring happens in a later step.
+      summary: Create an image generation job
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+  /api/image-generation-jobs/{job_id}/:
+    get:
+      operationId: api_image_generation_jobs_retrieve
+      description: |-
+        GET /api/image-generation-jobs/{job_id}/ — retrieve a generation job.
+
+        Returns 404 (not 403) when the job does not exist or belongs to another
+        user.
+      summary: Get an image generation job
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+  /api/image-generation-jobs/{job_id}/mark-blocked/:
+    post:
+      operationId: api_image_generation_jobs_mark_blocked_create
+      description: Not yet implemented. Reserved for trusted-server use only.
+      summary: '[Stub] Mark job as blocked'
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '501':
+          description: No response body
+  /api/image-generation-jobs/{job_id}/mark-failed/:
+    post:
+      operationId: api_image_generation_jobs_mark_failed_create
+      description: Not yet implemented. Reserved for trusted-server use only.
+      summary: '[Stub] Mark job as failed'
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '501':
+          description: No response body
+  /api/image-generation-jobs/{job_id}/mark-running/:
+    post:
+      operationId: api_image_generation_jobs_mark_running_create
+      description: Not yet implemented. Reserved for trusted-server use only.
+      summary: '[Stub] Mark job as running'
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '501':
+          description: No response body
+  /api/image-generation-jobs/{job_id}/mark-succeeded/:
+    post:
+      operationId: api_image_generation_jobs_mark_succeeded_create
+      description: Not yet implemented. Reserved for trusted-server use only.
+      summary: '[Stub] Mark job as succeeded'
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '501':
+          description: No response body
+  /api/image-generation-jobs/{job_id}/notification/:
+    patch:
+      operationId: api_image_generation_jobs_notification_partial_update
+      description: |-
+        PATCH /api/image-generation-jobs/{job_id}/notification/ — toggle email
+        notification preference.
+
+        Returns 400 if the job is already in a terminal state (succeeded, failed,
+        or blocked) because the notification window has closed.
+      summary: Toggle email notification preference for a job
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+        '400':
+          description: No response body
   /api/me/:
     get:
       operationId: api_me_retrieve
@@ -38,6 +213,147 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserProfile'
           description: ''
+  /api/monsters/:
+    get:
+      operationId: api_monsters_list
+      description: |-
+        GET  /api/monsters/   — list the authenticated user's monsters.
+        POST /api/monsters/   — create a monster owned by the authenticated user.
+      summary: List current user's monsters
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Monster'
+          description: ''
+    post:
+      operationId: api_monsters_create
+      description: |-
+        GET  /api/monsters/   — list the authenticated user's monsters.
+        POST /api/monsters/   — create a monster owned by the authenticated user.
+      summary: Create a monster
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonsterCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MonsterCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MonsterCreate'
+        required: true
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monster'
+          description: ''
+  /api/monsters/{monster_id}/:
+    get:
+      operationId: api_monsters_retrieve
+      description: |-
+        GET    /api/monsters/{monster_id}/ — retrieve a monster.
+        PATCH  /api/monsters/{monster_id}/ — partial-update a monster.
+        DELETE /api/monsters/{monster_id}/ — delete a monster.
+
+        Returns 404 (not 403) when the monster does not exist or belongs to
+        another user.
+      summary: Get a monster
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monster'
+          description: ''
+    patch:
+      operationId: api_monsters_partial_update
+      description: |-
+        GET    /api/monsters/{monster_id}/ — retrieve a monster.
+        PATCH  /api/monsters/{monster_id}/ — partial-update a monster.
+        DELETE /api/monsters/{monster_id}/ — delete a monster.
+
+        Returns 404 (not 403) when the monster does not exist or belongs to
+        another user.
+      summary: Partial-update a monster
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterUpdate'
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monster'
+          description: ''
+    delete:
+      operationId: api_monsters_destroy
+      description: |-
+        GET    /api/monsters/{monster_id}/ — retrieve a monster.
+        PATCH  /api/monsters/{monster_id}/ — partial-update a monster.
+        DELETE /api/monsters/{monster_id}/ — delete a monster.
+
+        Returns 404 (not 403) when the monster does not exist or belongs to
+        another user.
+      summary: Delete a monster
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '204':
+          description: No response body
   /health/:
     get:
       operationId: health_retrieve
@@ -57,6 +373,14 @@ paths:
           description: ''
 components:
   schemas:
+    GenerationModeEnum:
+      enum:
+      - fake
+      - real
+      type: string
+      description: |-
+        * `fake` - Fake
+        * `real` - Real
     HealthResponse:
       type: object
       properties:
@@ -64,6 +388,379 @@ components:
           type: string
       required:
       - status
+    JobGenerationMetadata:
+      type: object
+      description: |-
+        Nested generation_metadata sub-object on MonsterImageGenerationJob.
+
+        sanitized_prompt is intentionally excluded from the frontend-facing
+        response (Step 2f decision). prompt_version and prompt_hash are safe
+        identifiers useful for debugging/drift detection.
+      properties:
+        prompt_version:
+          type: string
+          readOnly: true
+        prompt_hash:
+          type: string
+          readOnly: true
+      required:
+      - prompt_hash
+      - prompt_version
+    JobNotifyWhenDone:
+      type: object
+      description: |-
+        Nested notify_when_done sub-object on MonsterImageGenerationJob.
+
+        notification_error is null when no notification error has occurred.
+        When present, it carries only safe code/message — no internal details.
+      properties:
+        should_email_when_done:
+          type: boolean
+          readOnly: true
+        notified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        notification_error:
+          type: object
+          nullable: true
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required:
+          - code
+          - message
+          readOnly: true
+          description: Null when no notification error has occurred. Present only
+            when email delivery failed.
+      required:
+      - notification_error
+      - notified_at
+      - should_email_when_done
+    JobProviderInfo:
+      type: object
+      description: |-
+        Nested provider_info sub-object on MonsterImageGenerationJob.
+        Maps to provider, provider_model, provider_request_id on the model.
+      properties:
+        provider:
+          type: string
+          readOnly: true
+        provider_model:
+          type: string
+          readOnly: true
+        provider_request_id:
+          type: string
+          readOnly: true
+      required:
+      - provider
+      - provider_model
+      - provider_request_id
+    JobTimestamps:
+      type: object
+      description: |-
+        Nested timestamps sub-object on MonsterImageGenerationJob.
+        Groups all lifecycle timestamps together.
+      properties:
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - finished_at
+      - started_at
+      - updated_at
+    Monster:
+      type: object
+      description: |-
+        Read/response serializer for Monster.
+
+        Exposes traits as a nested object even though they are stored as flat
+        columns on the model. source="*" passes the whole instance to the nested
+        serializer so each trait field reads from the instance attribute directly.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        display_name:
+          type: string
+          maxLength: 80
+        traits:
+          allOf:
+          - $ref: '#/components/schemas/MonsterTraits'
+          readOnly: true
+        flavor_text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - display_name
+      - id
+      - traits
+      - updated_at
+    MonsterCreate:
+      type: object
+      description: |-
+        POST request serializer for Monster.
+
+        Owner is always set from request context. Never accepted from client input.
+      properties:
+        display_name:
+          type: string
+          maxLength: 80
+        traits:
+          $ref: '#/components/schemas/MonsterTraits'
+        flavor_text:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - display_name
+      - traits
+    MonsterImage:
+      type: object
+      description: |-
+        Read/response serializer for MonsterImage.
+
+        Exposes safe image display metadata. image_storage_path is intentionally
+        included per explicit decision (see Step 2e).
+        No image bytes, no base64, no raw provider response.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        public_image_url:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        image_storage_path:
+          type: string
+          readOnly: true
+          description: Object storage path used for cleanup. Intentionally exposed
+            per Step 2e decision.
+        provider:
+          type: string
+          readOnly: true
+        provider_model:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - image_storage_path
+      - provider
+      - provider_model
+      - public_image_url
+    MonsterImageGenerationJob:
+      type: object
+      description: |-
+        Read/response serializer for MonsterImageGenerationJob.
+
+        Flat model columns are exposed as nested sub-objects to match
+        the groupings annotated in models.py:
+
+            provider_info     — provider, provider_model, provider_request_id
+            generation_metadata — prompt_version, prompt_hash
+                                  (sanitized_prompt excluded per Step 2f)
+            notify_when_done  — should_email_when_done, notified_at, notification_error
+            error_info        — null unless job failed/blocked
+            timestamps        — started_at, finished_at, created_at, updated_at
+            image             — nested MonsterImage when succeeded, else null
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        monster:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: UUID of the associated Monster, or null if the job failed before
+            a Monster was created.
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+          description: |-
+            Lifecycle state: queued → running → succeeded | failed | blocked.
+
+            * `queued` - Queued
+            * `running` - Running
+            * `succeeded` - Succeeded
+            * `failed` - Failed
+            * `blocked` - Blocked
+        generation_mode:
+          allOf:
+          - $ref: '#/components/schemas/GenerationModeEnum'
+          readOnly: true
+          description: |-
+            fake uses fixture images (no provider cost). real calls the configured image provider.
+
+            * `fake` - Fake
+            * `real` - Real
+        provider_info:
+          allOf:
+          - $ref: '#/components/schemas/JobProviderInfo'
+          readOnly: true
+        generation_metadata:
+          allOf:
+          - $ref: '#/components/schemas/JobGenerationMetadata'
+          readOnly: true
+        notify_when_done:
+          allOf:
+          - $ref: '#/components/schemas/JobNotifyWhenDone'
+          readOnly: true
+        error_info:
+          type: object
+          nullable: true
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required:
+          - code
+          - message
+          readOnly: true
+          description: Null for queued/running/succeeded jobs. Present with code and
+            message when status is failed or blocked.
+        image:
+          allOf:
+          - $ref: '#/components/schemas/MonsterImage'
+          readOnly: true
+        timestamps:
+          allOf:
+          - $ref: '#/components/schemas/JobTimestamps'
+          readOnly: true
+      required:
+      - error_info
+      - generation_metadata
+      - generation_mode
+      - id
+      - image
+      - monster
+      - notify_when_done
+      - provider_info
+      - status
+      - timestamps
+    MonsterImageGenerationJobCreate:
+      type: object
+      description: |-
+        POST request serializer for MonsterImageGenerationJob.
+
+        Owner is always set from request context. Status, provider, prompt,
+        and all other internal fields are never accepted from client input.
+      properties:
+        should_email_when_done:
+          type: boolean
+          default: false
+        monster_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Optional: attach this job to an existing monster owned by
+            the requesting user.'
+    MonsterTraits:
+      type: object
+      description: |-
+        Nested traits sub-object. Maps to flat columns on Monster.
+
+        CharField defaults (trim_whitespace=True, allow_blank=False) enforce
+        trimmed, non-blank values on all four fields.
+      properties:
+        element:
+          type: string
+          description: Free-text element descriptor. Not an enum — frontend may suggest
+            values but any text is accepted.
+          maxLength: 20
+        habitat:
+          type: string
+          maxLength: 60
+        personality:
+          type: string
+          maxLength: 60
+        color_palette:
+          type: string
+          maxLength: 80
+      required:
+      - color_palette
+      - element
+      - habitat
+      - personality
+    PatchedMonsterImageGenerationJobNotificationUpdate:
+      type: object
+      description: |-
+        PATCH request serializer for the notification toggle endpoint.
+
+        Only allows setting should_email_when_done. Owner, status, and all
+        other job fields are structurally impossible to change via this serializer.
+      properties:
+        should_email_when_done:
+          type: boolean
+    PatchedMonsterUpdate:
+      type: object
+      description: |-
+        PATCH request serializer for Monster.
+
+        All fields are optional so any subset can be updated.
+        If traits is provided, all four trait fields within it are required.
+        Owner cannot be changed.
+      properties:
+        display_name:
+          type: string
+          maxLength: 80
+        traits:
+          $ref: '#/components/schemas/MonsterTraits'
+        flavor_text:
+          type: string
+          maxLength: 500
+    StatusEnum:
+      enum:
+      - queued
+      - running
+      - succeeded
+      - failed
+      - blocked
+      type: string
+      description: |-
+        * `queued` - Queued
+        * `running` - Running
+        * `succeeded` - Succeeded
+        * `failed` - Failed
+        * `blocked` - Blocked
     UserProfile:
       type: object
       properties:
