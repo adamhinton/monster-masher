@@ -182,7 +182,7 @@ class MonsterImageGenerationJob(models.Model):
             # queued jobs must not have lifecycle timestamps
             models.CheckConstraint(
                 condition=~(
-                    Q(status="queued")
+                    Q(status=MonsterImageGenerationStatus.QUEUED)
                     & (Q(started_at__isnull=False) | Q(finished_at__isnull=False))
                 ),
                 name="job_queued_has_no_timestamps",
@@ -190,7 +190,7 @@ class MonsterImageGenerationJob(models.Model):
             # running jobs must have started_at and must not have finished_at
             models.CheckConstraint(
                 condition=~(
-                    Q(status="running")
+                    Q(status=MonsterImageGenerationStatus.RUNNING)
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=False))
                 ),
                 name="job_running_has_started_at_only",
@@ -198,7 +198,7 @@ class MonsterImageGenerationJob(models.Model):
             # succeeded jobs must have both timestamps
             models.CheckConstraint(
                 condition=~(
-                    Q(status="succeeded")
+                    Q(status=MonsterImageGenerationStatus.SUCCEEDED)
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=True))
                 ),
                 name="job_succeeded_has_both_timestamps",
@@ -206,7 +206,10 @@ class MonsterImageGenerationJob(models.Model):
             # failed and blocked jobs must have both timestamps
             models.CheckConstraint(
                 condition=~(
-                    (Q(status="failed") | Q(status="blocked"))
+                    (
+                        Q(status=MonsterImageGenerationStatus.FAILED)
+                        | Q(status=MonsterImageGenerationStatus.BLOCKED)
+                    )
                     & (Q(started_at__isnull=True) | Q(finished_at__isnull=True))
                 ),
                 name="job_failed_blocked_have_both_timestamps",
