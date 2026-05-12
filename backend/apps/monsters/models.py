@@ -119,7 +119,7 @@ class MonsterImageGenerationJob(models.Model):
 
     monster = models.ForeignKey(
         Monster,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="image_generation_jobs",
@@ -127,7 +127,7 @@ class MonsterImageGenerationJob(models.Model):
 
     image = models.OneToOneField(
         MonsterImage,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name="generation_job",
