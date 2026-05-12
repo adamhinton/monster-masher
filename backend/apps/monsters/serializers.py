@@ -225,7 +225,11 @@ class MonsterImageGenerationJobSerializer(serializers.ModelSerializer):
         help_text="Null for queued/running/succeeded jobs. Present with code and message when status is failed or blocked.",
     )
     timestamps = JobTimestampsSerializer(source="*", read_only=True)
+<<<<<<< HEAD
     image = MonsterImageSerializer(read_only=True)
+=======
+    image = MonsterImageSerializer(read_only=True, allow_null=True)
+>>>>>>> image-gen-contract-foundation
 
     class Meta:
         model = MonsterImageGenerationJob

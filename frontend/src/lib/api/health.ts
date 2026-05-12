@@ -5,7 +5,7 @@
 import * as Sentry from "@sentry/nextjs";
 
 import { env } from "@/lib/env/env";
-import { HealthResponse, HealthResponseSchema } from "./schemas/health";
+import { HealthResponse, HealthResponseSchema } from "./schemas/HealthSchema";
 
 /**Frontend helper to make sure the backend is healthy via /health endpoint */
 export async function fetchDjangoHealth(): Promise<HealthResponse> {

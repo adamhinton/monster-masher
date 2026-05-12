@@ -17,7 +17,7 @@
 
 export type Assert<T extends true> = T;
 
-/**Don't use IsExact, it's a helper for AssertExact which is defined below */
+/** Don't use IsExact directly — it's a helper for AssertExact */
 export type IsExact<A, B> =
 	(<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
 		? (<T>() => T extends B ? 1 : 2) extends <T>() => T extends A ? 1 : 2
@@ -26,19 +26,56 @@ export type IsExact<A, B> =
 		: false;
 
 /**
+ * Recursively strips `readonly` modifiers from all properties and array types.
+ *
+ * Zod v3 cannot express partial readonly (some properties readonly, others not),
+ * so `AssertExact` strips readonly from both sides before comparing. This means
+ * we still catch mismatches in property names, value types, and optionality —
+ * just not readonly modifiers.
+ */
+type DeepMutable<T> =
+	T extends ReadonlyArray<infer U>
+		? Array<DeepMutable<U>>
+		: T extends object
+			? { -readonly [K in keyof T]: DeepMutable<T[K]> }
+			: T;
+
+/**
+ * Shows only the keys that differ between two object types.
+ * Each differing key shows what your Zod schema has vs what the OpenAPI spec requires.
+ */
+type PropertyDiff<A, B> = {
+	[K in keyof A | keyof B as IsExact<
+		K extends keyof A ? A[K] : never,
+		K extends keyof B ? B[K] : never
+	> extends true
+		? never
+		: K]: {
+		zod: K extends keyof A ? A[K] : "⚠ key missing in Zod schema";
+		api: K extends keyof B ? B[K] : "⚠ key missing in OpenAPI type";
+	};
+};
+
+/**
  * Helper for making sure our Zod schema output types exactly match our OpenAPI-generated types.
  *
- * Resolves to `true` when manually-written zod schema output type exactly matches the OpenAPI-generated type, otherwise resolves to an object describing the mismatch.\
+ * `readonly` modifiers are stripped from both sides before comparing, because Zod v3 cannot
+ * express partial readonly on object properties. Shape, optionality, and value types ARE checked.
  *
- * This is used in a compile-time assertion to ensure our Zod schemas stay in sync with our OpenAPI types.
+ * Resolves to `true` when they match. When they don't, resolves to an error object with
+ * `per_key_diff` — hover each key to see exactly what your Zod type has vs what the OpenAPI
+ * spec requires.
  *
  * Usage: type _Check = Assert<AssertExact<ZodOutputType, OpenAPIType>>;
  */
 export type AssertExact<ZodOutput, OpenAPIType> =
-	IsExact<ZodOutput, OpenAPIType> extends true
+	IsExact<DeepMutable<ZodOutput>, DeepMutable<OpenAPIType>> extends true
 		? true
 		: {
 				error: "API contract drift — Zod schema does not match OpenAPI type";
-				zodOutput: ZodOutput;
-				openAPIType: OpenAPIType;
+				/** Hover each key to see what your Zod schema has vs what the OpenAPI spec requires */
+				per_key_diff: PropertyDiff<
+					DeepMutable<ZodOutput>,
+					DeepMutable<OpenAPIType>
+				>;
 			};

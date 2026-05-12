@@ -95,6 +95,54 @@ Any `/api/` path that does not match a registered endpoint returns a standard JS
 }
 ```
 
+### User profile endpoints
+
+All require `Authorization: Bearer <supabase_access_token>`.
+
+```
+GET  /api/me/           → returns the authenticated user's UserProfile
+POST /api/me/bootstrap/ → creates or fetches the UserProfile for the authenticated Supabase user
+```
+
+`/api/me/bootstrap/` is called once after login to ensure a local `UserProfile` row exists for the Supabase user.
+
+### Monster endpoints
+
+All require `Authorization: Bearer <supabase_access_token>`.
+
+Owner is always derived from the verified JWT — never passed in the request body.
+
+Non-owner access returns 404 (not 403) to avoid leaking resource existence.
+
+```
+GET    /api/monsters/              → list the authenticated user's monsters
+POST   /api/monsters/              → create a monster (owner set from JWT)
+GET    /api/monsters/{monster_id}/ → retrieve a monster
+PATCH  /api/monsters/{monster_id}/ → partial update (display_name, traits, flavor_text)
+DELETE /api/monsters/{monster_id}/ → delete; returns 204
+```
+
+### Image generation job endpoints
+
+All require `Authorization: Bearer <supabase_access_token>`.
+
+Owner is always derived from the verified JWT.
+
+```
+POST  /api/image-generation-jobs/                          → create a job (owner set from JWT)
+GET   /api/image-generation-jobs/{job_id}/                 → retrieve job status and result
+PATCH /api/image-generation-jobs/{job_id}/notification/    → toggle should_email_when_done (returns 400 on terminal jobs)
+```
+
+**Trusted-server transition stubs** — the following endpoints exist in the schema but return `501 Not Implemented`. They are reserved for server-to-server use once the trust boundary is designed:
+
+```
+POST /api/image-generation-jobs/{job_id}/mark-running/
+POST /api/image-generation-jobs/{job_id}/mark-succeeded/
+POST /api/image-generation-jobs/{job_id}/mark-failed/
+POST /api/image-generation-jobs/{job_id}/mark-blocked/
+```
+
 ## Regenerating the API Schema
 
 After any API change (serializer, view, or endpoint):

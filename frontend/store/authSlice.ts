@@ -1,4 +1,4 @@
-import { UserProfile } from "@/lib/api/schemas/UserProfile";
+import { UserProfile } from "@/lib/api/schemas/UserProfileSchema";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 /**Auth state is still loading */

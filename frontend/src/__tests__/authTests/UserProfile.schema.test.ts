@@ -2,7 +2,7 @@
 // Tests for src/lib/api/schemas/UserProfile.ts
 // ________
 import { describe, it, expect } from "vitest";
-import { userProfileSchema } from "@/lib/api/schemas/UserProfile";
+import { userProfileSchema } from "@/lib/api/schemas/UserProfileSchema";
 import { validUserProfile } from "../__testUtils__/fixtures";
 
 describe("userProfileSchema", () => {

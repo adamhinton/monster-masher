@@ -661,6 +661,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/MonsterImage'
           readOnly: true
+<<<<<<< HEAD
+=======
+          nullable: true
+>>>>>>> image-gen-contract-foundation
         timestamps:
           allOf:
           - $ref: '#/components/schemas/JobTimestamps'

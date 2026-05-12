@@ -441,7 +441,11 @@ export interface components {
                 code: string;
                 message: string;
             } | null;
+<<<<<<< HEAD
             readonly image: components["schemas"]["MonsterImage"];
+=======
+            readonly image: components["schemas"]["MonsterImage"] | null;
+>>>>>>> image-gen-contract-foundation
             readonly timestamps: components["schemas"]["JobTimestamps"];
         };
         /**
