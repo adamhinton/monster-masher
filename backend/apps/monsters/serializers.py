@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Monster, MonsterImage
+from .models import Monster, MonsterImage, MonsterImageGenerationJob
 
 
 class MonsterTraitsSerializer(serializers.Serializer):
@@ -106,3 +106,156 @@ class MonsterImageSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = fields
+
+
+# ---------------------------------------------------------------------------
+# MonsterImageGenerationJob serializers
+# ---------------------------------------------------------------------------
+
+
+class JobProviderInfoSerializer(serializers.Serializer):
+    """
+    Nested provider_info sub-object on MonsterImageGenerationJob.
+    Maps to provider, provider_model, provider_request_id on the model.
+    """
+
+    provider = serializers.CharField(read_only=True)
+    provider_model = serializers.CharField(read_only=True)
+    provider_request_id = serializers.CharField(read_only=True)
+
+
+class JobGenerationMetadataSerializer(serializers.Serializer):
+    """
+    Nested generation_metadata sub-object on MonsterImageGenerationJob.
+
+    sanitized_prompt is intentionally excluded from the frontend-facing
+    response (Step 2f decision). prompt_version and prompt_hash are safe
+    identifiers useful for debugging/drift detection.
+    """
+
+    prompt_version = serializers.CharField(read_only=True)
+    prompt_hash = serializers.CharField(read_only=True)
+
+
+class JobNotifyWhenDoneSerializer(serializers.Serializer):
+    """
+    Nested notify_when_done sub-object on MonsterImageGenerationJob.
+
+    notification_error is null when no notification error has occurred.
+    When present, it carries only safe code/message — no internal details.
+    """
+
+    should_email_when_done = serializers.BooleanField(read_only=True)
+    notified_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    notification_error = serializers.SerializerMethodField()
+
+    def get_notification_error(self, obj):
+        if obj.notification_error_code or obj.notification_error_message:
+            return {
+                "code": obj.notification_error_code,
+                "message": obj.notification_error_message,
+            }
+        return None
+
+
+class JobErrorInfoSerializer(serializers.Serializer):
+    """
+    Nested error_info sub-object on MonsterImageGenerationJob.
+    Only safe, user-facing error fields. No internal details.
+    """
+
+    code = serializers.CharField(source="error_code", read_only=True)
+    message = serializers.CharField(source="safe_error_message", read_only=True)
+
+
+class JobTimestampsSerializer(serializers.Serializer):
+    """
+    Nested timestamps sub-object on MonsterImageGenerationJob.
+    Groups all lifecycle timestamps together.
+    """
+
+    started_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    finished_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+
+class MonsterImageGenerationJobSerializer(serializers.ModelSerializer):
+    """
+    Read/response serializer for MonsterImageGenerationJob.
+
+    Flat model columns are exposed as nested sub-objects to match
+    the groupings annotated in models.py:
+
+        provider_info     — provider, provider_model, provider_request_id
+        generation_metadata — prompt_version, prompt_hash
+                              (sanitized_prompt excluded per Step 2f)
+        notify_when_done  — should_email_when_done, notified_at, notification_error
+        error_info        — null unless job failed/blocked
+        timestamps        — started_at, finished_at, created_at, updated_at
+        image             — nested MonsterImage when succeeded, else null
+    """
+
+    provider_info = JobProviderInfoSerializer(source="*", read_only=True)
+    generation_metadata = JobGenerationMetadataSerializer(source="*", read_only=True)
+    notify_when_done = JobNotifyWhenDoneSerializer(source="*", read_only=True)
+    error_info = serializers.SerializerMethodField()
+    timestamps = JobTimestampsSerializer(source="*", read_only=True)
+    image = MonsterImageSerializer(read_only=True)
+
+    class Meta:
+        model = MonsterImageGenerationJob
+        fields = [
+            "id",
+            "monster",
+            "status",
+            "generation_mode",
+            "provider_info",
+            "generation_metadata",
+            "notify_when_done",
+            "error_info",
+            "image",
+            "timestamps",
+        ]
+        read_only_fields = [
+            "id",
+            "monster",
+            "status",
+            "generation_mode",
+        ]
+
+    def get_error_info(self, obj):
+        if obj.error_code or obj.safe_error_message:
+            return {
+                "code": obj.error_code,
+                "message": obj.safe_error_message,
+            }
+        return None
+
+
+class MonsterImageGenerationJobCreateSerializer(serializers.Serializer):
+    """
+    POST request serializer for MonsterImageGenerationJob.
+
+    Owner is always set from request context. Status, provider, prompt,
+    and all other internal fields are never accepted from client input.
+    """
+
+    should_email_when_done = serializers.BooleanField(required=False, default=False)
+    monster_id = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="Optional: attach this job to an existing monster owned by the requesting user.",
+    )
+
+
+class MonsterImageGenerationJobNotificationUpdateSerializer(serializers.Serializer):
+    """
+    PATCH request serializer for the notification toggle endpoint.
+
+    Only allows setting should_email_when_done. Owner, status, and all
+    other job fields are structurally impossible to change via this serializer.
+    """
+
+    should_email_when_done = serializers.BooleanField()
