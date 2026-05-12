@@ -41,10 +41,7 @@ class Monster(models.Model):
     )
 
     display_name = models.CharField(max_length=80)
-<<<<<<< HEAD
-=======
     flavor_text = models.TextField(blank=True)
->>>>>>> image-gen-contract-foundation
 
     # This stuff will be a `traits` sub-object in the serializers
     element = models.CharField(max_length=20)
