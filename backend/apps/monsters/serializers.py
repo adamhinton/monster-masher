@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Monster, MonsterImage, MonsterImageGenerationJob
@@ -11,7 +12,10 @@ class MonsterTraitsSerializer(serializers.Serializer):
     trimmed, non-blank values on all four fields.
     """
 
-    element = serializers.CharField(max_length=20)
+    element = serializers.CharField(
+        max_length=20,
+        help_text="Free-text element descriptor. Not an enum — frontend may suggest values but any text is accepted.",
+    )
     habitat = serializers.CharField(max_length=60)
     personality = serializers.CharField(max_length=60)
     color_palette = serializers.CharField(max_length=80)
@@ -106,6 +110,11 @@ class MonsterImageSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = fields
+        extra_kwargs = {
+            "image_storage_path": {
+                "help_text": "Object storage path used for cleanup. Intentionally exposed per Step 2e decision.",
+            },
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -147,8 +156,21 @@ class JobNotifyWhenDoneSerializer(serializers.Serializer):
 
     should_email_when_done = serializers.BooleanField(read_only=True)
     notified_at = serializers.DateTimeField(read_only=True, allow_null=True)
-    notification_error = serializers.SerializerMethodField()
+    notification_error = serializers.SerializerMethodField(
+        help_text="Null when no notification error has occurred. Present only when email delivery failed.",
+    )
 
+    @extend_schema_field(
+        {
+            "type": "object",
+            "nullable": True,
+            "properties": {
+                "code": {"type": "string"},
+                "message": {"type": "string"},
+            },
+            "required": ["code", "message"],
+        }
+    )
     def get_notification_error(self, obj):
         if obj.notification_error_code or obj.notification_error_message:
             return {
@@ -199,7 +221,9 @@ class MonsterImageGenerationJobSerializer(serializers.ModelSerializer):
     provider_info = JobProviderInfoSerializer(source="*", read_only=True)
     generation_metadata = JobGenerationMetadataSerializer(source="*", read_only=True)
     notify_when_done = JobNotifyWhenDoneSerializer(source="*", read_only=True)
-    error_info = serializers.SerializerMethodField()
+    error_info = serializers.SerializerMethodField(
+        help_text="Null for queued/running/succeeded jobs. Present with code and message when status is failed or blocked.",
+    )
     timestamps = JobTimestampsSerializer(source="*", read_only=True)
     image = MonsterImageSerializer(read_only=True)
 
@@ -223,7 +247,29 @@ class MonsterImageGenerationJobSerializer(serializers.ModelSerializer):
             "status",
             "generation_mode",
         ]
+        extra_kwargs = {
+            "monster": {
+                "help_text": "UUID of the associated Monster, or null if the job failed before a Monster was created.",
+            },
+            "status": {
+                "help_text": "Lifecycle state: queued → running → succeeded | failed | blocked.",
+            },
+            "generation_mode": {
+                "help_text": "fake uses fixture images (no provider cost). real calls the configured image provider.",
+            },
+        }
 
+    @extend_schema_field(
+        {
+            "type": "object",
+            "nullable": True,
+            "properties": {
+                "code": {"type": "string"},
+                "message": {"type": "string"},
+            },
+            "required": ["code", "message"],
+        }
+    )
     def get_error_info(self, obj):
         if obj.error_code or obj.safe_error_message:
             return {
