@@ -1,8 +1,9 @@
+from django.conf import settings
 from django.contrib import admin
+from django.contrib import messages
 from django.utils.html import format_html
 
 from .models import Monster, MonsterImage, MonsterImageGenerationJob
-
 
 # ── Inlines ──────────────────────────────────────────────────────────────────
 
@@ -13,7 +14,14 @@ class MonsterImageInline(admin.TabularInline):
     can_delete = False
     show_change_link = True
     fields = ["id", "provider", "provider_model", "created_at", "image_preview"]
-    readonly_fields = ["id", "provider", "provider_model", "created_at", "image_preview", "image_storage_path"]
+    readonly_fields = [
+        "id",
+        "provider",
+        "provider_model",
+        "created_at",
+        "image_preview",
+        "image_storage_path",
+    ]
 
     @admin.display(description="Preview")
     def image_preview(self, obj):
@@ -50,15 +58,37 @@ class MonsterImageGenerationJobInline(admin.TabularInline):
 
 @admin.register(Monster)
 class MonsterAdmin(admin.ModelAdmin):
-    list_display = ["id", "owner", "display_name", "element", "created_at", "updated_at"]
+    list_display = [
+        "id",
+        "owner",
+        "display_name",
+        "element",
+        "created_at",
+        "updated_at",
+    ]
     list_filter = ["created_at", "element"]
     search_fields = ["display_name", "owner__email"]
     list_select_related = ["owner"]
     inlines = [MonsterImageInline, MonsterImageGenerationJobInline]
+    actions = ["attach_fake_image"]
     fieldsets = [
         (None, {"fields": ["id", "owner", "display_name"]}),
-        ("Traits", {"fields": ["element", "habitat", "personality", "color_palette", "flavor_text"]}),
-        ("Timestamps", {"fields": ["created_at", "updated_at"], "classes": ["collapse"]}),
+        (
+            "Traits",
+            {
+                "fields": [
+                    "element",
+                    "habitat",
+                    "personality",
+                    "color_palette",
+                    "flavor_text",
+                ]
+            },
+        ),
+        (
+            "Timestamps",
+            {"fields": ["created_at", "updated_at"], "classes": ["collapse"]},
+        ),
     ]
 
     def get_readonly_fields(self, request, obj=None):
@@ -67,10 +97,58 @@ class MonsterAdmin(admin.ModelAdmin):
             return ["id", "created_at", "updated_at", "owner"]
         return ["id", "created_at", "updated_at"]
 
+    @admin.action(description="Attach fake image to selected monsters (if missing)")
+    def attach_fake_image(self, request, queryset):
+        if not settings.ENABLE_DEV_ADMIN_ACTIONS:
+            self.message_user(
+                request,
+                "attach_fake_image is disabled. Set ENABLE_DEV_ADMIN_ACTIONS=True to enable it.",
+                level=messages.ERROR,
+            )
+            return
+
+        from apps.monsters.management.commands.seed_fake_monsters import (
+            FAKE_IMAGE_FIXTURE_URL,
+            FAKE_PROVIDER,
+            FAKE_PROVIDER_MODEL,
+        )
+
+        created_count = 0
+        skipped_count = 0
+
+        for monster in queryset:
+            # Idempotent: skip monsters that already have at least one image.
+            if monster.images.exists():
+                skipped_count += 1
+                continue
+
+            MonsterImage.objects.create(
+                monster=monster,
+                public_image_url=FAKE_IMAGE_FIXTURE_URL,
+                image_storage_path="",
+                provider=FAKE_PROVIDER,
+                provider_model=FAKE_PROVIDER_MODEL,
+            )
+            created_count += 1
+
+        self.message_user(
+            request,
+            f"Attached fake image to {created_count} monster(s). "
+            f"Skipped {skipped_count} monster(s) that already had images.",
+            level=messages.SUCCESS,
+        )
+
 
 @admin.register(MonsterImage)
 class MonsterImageAdmin(admin.ModelAdmin):
-    list_display = ["id", "monster", "provider", "provider_model", "created_at", "image_preview"]
+    list_display = [
+        "id",
+        "monster",
+        "provider",
+        "provider_model",
+        "created_at",
+        "image_preview",
+    ]
     list_filter = ["provider", "provider_model"]
     search_fields = ["monster__display_name", "monster__owner__email"]
     list_select_related = ["monster", "monster__owner"]
@@ -127,10 +205,32 @@ class MonsterImageGenerationJobAdmin(admin.ModelAdmin):
     fieldsets = [
         (None, {"fields": ["id", "owner", "monster", "status", "generation_mode"]}),
         ("Provider", {"fields": ["provider", "provider_model", "provider_request_id"]}),
-        ("Prompt", {"fields": ["sanitized_prompt", "prompt_version", "prompt_hash"], "classes": ["collapse"]}),
-        ("Notification", {"fields": ["should_email_when_done", "notified_at", "notification_error_code", "notification_error_message"]}),
+        (
+            "Prompt",
+            {
+                "fields": ["sanitized_prompt", "prompt_version", "prompt_hash"],
+                "classes": ["collapse"],
+            },
+        ),
+        (
+            "Notification",
+            {
+                "fields": [
+                    "should_email_when_done",
+                    "notified_at",
+                    "notification_error_code",
+                    "notification_error_message",
+                ]
+            },
+        ),
         ("Error", {"fields": ["error_code", "safe_error_message"]}),
-        ("Timestamps", {"fields": ["created_at", "started_at", "finished_at", "duration"], "classes": ["collapse"]}),
+        (
+            "Timestamps",
+            {
+                "fields": ["created_at", "started_at", "finished_at", "duration"],
+                "classes": ["collapse"],
+            },
+        ),
     ]
 
     @admin.display(description="Duration")
