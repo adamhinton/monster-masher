@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Monster
+from .models import Monster, MonsterImage
 
 
 class MonsterTraitsSerializer(serializers.Serializer):
@@ -84,3 +84,25 @@ class MonsterUpdateSerializer(serializers.Serializer):
             setattr(instance, field, value)
         instance.save()
         return instance
+
+
+class MonsterImageSerializer(serializers.ModelSerializer):
+    """
+    Read/response serializer for MonsterImage.
+
+    Exposes safe image display metadata. image_storage_path is intentionally
+    included per explicit decision (see Step 2e).
+    No image bytes, no base64, no raw provider response.
+    """
+
+    class Meta:
+        model = MonsterImage
+        fields = [
+            "id",
+            "public_image_url",
+            "image_storage_path",
+            "provider",
+            "provider_model",
+            "created_at",
+        ]
+        read_only_fields = fields
