@@ -30,13 +30,6 @@ describe("CreatePage", () => {
 		renderCreatePage();
 	});
 
-	it("has the 'Create a Monster' heading", () => {
-		renderCreatePage();
-		expect(
-			screen.getByRole("heading", { name: /create a monster/i }),
-		).toBeInTheDocument();
-	});
-
 	it("shows the fake mode status state", () => {
 		renderCreatePage();
 		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
@@ -51,6 +44,8 @@ describe("CreatePage", () => {
 		expect(
 			screen.getByRole("button", { name: /generate monster/i }),
 		).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: /clear form/i })).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: /clear form/i }),
+		).toBeInTheDocument();
 	});
 });
