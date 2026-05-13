@@ -22,25 +22,35 @@ vi.mock("next/link", () => ({
 }));
 
 describe("CreatePage", () => {
+	function renderCreatePage() {
+		return render(<CreatePage />);
+	}
+
 	it("renders without crashing", () => {
-		render(<CreatePage />);
+		renderCreatePage();
 	});
 
 	it("has the 'Create a Monster' heading", () => {
-		render(<CreatePage />);
+		renderCreatePage();
 		expect(
 			screen.getByRole("heading", { name: /create a monster/i }),
 		).toBeInTheDocument();
 	});
 
-	it("shows the 'Coming soon' badge", () => {
-		render(<CreatePage />);
-		expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+	it("shows the fake mode status state", () => {
+		renderCreatePage();
+		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
+		expect(screen.getByText(/no real provider call yet/i)).toBeInTheDocument();
 	});
 
-	it("has a '← Back home' link pointing to /", () => {
-		render(<CreatePage />);
-		const link = screen.getByRole("link", { name: /back home/i });
-		expect(link).toHaveAttribute("href", "/");
+	it("renders the generation form fields", () => {
+		renderCreatePage();
+		expect(screen.getByLabelText(/monster name/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/element/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/habitat/i)).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: /generate monster/i }),
+		).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: /clear form/i })).toBeInTheDocument();
 	});
 });
