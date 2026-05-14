@@ -8,6 +8,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { GenerateMonsterForm } from "@/components/monsterGeneration/GenerateMonsterForm";
 import { GenerationStatusPanel } from "@/components/monsterGeneration/GenerationStatusPanel";
@@ -24,6 +25,7 @@ import {
 	type MonsterFormValues,
 } from "@/components/monsterGeneration/monsterFormSchema";
 import type { GenerationUIState } from "@/lib/monsterGeneration/generationState";
+import { MonsterForPOSTSchema } from "@/lib/api/schemas/monster/MonsterSchema";
 
 /**Disallowed terms */
 const blockedPromptPattern = /\b(gore|graphic|hate|blood)\b/i;
@@ -31,6 +33,7 @@ const blockedPromptPattern = /\b(gore|graphic|hate|blood)\b/i;
 const createMonsterFormStorageKey = "monster-masher:create-monster-form";
 
 export function CreateMonsterExperience() {
+	const router = useRouter();
 	const [formValues, setFormValues] = useState<MonsterFormValues>(
 		emptyMonsterFormValues,
 	);
@@ -40,6 +43,7 @@ export function CreateMonsterExperience() {
 	const [generationState, setGenerationState] = useState<GenerationUIState>({
 		status: "idle",
 	});
+	const [isSaving, setIsSaving] = useState(false);
 
 	// Check if ongoing form values are stored in localStorage and load them if so. This allows users to refresh or leave and come back without losing their progress.
 	useEffect(() => {
@@ -87,6 +91,7 @@ export function CreateMonsterExperience() {
 		return () => window.clearTimeout(timeoutId);
 	}, [generationState]);
 
+	/**Delete all form values */
 	function handleClearForm() {
 		setFormValues(emptyMonsterFormValues);
 		setGenerationState({ status: "idle" });
@@ -101,6 +106,11 @@ export function CreateMonsterExperience() {
 		);
 	}
 
+	/**This sends to preview component, doesn't save to db or anything
+	 * Then, handleSave() is what performs db operations and API calls in the preview component
+	 *
+	 * COuld maybe simplify that flow (TODO)
+	 */
 	function handleSubmit(submittedFormValues: MonsterFormValues) {
 		if (generationState.status !== "idle") {
 			return;
@@ -111,8 +121,73 @@ export function CreateMonsterExperience() {
 		setGenerationState({ status: "running" });
 	}
 
+	// TODO might be able to delete this
 	function handleResetGeneration() {
 		setGenerationState({ status: "idle" });
+	}
+
+	/**Send Monster to API for generation
+	 * TODO actually generate the image when generation pipeline is ready; right now this just saves the monster to the db
+	 */
+	async function handleSave() {
+		if (isSaving) return;
+		setIsSaving(true);
+
+		const {
+			display_name,
+			element,
+			habitat,
+			personality,
+			color_palette,
+			flavor_text,
+		} = submittedFormValuesRef.current;
+
+		// Transform flat form values into the nested structure Django expects:
+		// { display_name, traits: { element, habitat, personality, color_palette }, flavor_text }
+		const payload = {
+			display_name,
+			traits: { element, habitat, personality, color_palette },
+			flavor_text: flavor_text ?? "",
+		};
+
+		// Determines that monster is expected data structure for Django API
+		const isValidMonster = MonsterForPOSTSchema.safeParse(payload);
+
+		// TODO not sure this is the right error flow
+		if (!isValidMonster.success) {
+			setGenerationState({
+				status: "failed",
+				safeErrorMessage: "Unexpected error. Please try again.",
+			});
+			setIsSaving(false);
+			return;
+		}
+
+		try {
+			// Send to Next's /api/monsters which sends to django
+			const response = await fetch("/api/monsters/", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+
+			if (response.ok) {
+				router.push("/gallery");
+				return;
+			}
+
+			setGenerationState({
+				status: "failed",
+				safeErrorMessage: "Failed to save your monster. Please try again.",
+			});
+		} catch {
+			setGenerationState({
+				status: "failed",
+				safeErrorMessage: "Network error. Check your connection and try again.",
+			});
+		}
+
+		setIsSaving(false);
 	}
 
 	return (
@@ -148,6 +223,8 @@ export function CreateMonsterExperience() {
 					<GenerationStatusPanel
 						generationState={generationState}
 						onReset={handleResetGeneration}
+						onSave={handleSave}
+						isSaving={isSaving}
 					/>
 				</CardContent>
 			</Card>

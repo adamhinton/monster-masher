@@ -38,6 +38,25 @@ export const MonsterSchema = z.object({
 });
 export type Monster = z.output<typeof MonsterSchema>;
 
+// 		const payload = {
+// 			display_name,
+// 			traits: { element, habitat, personality, color_palette },
+// 			flavor_text: flavor_text ?? "",
+// 		};
+
+/**The Monster type built in the user generation form that we will send to Django
+ *
+ * Use this to validate monsters before sending to the API.
+ */
+export const MonsterForPOSTSchema = MonsterSchema.pick({
+	display_name: true,
+	traits: true,
+	flavor_text: true,
+});
+
+/**Monster data structure that gets sent to Django */
+export type MonsterForPOST = z.input<typeof MonsterForPOSTSchema>;
+
 /**
  * Compile-time drift check. tsc fails here if the Zod schema drifts from the OpenAPI type.
  *

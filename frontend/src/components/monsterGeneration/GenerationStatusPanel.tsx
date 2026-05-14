@@ -1,25 +1,37 @@
+"use client";
+
 import {
 	AlertCircle,
 	CheckCircle2,
 	LoaderCircle,
+	LogIn,
 	RotateCcw,
+	Save,
 } from "lucide-react";
+import Link from "next/link";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import type { GenerationUIState } from "@/lib/monsterGeneration/generationState";
+import { useAppSelector } from "@/lib/store/hooks";
 
 interface GenerationStatusPanelProps {
 	generationState: GenerationUIState;
 	onReset: () => void;
+	onSave: () => void;
+	isSaving: boolean;
 }
 
 /**Status showing ongoing monster generation */
 export function GenerationStatusPanel({
 	generationState,
 	onReset,
+	onSave,
+	isSaving,
 }: GenerationStatusPanelProps) {
+	const authState = useAppSelector((state) => state.auth);
+
 	switch (generationState.status) {
 		case "idle":
 			return (
@@ -50,16 +62,43 @@ export function GenerationStatusPanel({
 			return (
 				<Alert>
 					<CheckCircle2 aria-hidden="true" />
-					<AlertTitle>Fake generation complete</AlertTitle>
+					<AlertTitle>Monster ready</AlertTitle>
 					<AlertDescription className="grid gap-3">
-						<span>
-							The local generation flow completed. Real image display will come
-							later when the provider flow is wired in.
-						</span>
-						<Button type="button" variant="outline" size="sm" onClick={onReset}>
-							<RotateCcw aria-hidden="true" />
-							Create another
-						</Button>
+						{authState.status === "authenticated" ? (
+							<>
+								<span>Save your monster to your gallery.</span>
+								<Button
+									type="button"
+									size="sm"
+									onClick={onSave}
+									disabled={isSaving}
+								>
+									{isSaving ? (
+										<LoaderCircle className="animate-spin" aria-hidden="true" />
+									) : (
+										<Save aria-hidden="true" />
+									)}
+									{isSaving ? "Saving…" : "Save to gallery"}
+								</Button>
+							</>
+						) : authState.status === "anonymous" ? (
+							<>
+								<span>Sign in to save your monster to your gallery.</span>
+								<Link
+									href="/auth"
+									className={buttonVariants({ variant: "outline", size: "sm" })}
+								>
+									<LogIn aria-hidden="true" />
+									Sign in to save
+								</Link>
+							</>
+						) : (
+							// Auth state still loading — show disabled save button
+							<Button type="button" size="sm" disabled>
+								<LoaderCircle className="animate-spin" aria-hidden="true" />
+								Save to gallery
+							</Button>
+						)}
 					</AlertDescription>
 				</Alert>
 			);

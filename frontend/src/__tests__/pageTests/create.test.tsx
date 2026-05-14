@@ -4,6 +4,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CreatePage from "@/app/create/page";
+import { TestStoreProvider } from "../__testUtils__/store";
+
+vi.mock("next/navigation", () => ({
+	useRouter: () => ({ push: vi.fn() }),
+}));
 
 vi.mock("next/link", () => ({
 	default: ({
@@ -23,7 +28,11 @@ vi.mock("next/link", () => ({
 
 describe("CreatePage", () => {
 	function renderCreatePage() {
-		return render(<CreatePage />);
+		return render(
+			<TestStoreProvider>
+				<CreatePage />
+			</TestStoreProvider>,
+		);
 	}
 
 	it("renders without crashing", () => {
