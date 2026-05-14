@@ -25,6 +25,14 @@ export async function proxy(request: NextRequest) {
 		},
 	);
 
+	// If in prod, block anything that is in /dev
+	if (
+		process.env.NODE_ENV === "production" &&
+		request.nextUrl.pathname.startsWith("/dev")
+	) {
+		return new NextResponse("Not found", { status: 404 });
+	}
+
 	// Validates the JWT and refreshes the session if expired.
 	// getClaims() verifies signature against Supabase's public keys — required for SSR.
 	// Do not add any logic between createServerClient and getClaims.
