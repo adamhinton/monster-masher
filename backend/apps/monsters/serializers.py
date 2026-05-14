@@ -21,6 +21,33 @@ class MonsterTraitsSerializer(serializers.Serializer):
     color_palette = serializers.CharField(max_length=80)
 
 
+class MonsterImageSerializer(serializers.ModelSerializer):
+    """
+    Read/response serializer for MonsterImage.
+
+    Exposes safe image display metadata. image_storage_path is intentionally
+    included per explicit decision (see Step 2e).
+    No image bytes, no base64, no raw provider response.
+    """
+
+    class Meta:
+        model = MonsterImage
+        fields = [
+            "id",
+            "public_image_url",
+            "image_storage_path",
+            "provider",
+            "provider_model",
+            "created_at",
+        ]
+        read_only_fields = fields
+        extra_kwargs = {
+            "image_storage_path": {
+                "help_text": "Object storage path used for cleanup. Intentionally exposed per Step 2e decision.",
+            },
+        }
+
+
 class MonsterSerializer(serializers.ModelSerializer):
     """
     Read/response serializer for Monster.
@@ -28,9 +55,20 @@ class MonsterSerializer(serializers.ModelSerializer):
     Exposes traits as a nested object even though they are stored as flat
     columns on the model. source="*" passes the whole instance to the nested
     serializer so each trait field reads from the instance attribute directly.
+
+    image is the most recently created MonsterImage for this monster, or null
+    if no image has been generated yet.
     """
 
     traits = MonsterTraitsSerializer(source="*", read_only=True)
+    image = serializers.SerializerMethodField()
+
+    @extend_schema_field(MonsterImageSerializer(allow_null=True))
+    def get_image(self, obj: Monster):
+        latest = obj.images.first()
+        if latest is None:
+            return None
+        return MonsterImageSerializer(latest).data
 
     class Meta:
         model = Monster
@@ -41,6 +79,7 @@ class MonsterSerializer(serializers.ModelSerializer):
             "flavor_text",
             "created_at",
             "updated_at",
+            "image",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -88,33 +127,6 @@ class MonsterUpdateSerializer(serializers.Serializer):
             setattr(instance, field, value)
         instance.save()
         return instance
-
-
-class MonsterImageSerializer(serializers.ModelSerializer):
-    """
-    Read/response serializer for MonsterImage.
-
-    Exposes safe image display metadata. image_storage_path is intentionally
-    included per explicit decision (see Step 2e).
-    No image bytes, no base64, no raw provider response.
-    """
-
-    class Meta:
-        model = MonsterImage
-        fields = [
-            "id",
-            "public_image_url",
-            "image_storage_path",
-            "provider",
-            "provider_model",
-            "created_at",
-        ]
-        read_only_fields = fields
-        extra_kwargs = {
-            "image_storage_path": {
-                "help_text": "Object storage path used for cleanup. Intentionally exposed per Step 2e decision.",
-            },
-        }
 
 
 # ---------------------------------------------------------------------------

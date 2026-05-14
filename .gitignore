@@ -48,6 +48,10 @@ phase-1-auth-foundations.md
 phase-4-auth-ui-implementation-plan.md
 monster-image-generation-build-plan.md
 .agents/skills/branching-image-gen/SKILL.md
+.agents/skills/typescript-dogma-local/SKILL.md
+.agents/skills/monster-gallery-specs/SKILL.md
+frontend/gallery-ui-planning-doc.md
+monster-image-generation-build-plan.md
 
 # Database
 db.sqlite3

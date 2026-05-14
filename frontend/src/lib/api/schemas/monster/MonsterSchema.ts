@@ -15,6 +15,7 @@
 import z from "zod";
 import { components } from "../../__generated__/types";
 import { Assert, AssertExact } from "../../type-assertions";
+import { MonsterImageSchema } from "./MonsterImageSchema";
 
 /**Don't use this, it's a reference type
  *
@@ -35,6 +36,8 @@ export const MonsterSchema = z.object({
 	// These are dates
 	created_at: z.string(),
 	updated_at: z.string(),
+	// Will be null when no image has been generated yet
+	image: MonsterImageSchema.nullable(),
 });
 export type Monster = z.output<typeof MonsterSchema>;
 

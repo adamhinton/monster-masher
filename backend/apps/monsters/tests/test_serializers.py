@@ -266,12 +266,17 @@ class MonsterSerializerTests(TestCase):
 
     def test_no_image_fields_in_output(self):
         data = MonsterSerializer(self.monster).data
-        for field in ("public_image_url", "image_url", "image_storage_path", "image"):
+        for field in ("public_image_url", "image_url", "image_storage_path"):
             self.assertNotIn(
                 field,
                 data,
                 msg=f"Unexpected image field '{field}' in MonsterSerializer output",
             )
+
+    def test_image_field_is_null_when_no_image(self):
+        data = MonsterSerializer(self.monster).data
+        self.assertIn("image", data)
+        self.assertIsNone(data["image"])
 
     def test_no_generation_job_fields_in_output(self):
         data = MonsterSerializer(self.monster).data

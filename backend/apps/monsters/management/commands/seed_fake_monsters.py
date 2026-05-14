@@ -29,9 +29,7 @@ from apps.monsters.models import MonsterImageGenerationMode
 # A deterministic, publicly accessible placeholder image used as the fixture URL
 # so that fake monsters display something visible in the admin without calling
 # any real provider.
-FAKE_IMAGE_FIXTURE_URL = (
-    "https://placehold.co/512x512/2d2d2d/ffffff/png?text=Fake+Monster"
-)
+FAKE_IMAGE_FIXTURE_URL = "https://tinyurl.com/47r659cf"
 FAKE_PROVIDER = "fake"
 FAKE_PROVIDER_MODEL = "fake-fixture-v1"
 

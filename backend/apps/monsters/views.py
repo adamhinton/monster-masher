@@ -59,7 +59,7 @@ class MonsterListCreateView(GenericAPIView):
         responses={200: MonsterSerializer(many=True)},
     )
     def get(self, request: Request) -> Response:
-        monsters = Monster.objects.filter(owner=request.user)
+        monsters = Monster.objects.filter(owner=request.user).prefetch_related("images")
         serializer = MonsterSerializer(monsters, many=True)
         return Response(serializer.data)
 
@@ -74,9 +74,7 @@ class MonsterListCreateView(GenericAPIView):
         )
         serializer.is_valid(raise_exception=True)
         monster = serializer.save()
-        return Response(
-            MonsterSerializer(monster).data, status=status.HTTP_201_CREATED
-        )
+        return Response(MonsterSerializer(monster).data, status=status.HTTP_201_CREATED)
 
 
 class MonsterDetailView(GenericAPIView):
@@ -109,9 +107,7 @@ class MonsterDetailView(GenericAPIView):
     )
     def patch(self, request: Request, monster_id) -> Response:
         monster = self._get_monster(request, monster_id)
-        serializer = MonsterUpdateSerializer(
-            monster, data=request.data, partial=True
-        )
+        serializer = MonsterUpdateSerializer(monster, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updated = serializer.save()
         return Response(MonsterSerializer(updated).data)
@@ -221,9 +217,7 @@ class ImageGenerationJobNotificationView(GenericAPIView):
 
         if job.status in _TERMINAL_STATUSES:
             return Response(
-                {
-                    "detail": "Cannot update notification preference on a completed job."
-                },
+                {"detail": "Cannot update notification preference on a completed job."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
