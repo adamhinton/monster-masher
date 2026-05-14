@@ -182,7 +182,11 @@ paths:
   /api/me/:
     get:
       operationId: api_me_retrieve
-      description: Get the current user's profile.
+      description: |-
+        GET /api/me/ — return the authenticated user's profile (no monsters).
+
+        Lightweight profile-only endpoint. Use POST /api/me/bootstrap/ when the
+        full profile + monsters payload is needed (e.g. on initial page load).
       summary: Get current user profile
       tags:
       - api
@@ -198,10 +202,12 @@ paths:
   /api/me/bootstrap/:
     post:
       operationId: api_me_bootstrap_create
-      description: Idempotent. The authentication class already creates the profile
-        on first verified request, but this endpoint gives the frontend a clean 'finish
-        login' hook to call explicitly after auth confirm.
-      summary: Create or fetch UserProfile for the current Supabase user
+      description: Idempotent. Returns profile fields plus the user's saved monsters,
+        each with their most recent MonsterImage (or null). The authentication class
+        already creates the profile on first verified request, but this endpoint gives
+        the frontend a clean 'finish login' hook to call explicitly after auth confirm.
+      summary: Create or fetch UserProfile (with monsters) for the current Supabase
+        user
       tags:
       - api
       security:
@@ -211,7 +217,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfile'
+                $ref: '#/components/schemas/UserProfileWithMonsters'
           description: ''
   /api/monsters/:
     get:
@@ -804,6 +810,58 @@ components:
       - display_name
       - email
       - id
+      - supabase_user_id
+      - updated_at
+    UserProfileWithMonsters:
+      type: object
+      description: |-
+        Extended UserProfile serializer that nests the user's saved monsters (with images).
+
+        Used by POST /api/me/bootstrap/ so the frontend can hydrate the full initial
+        auth state — profile + monsters — in a single request.
+
+        The monsters list is ordered by creation date (newest first), matching the
+        Monster model's default ordering.  Each monster's ``image`` field is the
+        most recently created MonsterImage, or null if none exists yet.
+
+        This serializer is intentionally read-only; monster mutations go through the
+        dedicated /api/monsters/* endpoints.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        supabase_user_id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        monsters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Monster'
+          readOnly: true
+      required:
+      - created_at
+      - display_name
+      - email
+      - id
+      - monsters
       - supabase_user_id
       - updated_at
   securitySchemes:

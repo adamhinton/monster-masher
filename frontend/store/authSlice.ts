@@ -1,3 +1,4 @@
+import { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
 import { UserProfile } from "@/lib/api/schemas/UserProfileSchema";
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
@@ -11,10 +12,10 @@ type AuthStateAnonymous = {
 	status: "anonymous";
 };
 
-/**User logged in */
+/**User logged in, with their full profile and monsters */
 type AuthStateAuthenticated = {
 	status: "authenticated";
-	/**Gotten from django */
+	/**Gotten from django; includes the user's saved monsters */
 	user: UserProfile;
 };
 
@@ -48,7 +49,7 @@ const authSlice = createSlice({
 			return action.payload;
 		},
 
-		/**Logged in with Supabase Auth; user profile retrieved from django*/
+		/**Logged in with Supabase Auth; user profile (with monsters) retrieved from django */
 		authSignedIn(
 			_state,
 			action: PayloadAction<UserProfile>,
@@ -62,6 +63,45 @@ const authSlice = createSlice({
 		authSignedOut(): AuthStateAnonymous {
 			return { status: "anonymous" };
 		},
+
+		/**
+		 * Add a newly created monster to the authenticated user's monsters list.
+		 * No-op if the user is not authenticated.
+		 */
+		monsterAdded(state, action: PayloadAction<Monster>) {
+			if (state.status !== "authenticated") return;
+			// Prepend so the newest appears first, matching the backend ordering (-created_at).
+			state.user = {
+				...state.user,
+				monsters: [action.payload, ...state.user.monsters],
+			};
+		},
+
+		/**
+		 * Replace an existing monster in the authenticated user's monsters list.
+		 * Matched by id. No-op if not authenticated or monster not found.
+		 */
+		monsterUpdated(state, action: PayloadAction<Monster>) {
+			if (state.status !== "authenticated") return;
+			state.user = {
+				...state.user,
+				monsters: state.user.monsters.map((m) =>
+					m.id === action.payload.id ? action.payload : m,
+				),
+			};
+		},
+
+		/**
+		 * Remove a monster from the authenticated user's monsters list by id.
+		 * No-op if not authenticated or monster not found.
+		 */
+		monsterDeleted(state, action: PayloadAction<string>) {
+			if (state.status !== "authenticated") return;
+			state.user = {
+				...state.user,
+				monsters: state.user.monsters.filter((m) => m.id !== action.payload),
+			};
+		},
 	},
 });
 
@@ -70,6 +110,9 @@ export const {
 	authInitialized,
 	authSignedIn,
 	authSignedOut,
+	monsterAdded,
+	monsterUpdated,
+	monsterDeleted,
 } = authSlice.actions;
 
 export const authReducer = authSlice.reducer;

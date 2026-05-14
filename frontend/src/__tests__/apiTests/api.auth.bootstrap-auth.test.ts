@@ -21,7 +21,10 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 import { POST } from "@/app/api/auth/bootstrap-auth/route";
-import { validUserProfile } from "../__testUtils__/fixtures";
+import {
+	validUserProfile,
+	validUserProfileWithMonsters,
+} from "../__testUtils__/fixtures";
 
 function makeSupabaseClient({
 	claimsError = null as Error | null,
@@ -61,6 +64,61 @@ describe("POST /api/auth/bootstrap-auth", () => {
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.user.email).toBe("test@example.com");
+	});
+
+	it("returns user with monsters array in body", async () => {
+		const res = await POST();
+		const body = await res.json();
+		expect(Array.isArray(body.user.monsters)).toBe(true);
+	});
+
+	it("returns user with populated monsters when Django returns them", async () => {
+		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
+			validUserProfileWithMonsters,
+		);
+		const res = await POST();
+		expect(res.status).toBe(200);
+		const body = await res.json();
+		expect(body.user.monsters).toHaveLength(2);
+		expect(body.user.monsters[0].display_name).toBe("Gloomspark");
+	});
+
+	it("monster entries include expected fields", async () => {
+		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
+			validUserProfileWithMonsters,
+		);
+		const res = await POST();
+		const body = await res.json();
+		const monster = body.user.monsters[0];
+		expect(monster).toHaveProperty("id");
+		expect(monster).toHaveProperty("display_name");
+		expect(monster).toHaveProperty("traits");
+		expect(monster).toHaveProperty("image");
+	});
+
+	it("monster image is null when no image has been generated", async () => {
+		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
+			validUserProfileWithMonsters,
+		);
+		const res = await POST();
+		const body = await res.json();
+		// validMonster (second in the list) has image: null
+		const monsterWithoutImage = body.user.monsters[1];
+		expect(monsterWithoutImage.image).toBeNull();
+	});
+
+	it("monster image contains expected fields when present", async () => {
+		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
+			validUserProfileWithMonsters,
+		);
+		const res = await POST();
+		const body = await res.json();
+		// validMonsterWithImage (first in the list) has an image
+		const image = body.user.monsters[0].image;
+		expect(image).not.toBeNull();
+		expect(image).toHaveProperty("id");
+		expect(image).toHaveProperty("public_image_url");
+		expect(image).toHaveProperty("provider");
 	});
 
 	it("returns 401 not_authenticated when getClaims errors", async () => {

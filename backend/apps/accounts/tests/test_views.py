@@ -157,3 +157,158 @@ class PublicEndpointRegressionTests(APITestCase):
     def test_api_docs_returns_200_without_token(self):
         response = self.client.get("/api/docs/")
         self.assertEqual(response.status_code, 200)
+
+
+class BootstrapMonstersTests(APITestCase):
+    """
+    Tests for the monsters payload nested inside the POST /api/me/bootstrap/ response.
+
+    verify_supabase_jwt is patched so that tests run without a real Supabase instance.
+    """
+
+    def _do_bootstrap(self, uid, email="test@example.com"):
+        claims = _make_claims(uid, email)
+        with patch(
+            "apps.accounts.authentication.verify_supabase_jwt", return_value=claims
+        ):
+            return self.client.post(
+                reverse("me-bootstrap"), HTTP_AUTHORIZATION="Bearer valid-token"
+            )
+
+    def _make_monster(self, owner, display_name="Gloopbeast"):
+        from apps.monsters.models import Monster
+
+        return Monster.objects.create(
+            owner=owner,
+            display_name=display_name,
+            element="fire",
+            habitat="volcano",
+            personality="grumpy",
+            color_palette="red and black",
+            flavor_text="Smells of sulphur.",
+        )
+
+    def _make_image(self, monster):
+        from apps.monsters.models import MonsterImage
+
+        return MonsterImage.objects.create(
+            monster=monster,
+            public_image_url="https://placehold.co/512x512.png",
+            image_storage_path="monsters/test.png",
+            provider="fake",
+            provider_model="fake-fixture-v1",
+        )
+
+    def test_bootstrap_response_includes_monsters_key(self):
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("monsters", response.data)
+
+    def test_monsters_is_empty_list_when_user_has_no_monsters(self):
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        self.assertEqual(response.data["monsters"], [])
+
+    def test_monsters_contains_user_monsters(self):
+        uid = uuid.uuid4()
+        # Bootstrap to create the profile first
+        response = self._do_bootstrap(uid)
+        profile = UserProfile.objects.get(supabase_user_id=uid)
+        self._make_monster(profile, "Blorp")
+        self._make_monster(profile, "Zorp")
+
+        response = self._do_bootstrap(uid)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["monsters"]), 2)
+
+    def test_monster_has_expected_fields(self):
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        profile = UserProfile.objects.get(supabase_user_id=uid)
+        self._make_monster(profile, "Flumpus")
+
+        response = self._do_bootstrap(uid)
+        monster = response.data["monsters"][0]
+        self.assertIn("id", monster)
+        self.assertIn("display_name", monster)
+        self.assertIn("traits", monster)
+        self.assertIn("flavor_text", monster)
+        self.assertIn("created_at", monster)
+        self.assertIn("updated_at", monster)
+        self.assertIn("image", monster)
+
+    def test_monster_traits_subobject_is_present(self):
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        profile = UserProfile.objects.get(supabase_user_id=uid)
+        self._make_monster(profile, "Traitmaster")
+
+        response = self._do_bootstrap(uid)
+        traits = response.data["monsters"][0]["traits"]
+        self.assertIn("element", traits)
+        self.assertIn("habitat", traits)
+        self.assertIn("personality", traits)
+        self.assertIn("color_palette", traits)
+
+    def test_monster_image_is_null_when_no_image_generated(self):
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        profile = UserProfile.objects.get(supabase_user_id=uid)
+        self._make_monster(profile, "Imageless")
+
+        response = self._do_bootstrap(uid)
+        self.assertIsNone(response.data["monsters"][0]["image"])
+
+    def test_monster_image_is_populated_when_image_exists(self):
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        profile = UserProfile.objects.get(supabase_user_id=uid)
+        monster = self._make_monster(profile, "Picturesque")
+        self._make_image(monster)
+
+        response = self._do_bootstrap(uid)
+        image = response.data["monsters"][0]["image"]
+        self.assertIsNotNone(image)
+        self.assertIn("id", image)
+        self.assertIn("public_image_url", image)
+        self.assertIn("provider", image)
+        self.assertEqual(image["public_image_url"], "https://placehold.co/512x512.png")
+
+    def test_monsters_ordered_newest_first(self):
+        """Monsters must come back newest-first (-created_at), matching the Monster model ordering."""
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        profile = UserProfile.objects.get(supabase_user_id=uid)
+        first = self._make_monster(profile, "Older")
+        second = self._make_monster(profile, "Newer")
+
+        response = self._do_bootstrap(uid)
+        names = [m["display_name"] for m in response.data["monsters"]]
+        # Newer was created last so it should appear first
+        self.assertEqual(names[0], "Newer")
+        self.assertEqual(names[1], "Older")
+
+    def test_only_owner_monsters_are_returned(self):
+        """A user must only see their own monsters, not another user's."""
+        uid_a = uuid.uuid4()
+        uid_b = uuid.uuid4()
+        response_a = self._do_bootstrap(uid_a)
+        response_b = self._do_bootstrap(uid_b)
+        profile_a = UserProfile.objects.get(supabase_user_id=uid_a)
+        profile_b = UserProfile.objects.get(supabase_user_id=uid_b)
+        self._make_monster(profile_a, "A Monster")
+        self._make_monster(profile_b, "B Monster")
+
+        response_a = self._do_bootstrap(uid_a)
+        self.assertEqual(len(response_a.data["monsters"]), 1)
+        self.assertEqual(response_a.data["monsters"][0]["display_name"], "A Monster")
+
+    def test_response_still_includes_profile_fields_alongside_monsters(self):
+        uid = uuid.uuid4()
+        response = self._do_bootstrap(uid)
+        self.assertIn("id", response.data)
+        self.assertIn("email", response.data)
+        self.assertIn("supabase_user_id", response.data)
+        self.assertIn("monsters", response.data)
+

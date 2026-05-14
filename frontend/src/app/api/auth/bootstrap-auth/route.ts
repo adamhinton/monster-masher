@@ -1,9 +1,11 @@
 // ____________
 // POST /api/auth/bootstrap-auth
-// Verifies the Supabase session, forwards the access token to Django,
-// and returns the app-level user profile.
-// NOTE The user will be already logged in, since Next will have gotten auth from Supabase Auth directly.
-// This just gets further profile info.
+// Verifies the Supabase session, forwards the access token to Django's
+// POST /api/me/bootstrap/ endpoint, and returns the full UserProfileWithMonsters
+// payload — profile fields + saved monsters with images — so the frontend can
+// hydrate global auth + monster state in a single round-trip.
+// NOTE The user is already logged in via Supabase Auth at this point; this
+// just fetches the deeper app-level profile and monster data from Django.
 // ____________
 
 import * as Sentry from "@sentry/nextjs";
@@ -37,13 +39,14 @@ function jsonError({
 }
 
 /**
- * Get user profile info from Django
+ * Fetch full profile + monsters from Django and return to the client.
  *
- * Doesn't take any parameters because Supabase Auth detects which user is logged-in, and gets info for that user.
+ * Validates the Supabase session, then calls Django's POST /api/me/bootstrap/
+ * with the access token.  Django returns a UserProfileWithMonsters payload
+ * (profile fields + all saved monsters, each with their most recent image or null).
  *
- * User is already logged in via supabase auth but that only gives us their email and ID; this just gets further info about their profile.
- *
- * Eventually this will also return their Monsters and any other info, but we haven't written that yet as of 5.8.26.
+ * The response is parsed through userProfileSchema for runtime validation before
+ * being returned, so malformed Django responses are caught at this boundary.
  */
 export async function POST(): Promise<
 	NextResponse<{ user: UserProfile } | NextApiError>

@@ -64,8 +64,8 @@ Auth is handled by Next.js + Supabase Auth. Magic links are delivered by Resend.
 3. User clicks the link — browser hits `GET /api/auth/callback?code=...&next=...`.
 4. Callback exchanges the code for a Supabase session (sets auth cookies) and redirects to the safe `next` path.
 5. `AuthWatcher` (mounted in the root layout) detects the `SIGNED_IN` event from the Supabase client.
-6. `AuthWatcher` calls `POST /api/auth/bootstrap-auth`, which verifies the JWT server-side, fetches or creates the Django `UserProfile`, and returns it.
-7. Redux dispatches `authSignedIn(profile)` — the app now has auth state.
+6. `AuthWatcher` calls `POST /api/auth/bootstrap-auth`, which verifies the JWT server-side, calls Django's `POST /api/me/bootstrap/`, and returns a `UserProfileWithMonsters` payload — profile fields plus all saved monsters with images.
+7. Redux dispatches `authSignedIn(profile)` — the app now has full auth + monster state.
 
 ### Logout flow
 
@@ -83,7 +83,7 @@ Auth is handled by Next.js + Supabase Auth. Magic links are delivered by Resend.
 | ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST` | `/api/auth/sign-in`        | Accepts `{ email, next }`. Initiates magic link via Supabase; does not return a token.                                                                                |
 | `GET`  | `/api/auth/callback`       | Receives `?code=` from the magic link. Exchanges it for a session and redirects to the safe `next` path.                                                              |
-| `POST` | `/api/auth/bootstrap-auth` | Server-side only. Verifies the Supabase session, fetches or creates the Django `UserProfile`, returns `{ user: UserProfile }`. Called by `AuthWatcher` after sign-in. |
+| `POST` | `/api/auth/bootstrap-auth` | Server-side only. Verifies the Supabase session, calls Django `POST /api/me/bootstrap/`, returns `{ user: UserProfileWithMonsters }` (profile + all saved monsters with images). Called by `AuthWatcher` after sign-in. |
 | `POST` | `/api/auth/logout`         | Signs out via Supabase Auth and clears session cookies.                                                                                                               |
 
 ### Auth state (Redux)
@@ -92,7 +92,13 @@ Auth is handled by Next.js + Supabase Auth. Magic links are delivered by Resend.
 type AuthState =
 	| { status: "loading" }
 	| { status: "anonymous" }
-	| { status: "authenticated"; user: UserProfile };
+	| { status: "authenticated"; user: UserProfile }; // UserProfile includes monsters[]
 ```
 
-Initial state is derived server-side in the root layout: Supabase session checked → Django `UserProfile` fetched and Zod-validated → hydrated into Redux before first render.
+`UserProfile.monsters` is an array of `Monster` objects (each with their most recent `MonsterImage` or `null`), populated on bootstrap. Monster state lives inside the authenticated user and is kept in sync via Redux actions:
+
+- `monsterAdded(monster)` — prepends a newly created monster
+- `monsterUpdated(monster)` — replaces an existing monster matched by id
+- `monsterDeleted(monsterId)` — removes a monster by id
+
+Initial state is derived server-side in the root layout: Supabase session checked → Django `POST /api/me/bootstrap/` fetched and Zod-validated → hydrated into Redux before first render.

@@ -29,14 +29,14 @@ export async function fetchFromDjango(
 }
 
 /**
- * Gets profile info for the currently logged-in user from Django.
+ * Gets profile info + monsters for the currently logged-in user from Django.
  *
- * This is meant to be called from the client so as not to expose our API endpoints.
+ * Calls POST /api/me/bootstrap/ which returns a UserProfileWithMonsters payload —
+ * profile fields plus all saved monsters (each with their most recent image or null).
+ * This single call hydrates the full initial auth state in one round-trip.
  *
- * Returns the validated UserProfile.
+ * Returns the validated UserProfile (which includes monsters).
  * Throws specific errors for network issues, response errors, or validation failures.
- *
- * Note that the user is logged in through Supabase Auth already, but that only gives us their email and supabase id. Django now gives us their username, display name, and eventually monsters when we add that.
  */
 export async function fetchLoggedInDjangoUserProfile(
 	accessToken: string,

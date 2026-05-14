@@ -100,11 +100,19 @@ Any `/api/` path that does not match a registered endpoint returns a standard JS
 All require `Authorization: Bearer <supabase_access_token>`.
 
 ```
-GET  /api/me/           → returns the authenticated user's UserProfile
-POST /api/me/bootstrap/ → creates or fetches the UserProfile for the authenticated Supabase user
+GET  /api/me/           → returns the authenticated user's UserProfile (profile fields only, no monsters)
+POST /api/me/bootstrap/ → creates or fetches the UserProfile + all saved monsters with images
 ```
 
-`/api/me/bootstrap/` is called once after login to ensure a local `UserProfile` row exists for the Supabase user.
+`/api/me/bootstrap/` is the primary login hook. It is called once after Supabase Auth confirms a session
+to ensure a local `UserProfile` row exists and to return the full initial state — profile fields plus all
+saved monsters (each with their most recent `MonsterImage` or `null`) — in a single round-trip.
+
+The response shape is `UserProfileWithMonsters` (see the OpenAPI schema). Monsters are ordered
+newest-first (`-created_at`) and monsters are prefetched with their images to avoid N+1 queries.
+
+`GET /api/me/` returns only the plain `UserProfile` (no monsters). Use it when only profile metadata
+is needed.
 
 ### Monster endpoints
 

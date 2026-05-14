@@ -163,7 +163,10 @@ export interface paths {
         };
         /**
          * Get current user profile
-         * @description Get the current user's profile.
+         * @description GET /api/me/ — return the authenticated user's profile (no monsters).
+         *
+         *     Lightweight profile-only endpoint. Use POST /api/me/bootstrap/ when the
+         *     full profile + monsters payload is needed (e.g. on initial page load).
          */
         get: operations["api_me_retrieve"];
         put?: never;
@@ -184,8 +187,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create or fetch UserProfile for the current Supabase user
-         * @description Idempotent. The authentication class already creates the profile on first verified request, but this endpoint gives the frontend a clean 'finish login' hook to call explicitly after auth confirm.
+         * Create or fetch UserProfile (with monsters) for the current Supabase user
+         * @description Idempotent. Returns profile fields plus the user's saved monsters, each with their most recent MonsterImage (or null). The authentication class already creates the profile on first verified request, but this endpoint gives the frontend a clean 'finish login' hook to call explicitly after auth confirm.
          */
         post: operations["api_me_bootstrap_create"];
         delete?: never;
@@ -519,6 +522,33 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /**
+         * @description Extended UserProfile serializer that nests the user's saved monsters (with images).
+         *
+         *     Used by POST /api/me/bootstrap/ so the frontend can hydrate the full initial
+         *     auth state — profile + monsters — in a single request.
+         *
+         *     The monsters list is ordered by creation date (newest first), matching the
+         *     Monster model's default ordering.  Each monster's ``image`` field is the
+         *     most recently created MonsterImage, or null if none exists yet.
+         *
+         *     This serializer is intentionally read-only; monster mutations go through the
+         *     dedicated /api/monsters/* endpoints.
+         */
+        UserProfileWithMonsters: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: uuid */
+            readonly supabase_user_id: string;
+            /** Format: email */
+            readonly email: string;
+            readonly display_name: string | null;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly monsters: components["schemas"]["Monster"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -721,7 +751,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserProfile"];
+                    "application/json": components["schemas"]["UserProfileWithMonsters"];
                 };
             };
         };
