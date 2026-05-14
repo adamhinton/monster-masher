@@ -31,11 +31,6 @@ function jsonError({
 	return NextResponse.json({ error: { code, message } }, { status });
 }
 
-const isValidMonster = (body: unknown): body is Monster => {
-	const result = MonsterForPOSTSchema.safeParse(body);
-	return result.success;
-};
-
 /** POST /api/monsters/ — create a monster via Django, returning the created Monster */
 export async function POST(
 	request: NextRequest,
@@ -76,15 +71,19 @@ export async function POST(
 			message: "Request body must be valid JSON.",
 		});
 	}
-	if (!isValidMonster(body)) {
+
+	// Validate that it's the structure that Django expects
+	// Should never fail since the form also validates this before sending to this route handler
+	const isValidMonster = MonsterForPOSTSchema.safeParse(body);
+	if (!isValidMonster.success) {
 		return jsonError({
 			status: 400,
 			code: "invalid_monster_data",
-			message: "Request body does not match expected monster data structure.",
+			message:
+				"Request body does not match expected monster data structure." +
+				isValidMonster.error.message,
 		});
 	}
-
-	// Now TS knows that body is a MonsterForPOST, which is what our Django API expects.
 
 	let djangoResponse: Response;
 	try {

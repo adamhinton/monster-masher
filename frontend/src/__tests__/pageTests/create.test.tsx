@@ -4,6 +4,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CreatePage from "@/app/create/page";
+import { TestStoreProvider } from "../__testUtils__/store";
+
+vi.mock("next/navigation", () => ({
+	useRouter: () => ({ push: vi.fn() }),
+}));
 
 vi.mock("next/link", () => ({
 	default: ({
@@ -22,25 +27,34 @@ vi.mock("next/link", () => ({
 }));
 
 describe("CreatePage", () => {
+	function renderCreatePage() {
+		return render(
+			<TestStoreProvider>
+				<CreatePage />
+			</TestStoreProvider>,
+		);
+	}
+
 	it("renders without crashing", () => {
-		render(<CreatePage />);
+		renderCreatePage();
 	});
 
-	it("has the 'Create a Monster' heading", () => {
-		render(<CreatePage />);
+	it("shows the fake mode status state", () => {
+		renderCreatePage();
+		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
+		expect(screen.getByText(/no real provider call yet/i)).toBeInTheDocument();
+	});
+
+	it("renders the generation form fields", () => {
+		renderCreatePage();
+		expect(screen.getByLabelText(/monster name/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/element/i)).toBeInTheDocument();
+		expect(screen.getByLabelText(/habitat/i)).toBeInTheDocument();
 		expect(
-			screen.getByRole("heading", { name: /create a monster/i }),
+			screen.getByRole("button", { name: /generate monster/i }),
 		).toBeInTheDocument();
-	});
-
-	it("shows the 'Coming soon' badge", () => {
-		render(<CreatePage />);
-		expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
-	});
-
-	it("has a '← Back home' link pointing to /", () => {
-		render(<CreatePage />);
-		const link = screen.getByRole("link", { name: /back home/i });
-		expect(link).toHaveAttribute("href", "/");
+		expect(
+			screen.getByRole("button", { name: /clear form/i }),
+		).toBeInTheDocument();
 	});
 });

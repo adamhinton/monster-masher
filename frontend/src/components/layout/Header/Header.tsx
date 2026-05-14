@@ -25,6 +25,19 @@ export function Header() {
 					<span>Monster Masher</span>
 				</Link>
 
+				{/* If in dev, link to /dev/gallery 
+				TODO delete this after testing is done
+				But this route is blocked in prod in proxy.ts so it's not a big deal if it stays in
+				*/}
+				{process.env.NODE_ENV === "development" && (
+					<Link
+						href="/dev/gallery"
+						className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+					>
+						Dev Gallery
+					</Link>
+				)}
+
 				{/* Desktop nav */}
 				<nav
 					className="hidden items-center gap-1 md:flex"

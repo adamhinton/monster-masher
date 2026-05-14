@@ -50,16 +50,7 @@ const validMonsterResponse: Monster = {
 	flavor_text: "Lurks in the shallows.",
 	created_at: "2026-01-01T00:00:00.000Z",
 	updated_at: "2026-01-01T00:00:00.000Z",
-	image: {
-		// UUID
-		id: "45abf819-63ab-4f11-b3a7-843dd3ca25a9",
-		public_image_url:
-			"https://www.magnific.com/premium-ai-image/green-square-icon-with-green-monster-modern-app-logo-featuring-ghast-with-lego-face_149556712.htm#fromView=keyword&page=2&position=6&uuid=45abf819-63ab-4f11-b3a7-843dd3ca25a9&query=Monster+square",
-		image_storage_path: "example",
-		provider: "openAI",
-		provider_model: "dall-e-3",
-		created_at: new Date().toISOString(),
-	},
+	image: null,
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
