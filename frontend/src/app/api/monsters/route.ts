@@ -1,5 +1,5 @@
 // _______________
-// POST /api/monsters/
+// /api/monsters/
 //
 // Proxies monster creation to Django. Reads the Supabase session server-side
 // to get the access token, then forwards the JSON body to Django.

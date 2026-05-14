@@ -165,6 +165,7 @@ export function CreateMonsterExperience() {
 
 		try {
 			// Send to Next's /api/monsters which sends to django
+			// TODO put this in a server helper
 			const response = await fetch("/api/monsters/", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
