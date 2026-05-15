@@ -1,26 +1,33 @@
 // ________________
-// Here the user can see all of their saved monsters in a gallery format.
-// Features including but not limited to:
-// -Viewing individual monsters in more detail
-// -Deleting monsters
-// -Downloading images
-// -Edit details (but not images)
-// -MonsterCards with stats and lore etc
-
-// This is supposed to look more like a collectible trophy case than a boring CRUD app.
-
-// # GALLERY VIBE:
-// Creature collector board
-// Lab specimen cards
-// Soft glass cards
-// Bright element badges
-// Subtle glow around image frame
-// Playful but not childish
-
-// type GalleryState =
-// 	| { status: "loading" }
-// 	| { status: "unauthenticated" }
-// 	| { status: "error"; message: string }
-// 	| { status: "empty" }
-// 	| { status: "ready"; monsters: MonsterGalleryItem[] };
+// Responsive card grid for the /gallery page.
+// Accepts a validated monsters array and renders one MonsterCard per item.
 // ________________
+
+import type { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
+import { MonsterCard } from "./monsterCard/MonsterCard";
+
+interface GalleryGridProps {
+	monsters: Monster[];
+}
+
+/**
+ * Renders the user's saved monsters in a responsive grid.
+ *
+ * Layout: 1 col → 2 col (sm) → 3 col (lg) → 4 col (xl).
+ * The grid uses a `ul`/`li` structure for semantic correctness.
+ */
+export function GalleryGrid({ monsters }: GalleryGridProps) {
+	return (
+		<ul
+			aria-label="Saved monsters"
+			className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+		>
+			{monsters.map((monster) => (
+				<li key={monster.id} className="flex justify-center">
+					<MonsterCard monster={monster} />
+				</li>
+			))}
+		</ul>
+	);
+}
+

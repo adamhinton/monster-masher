@@ -1,32 +1,58 @@
 // ______________
-// Here the user can see their created monsters in a gallery format. This page is currently a placeholder and will be fleshed out as the project progresses.
+// Gallery page — the user's personal creature collection.
+// Reads saved monsters directly from Redux auth state.
 // ______________
 
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { PageContainer } from "@/components/layout/PageContainer";
-import Link from "next/link";
+"use client";
 
-export const metadata = { title: "Monster Gallery" };
+import { PageContainer } from "@/components/layout/PageContainer";
+import { GalleryHeader } from "@/components/monsterGallery/galleryHelperComponents/GalleryHeader";
+import { EmptyGalleryState } from "@/components/monsterGallery/galleryHelperComponents/EmptyGalleryState";
+import { GalleryGrid } from "@/components/monsterGallery/GalleryGrid";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAppSelector } from "@/lib/store/hooks";
 
 /**
- * Displays the user's created Monsters.
- *
- * Just a placeholder for now; will be fleshed out as the project progresses.
+ * Displays the user's saved monster collection from Redux auth state.
  */
 export default function GalleryPage() {
+	const authState = useAppSelector((state) => state.auth);
+	const monsters =
+		authState.status === "authenticated" ? authState.user.monsters : [];
+	const hasMonsters = monsters.length > 0;
+
 	return (
 		<PageContainer size="marketing">
-			<div className="flex flex-col items-start gap-6 py-16">
-				<Badge variant="secondary">Coming soon</Badge>
-				<h1 className="text-3xl font-semibold tracking-tight">Gallery</h1>
-				<p className="text-muted-foreground">
-					Your monster collection will appear here. Create one first!
-				</p>
-				<Link href="/" className={buttonVariants({ variant: "outline" })}>
-					← Back home
-				</Link>
-			</div>
+			<main>
+				<section aria-labelledby="gallery-title">
+					{/* ── Header ──────────────────────────────────────────────────── */}
+					<GalleryHeader />
+
+					{/* ── Summary strip (visible once the user has monsters) ──────── */}
+					{hasMonsters && (
+						<Card className="mt-6">
+							<CardContent className="flex flex-wrap gap-x-6 gap-y-1 py-3 text-sm text-muted-foreground">
+								<span>
+									<strong className="text-foreground">{monsters.length}</strong>{" "}
+									{monsters.length === 1 ? "monster" : "monsters"} saved
+								</span>
+								<span>Showing page 1 of 1</span>
+								<span>Images immutable · details editable</span>
+							</CardContent>
+						</Card>
+					)}
+
+					{/* ── Grid / empty state ──────────────────────────────────────── */}
+					<div className="mt-10">
+						{hasMonsters ? (
+							<GalleryGrid monsters={monsters} />
+						) : (
+							<EmptyGalleryState />
+						)}
+					</div>
+				</section>
+			</main>
 		</PageContainer>
 	);
 }
+
