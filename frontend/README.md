@@ -12,9 +12,7 @@ Copy `.env.local.example` to `.env.local` and fill in values before running.
 
 ## Environment Variables
 
-| Variable                          | Description                                                        |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `NEXT_PUBLIC_DJANGO_API_BASE_URL` | Base URL for the Django API (e.g. `http://127.0.0.1:8000` locally) |
+Check `.env.local.example` for required environment variables.
 
 ## Regenerating API Types
 

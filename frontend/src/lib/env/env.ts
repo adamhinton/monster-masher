@@ -41,4 +41,33 @@ export const env = {
 			"NEXT_PUBLIC_APP_URL",
 		);
 	},
+	// IMAGE_GENERATION_MODE "fake" | "real"
+	get imageGenerationMode() {
+		const value = assertDefined(
+			process.env.IMAGE_GENERATION_MODE,
+			"IMAGE_GENERATION_MODE",
+		);
+		if (value !== "fake" && value !== "real") {
+			throw new Error(
+				`Invalid IMAGE_GENERATION_MODE: ${value}. Must be "fake" or "real".`,
+			);
+		}
+		return value;
+	},
+	get openAIApiKey() {
+		return assertDefined(process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
+	},
+
+	get supabaseStorageBucket() {
+		return assertDefined(
+			process.env.SUPABASE_STORAGE_BUCKET,
+			"SUPABASE_STORAGE_BUCKET",
+		);
+	},
+	get supabaseSecretKey() {
+		return assertDefined(
+			process.env.SUPABASE_SECRET_KEY,
+			"SUPABASE_SECRET_KEY",
+		);
+	},
 };
