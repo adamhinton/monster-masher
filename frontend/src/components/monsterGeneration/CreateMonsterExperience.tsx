@@ -24,6 +24,11 @@ import {
 	monsterFormSchema,
 	type MonsterFormValues,
 } from "@/components/monsterGeneration/monsterFormSchema";
+import {
+	beginGeneration,
+	resolveFakeGeneration,
+	resetGenerationState,
+} from "@/lib/monsterGeneration/createMonsterFlow";
 import type { GenerationUIState } from "@/lib/monsterGeneration/generationState";
 import {
 	MonsterForPOSTSchema,
@@ -32,9 +37,6 @@ import {
 import { useDispatch } from "react-redux";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { monsterAdded } from "../../../store/authSlice";
-
-/**Disallowed terms */
-const blockedPromptPattern = /\b(gore|graphic|hate|blood)\b/i;
 /**Ongoing form values stored in localStorage for convenience */
 const createMonsterFormStorageKey = "monster-masher:create-monster-form";
 
@@ -72,28 +74,7 @@ export function CreateMonsterExperience() {
 		}
 
 		const timeoutId = window.setTimeout(() => {
-			const submittedFormValues = submittedFormValuesRef.current;
-			const promptText = Object.values(submittedFormValues).join(" ");
-
-			if (blockedPromptPattern.test(promptText)) {
-				setGenerationState({
-					status: "blocked",
-					safeErrorMessage:
-						"Please revise the prompt and keep the monster cute, original, and non-graphic.",
-				});
-				return;
-			}
-
-			if (submittedFormValues.display_name.toLowerCase() === "error") {
-				setGenerationState({
-					status: "failed",
-					safeErrorMessage:
-						"The fake generator hit a pretend snag. Reset and try another monster.",
-				});
-				return;
-			}
-
-			setGenerationState({ status: "succeeded" });
+			setGenerationState(resolveFakeGeneration(submittedFormValuesRef.current));
 		}, 900);
 
 		return () => window.clearTimeout(timeoutId);
@@ -102,7 +83,7 @@ export function CreateMonsterExperience() {
 	/**Delete all form values */
 	function handleClearForm() {
 		setFormValues(emptyMonsterFormValues);
-		setGenerationState({ status: "idle" });
+		setGenerationState(resetGenerationState());
 		window.localStorage.removeItem(createMonsterFormStorageKey);
 	}
 
@@ -120,18 +101,20 @@ export function CreateMonsterExperience() {
 	 * COuld maybe simplify that flow (TODO)
 	 */
 	function handleSubmit(submittedFormValues: MonsterFormValues) {
-		if (generationState.status !== "idle") {
+		const nextGenerationState = beginGeneration(generationState);
+
+		if (nextGenerationState.status !== "running") {
 			return;
 		}
 
 		submittedFormValuesRef.current = submittedFormValues;
 		window.localStorage.removeItem(createMonsterFormStorageKey);
-		setGenerationState({ status: "running" });
+		setGenerationState(nextGenerationState);
 	}
 
 	// TODO might be able to delete this
 	function handleResetGeneration() {
-		setGenerationState({ status: "idle" });
+		setGenerationState(resetGenerationState());
 	}
 
 	/**Send Monster to API for generation
