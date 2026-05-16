@@ -19,12 +19,14 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	monsterFormFieldLimits,
 	monsterFormSchema,
 	type MonsterFormValues,
 } from "@/components/monsterGeneration/monsterFormSchema";
+import { useAppSelector } from "@/lib/store/hooks";
 
 interface GenerateMonsterFormProps {
 	formValues: MonsterFormValues;
@@ -53,6 +55,10 @@ export function GenerateMonsterForm({
 	onSubmit,
 }: GenerateMonsterFormProps) {
 	const formId = useId();
+
+	/**Form doesn't show "email me when done" if user isn't authenticated */
+	const authState = useAppSelector((state) => state.auth);
+	const isAuthenticated = authState.status === "authenticated";
 	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
 	function updateField<FieldName extends keyof MonsterFormValues>(
@@ -98,7 +104,16 @@ export function GenerateMonsterForm({
 		}
 
 		setFieldErrors({});
-		onSubmit(parsedFormValues.data);
+
+		if (isAuthenticated) {
+			onSubmit(parsedFormValues.data);
+			return;
+		}
+
+		onSubmit({
+			...parsedFormValues.data,
+			should_email_when_done: false,
+		});
 	}
 
 	return (
@@ -258,6 +273,42 @@ export function GenerateMonsterForm({
 					</FormMessage>
 				</FormItem>
 			</FormField>
+
+			{/* If user is logged in, offer to email them when image is done generating */}
+			{isAuthenticated ? (
+				<FormField>
+					<FormItem className="rounded-xl border border-border/70 bg-card/60 p-3 sm:p-4">
+						<FormControl>
+							<div className="flex items-start justify-between gap-4">
+								<div className="grid gap-1 pr-2">
+									<FormLabel htmlFor={`${formId}-email-when-done`}>
+										Email me when done
+									</FormLabel>
+									<p className="text-xs text-muted-foreground">
+										We will use your account email when durable background
+										notifications are ready.
+									</p>
+								</div>
+								<Switch
+									id={`${formId}-email-when-done`}
+									checked={formValues.should_email_when_done}
+									onCheckedChange={(isChecked) =>
+										updateField("should_email_when_done", isChecked)
+									}
+									disabled={isSubmitting}
+									aria-describedby={`${formId}-email-when-done-help`}
+								/>
+							</div>
+						</FormControl>
+						<p
+							id={`${formId}-email-when-done-help`}
+							className="text-xs text-muted-foreground"
+						>
+							For now, keep this tab open until generation completes.
+						</p>
+					</FormItem>
+				</FormField>
+			) : null}
 
 			<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
 				<Button

@@ -35,19 +35,24 @@ export const monsterFormSchema = MonsterSchema.pick({
 		1,
 		"Describe the color palette.",
 	),
+	should_email_when_done: z.boolean().default(false),
 });
 
 export type MonsterFormValues = z.output<typeof monsterFormSchema>;
 
 /**Form input limits like maxLength, derived from the MonsterSchema to ensure consistency between frontend and backend validation.
  */
-export const monsterFormFieldLimits = {
+export const monsterFormFieldLimits: Record<
+	keyof MonsterFormValues,
+	number | undefined
+> = {
 	display_name: MonsterSchema.shape.display_name.maxLength ?? undefined,
 	element: monsterTraitsSchema.shape.element.maxLength ?? undefined,
 	habitat: monsterTraitsSchema.shape.habitat.maxLength ?? undefined,
 	personality: monsterTraitsSchema.shape.personality.maxLength ?? undefined,
 	color_palette: monsterTraitsSchema.shape.color_palette.maxLength ?? undefined,
 	flavor_text: flavorTextSchema.maxLength ?? undefined,
+	should_email_when_done: undefined,
 } satisfies Record<keyof MonsterFormValues, number | undefined>;
 
 /**Initial Monster generation form values */
@@ -58,4 +63,5 @@ export const emptyMonsterFormValues: MonsterFormValues = {
 	personality: "",
 	color_palette: "",
 	flavor_text: "",
+	should_email_when_done: false,
 };
