@@ -10,6 +10,7 @@ import {
 	UserProfile,
 	userProfileSchema,
 } from "../api/schemas/UserProfileSchema";
+import { paths } from "../api/__generated__/types";
 
 /**
  * Fetch from Django backend, forwarding cookies and headers for SSR.
@@ -17,7 +18,7 @@ import {
  * @param init Fetch options (method, body, etc)
  */
 export async function fetchFromDjango(
-	path: string,
+	path: keyof paths,
 	init?: RequestInit,
 ): Promise<Response> {
 	const url = `${env.djangoApiBaseUrl}${path}`;

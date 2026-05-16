@@ -79,12 +79,21 @@ Auth is handled by Next.js + Supabase Auth. Magic links are delivered by Resend.
 
 ### Auth endpoints
 
-| Method | Path                       | Description                                                                                                                                                           |
-| ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/api/auth/sign-in`        | Accepts `{ email, next }`. Initiates magic link via Supabase; does not return a token.                                                                                |
-| `GET`  | `/api/auth/callback`       | Receives `?code=` from the magic link. Exchanges it for a session and redirects to the safe `next` path.                                                              |
+| Method | Path                       | Description                                                                                                                                                                                                             |
+| ------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/api/auth/sign-in`        | Accepts `{ email, next }`. Initiates magic link via Supabase; does not return a token.                                                                                                                                  |
+| `GET`  | `/api/auth/callback`       | Receives `?code=` from the magic link. Exchanges it for a session and redirects to the safe `next` path.                                                                                                                |
 | `POST` | `/api/auth/bootstrap-auth` | Server-side only. Verifies the Supabase session, calls Django `POST /api/me/bootstrap/`, returns `{ user: UserProfileWithMonsters }` (profile + all saved monsters with images). Called by `AuthWatcher` after sign-in. |
-| `POST` | `/api/auth/logout`         | Signs out via Supabase Auth and clears session cookies.                                                                                                               |
+| `POST` | `/api/auth/logout`         | Signs out via Supabase Auth and clears session cookies.                                                                                                                                                                 |
+
+### Monster endpoints
+
+Next.js route handlers that proxy to Django after verifying the Supabase session server-side.
+
+| Method   | Path                        | Description                                                                                                                                     |
+| -------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/monsters`             | Creates a monster. Validates the body against `MonsterForPOSTSchema`, forwards to Django `POST /api/monsters/`, returns `{ monster: Monster }`. |
+| `DELETE` | `/api/monsters/[monsterId]` | Deletes a monster. Forwards to Django `DELETE /api/monsters/{monster_id}/`. Returns `{ ok: true }` on success or a `NextApiError` on failure.   |
 
 ### Auth state (Redux)
 

@@ -4,6 +4,7 @@
 import type { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
 import type { UserProfile } from "@/lib/api/schemas/UserProfileSchema";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import GalleryPage from "@/app/gallery/page";
 import { TestStoreProvider } from "../__testUtils__/store";
@@ -49,6 +50,14 @@ const authenticatedUser: UserProfile = {
 	updated_at: "2026-05-14T10:00:00.000Z",
 	monsters: [testMonster],
 };
+
+function createMonster(index: number): Monster {
+	return {
+		...testMonster,
+		id: `00000000-0000-0000-0000-${String(index).padStart(12, "0")}`,
+		display_name: `Monster ${index}`,
+	};
+}
 
 function renderGalleryPageWithAuthState(authState: ReduxAuthState) {
 	return render(
@@ -98,5 +107,53 @@ describe("GalleryPage", () => {
 		expect(
 			screen.getByRole("heading", { name: /flamox/i }),
 		).toBeInTheDocument();
+	});
+
+	it("paginates saved monsters client-side with previous and next controls", async () => {
+		const user = userEvent.setup();
+		const paginatedUser: UserProfile = {
+			...authenticatedUser,
+			monsters: Array.from({ length: 21 }, (_, index) =>
+				createMonster(index + 1),
+			),
+		};
+
+		renderGalleryPageWithAuthState({
+			status: "authenticated",
+			user: paginatedUser,
+		});
+
+		const previousButtons = screen.getAllByRole("button", {
+			name: /previous/i,
+		});
+		const nextButtons = screen.getAllByRole("button", { name: /next/i });
+		const [topPreviousButton, bottomPreviousButton] = previousButtons;
+		const [topNextButton, bottomNextButton] = nextButtons;
+
+		expect(topPreviousButton).toBeDisabled();
+		expect(topNextButton).toBeEnabled();
+		expect(
+			screen.getByRole("heading", { name: "Monster 1" }),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("heading", { name: "Monster 21" }),
+		).not.toBeInTheDocument();
+
+		await user.click(topNextButton);
+
+		expect(screen.getByText(/showing page 2 of 2/i)).toBeInTheDocument();
+		expect(bottomPreviousButton).toBeEnabled();
+		expect(bottomNextButton).toBeDisabled();
+		expect(
+			screen.getByRole("heading", { name: "Monster 21" }),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("heading", { name: "Monster 1" }),
+		).not.toBeInTheDocument();
+
+		await user.click(bottomPreviousButton);
+
+		expect(screen.getByText(/showing page 1 of 2/i)).toBeInTheDocument();
+		expect(topPreviousButton).toBeDisabled();
 	});
 });

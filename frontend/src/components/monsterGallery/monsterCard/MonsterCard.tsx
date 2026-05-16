@@ -26,9 +26,17 @@ import { cn } from "@/lib/utils";
 import { MonsterBadges } from "./helperComponents/MonsterBadges";
 import { MonsterImageFrame } from "./helperComponents/MonsterImageFrame";
 
+export type GalleryMode = "detailed" | "image-only";
+
 export interface MonsterCardProps {
 	/** The monster to display. */
 	monster: Monster;
+	/**
+	 * Controls how much detail the card shows.
+	 * - `"detailed"` — full card: image, name, trait badges, flavor text, date, and action menu (default).
+	 * - `"image-only"` — square image frame only; monster name revealed as a slide-up overlay on hover.
+	 */
+	mode?: GalleryMode;
 	/** Called when the user selects "Edit" from the action menu. Omit to disable the item. */
 	onEdit?: () => void;
 	/** Called when the user selects "Delete" from the action menu. Omit to disable the item. */
@@ -39,11 +47,48 @@ export interface MonsterCardProps {
  * Collectible specimen card for a single monster.
  * Fixed 240 px width to match the MonsterImageFrame card variant.
  */
-export function MonsterCard({ monster, onEdit, onDelete }: MonsterCardProps) {
+export function MonsterCard({
+	monster,
+	mode = "detailed",
+	onEdit,
+	onDelete,
+}: MonsterCardProps) {
 	const headingId = useId();
 
 	/** Descriptive alt text built from the monster's element and name. */
 	const altText = `${monster.traits.element} monster named ${monster.display_name}`;
+
+	if (mode === "image-only") {
+		return (
+			<article
+				aria-labelledby={headingId}
+				className={cn(
+					"group/card relative w-60 overflow-hidden rounded-3xl border border-border/60 bg-card",
+					"transition-all duration-200 hover:-translate-y-1",
+				)}
+				style={{
+					boxShadow:
+						"0 0 32px var(--brand-primary-glow), 0 1px 6px oklch(0 0 0 / 0.05)",
+				}}
+			>
+				<MonsterImageFrame
+					image={monster.image}
+					variant="card"
+					altText={altText}
+					className="rounded-none border-0"
+				/>
+				{/* Name overlay — slides up from bottom on hover */}
+				<div className="absolute inset-x-0 bottom-0 translate-y-full bg-linear-to-t from-black/80 to-transparent px-3 pb-3 pt-10 transition-transform duration-200 group-hover/card:translate-y-0">
+					<h3
+						id={headingId}
+						className="truncate text-sm font-semibold text-white"
+					>
+						{monster.display_name}
+					</h3>
+				</div>
+			</article>
+		);
+	}
 
 	return (
 		<article

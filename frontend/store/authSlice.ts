@@ -70,6 +70,20 @@ const authSlice = createSlice({
 		 */
 		monsterAdded(state, action: PayloadAction<Monster>) {
 			if (state.status !== "authenticated") return;
+			const existingMonsterIndex = state.user.monsters.findIndex(
+				(monster) => monster.id === action.payload.id,
+			);
+
+			if (existingMonsterIndex >= 0) {
+				state.user = {
+					...state.user,
+					monsters: state.user.monsters.map((monster) =>
+						monster.id === action.payload.id ? action.payload : monster,
+					),
+				};
+				return;
+			}
+
 			// Prepend so the newest appears first, matching the backend ordering (-created_at).
 			state.user = {
 				...state.user,

@@ -131,13 +131,19 @@ describe("authSlice reducers", () => {
 
 	describe("monsterAdded", () => {
 		it("prepends the new monster to user.monsters", () => {
+				const brandNewMonster = {
+					...validMonster,
+					id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+					display_name: "Cindersnail",
+				};
+
 			const state = authReducer(
 				authenticatedWithMonsters,
-				monsterAdded(validMonster),
+					monsterAdded(brandNewMonster),
 			);
 			expect(state.status).toBe("authenticated");
 			if (state.status === "authenticated") {
-				expect(state.user.monsters[0]).toEqual(validMonster);
+					expect(state.user.monsters[0]).toEqual(brandNewMonster);
 				// Original monsters are still present
 				expect(state.user.monsters).toHaveLength(3);
 			}
@@ -151,6 +157,30 @@ describe("authSlice reducers", () => {
 				expect(state.user.monsters[0]).toEqual(validMonster);
 			}
 		});
+
+			it("replaces an existing monster instead of duplicating it", () => {
+				const replacementMonster = {
+					...validMonster,
+					display_name: "Mucksnout Prime",
+					flavor_text: "An updated swamp terror.",
+				};
+
+				const state = authReducer(
+					authenticatedWithMonsters,
+					monsterAdded(replacementMonster),
+				);
+
+				expect(state.status).toBe("authenticated");
+				if (state.status === "authenticated") {
+					const matchingMonsters = state.user.monsters.filter(
+						(monster) => monster.id === replacementMonster.id,
+					);
+
+					expect(matchingMonsters).toHaveLength(1);
+					expect(matchingMonsters[0]).toEqual(replacementMonster);
+					expect(state.user.monsters).toHaveLength(2);
+				}
+			});
 
 		it("is a no-op when not authenticated — loading", () => {
 			const state = authReducer(loading, monsterAdded(validMonster));
@@ -249,8 +279,16 @@ describe("authSlice reducers", () => {
 		});
 
 		it("produces an empty list when the only monster is deleted", () => {
+				const authenticatedWithSingleMonster = {
+					status: "authenticated" as const,
+					user: {
+						...validUserProfile,
+						monsters: [validMonster],
+					},
+				};
+
 			const state = authReducer(
-				authenticated, // monsters: []
+					authenticatedWithSingleMonster,
 				monsterDeleted(validMonster.id),
 			);
 			if (state.status === "authenticated") {

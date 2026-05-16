@@ -25,7 +25,13 @@ import {
 	type MonsterFormValues,
 } from "@/components/monsterGeneration/monsterFormSchema";
 import type { GenerationUIState } from "@/lib/monsterGeneration/generationState";
-import { MonsterForPOSTSchema } from "@/lib/api/schemas/monster/MonsterSchema";
+import {
+	MonsterForPOSTSchema,
+	MonsterSchema,
+} from "@/lib/api/schemas/monster/MonsterSchema";
+import { useDispatch } from "react-redux";
+import { useAppDispatch } from "@/lib/store/hooks";
+import { monsterAdded } from "../../../store/authSlice";
 
 /**Disallowed terms */
 const blockedPromptPattern = /\b(gore|graphic|hate|blood)\b/i;
@@ -44,6 +50,8 @@ export function CreateMonsterExperience() {
 		status: "idle",
 	});
 	const [isSaving, setIsSaving] = useState(false);
+
+	const dispatch = useAppDispatch();
 
 	// Check if ongoing form values are stored in localStorage and load them if so. This allows users to refresh or leave and come back without losing their progress.
 	useEffect(() => {
@@ -129,7 +137,7 @@ export function CreateMonsterExperience() {
 	/**Send Monster to API for generation
 	 * TODO actually generate the image when generation pipeline is ready; right now this just saves the monster to the db
 	 */
-	async function handleSave() {
+	async function handleSave(dispatch: ReturnType<typeof useDispatch>) {
 		if (isSaving) return;
 		setIsSaving(true);
 
@@ -173,8 +181,21 @@ export function CreateMonsterExperience() {
 			});
 
 			if (response.ok) {
-				router.push("/gallery");
-				return;
+				// Add to redux state
+				const { monster } = await response.json();
+				if (MonsterSchema.safeParse(monster).success) {
+					dispatch(monsterAdded(monster));
+					router.push("/gallery");
+					return;
+				} else {
+					setGenerationState({
+						status: "failed",
+						safeErrorMessage:
+							"Received unexpected data from server. Please try again.",
+					});
+					setIsSaving(false);
+					return;
+				}
 			}
 
 			setGenerationState({
@@ -224,7 +245,7 @@ export function CreateMonsterExperience() {
 					<GenerationStatusPanel
 						generationState={generationState}
 						onReset={handleResetGeneration}
-						onSave={handleSave}
+						onSave={() => handleSave(dispatch)}
 						isSaving={isSaving}
 					/>
 				</CardContent>
