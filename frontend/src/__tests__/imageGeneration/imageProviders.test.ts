@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { FakeImageProvider } from "@/lib/monsterGeneration/imageGeneration/fakeProviderType";
-import { OpenAIImageProvider } from "@/lib/monsterGeneration/imageGeneration/openAI_Provider";
+import { FakeImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/fakeProviderType";
+import { OpenAIImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/openAI_Provider";
 
 // ---------------------------------------------------------------------------
 // FakeImageProvider
@@ -84,7 +84,7 @@ describe("getImageProvider", () => {
 	it("returns FakeImageProvider when IMAGE_GENERATION_MODE=fake", async () => {
 		process.env.IMAGE_GENERATION_MODE = "fake";
 		const { getImageProvider } =
-			await import("@/lib/monsterGeneration/imageGeneration/providers");
+			await import("@/lib/monsterGeneration/imageGeneration/providers/providers");
 		const provider = getImageProvider();
 		// The factory should hand back a FakeImageProvider whose generate() succeeds
 		const result = await provider.generate("test prompt");
@@ -94,7 +94,7 @@ describe("getImageProvider", () => {
 	it("returns OpenAIImageProvider when IMAGE_GENERATION_MODE=real", async () => {
 		process.env.IMAGE_GENERATION_MODE = "real";
 		const { getImageProvider } =
-			await import("@/lib/monsterGeneration/imageGeneration/providers");
+			await import("@/lib/monsterGeneration/imageGeneration/providers/providers");
 		const provider = getImageProvider();
 		// Shell returns failed — confirms we got the OpenAI provider, not the fake
 		const result = await provider.generate("test prompt");
@@ -104,14 +104,14 @@ describe("getImageProvider", () => {
 	it("throws when IMAGE_GENERATION_MODE is unrecognised", async () => {
 		process.env.IMAGE_GENERATION_MODE = "banana";
 		const { getImageProvider } =
-			await import("@/lib/monsterGeneration/imageGeneration/providers");
+			await import("@/lib/monsterGeneration/imageGeneration/providers/providers");
 		expect(() => getImageProvider()).toThrow();
 	});
 
 	it("throws when IMAGE_GENERATION_MODE is absent", async () => {
 		delete process.env.IMAGE_GENERATION_MODE;
 		const { getImageProvider } =
-			await import("@/lib/monsterGeneration/imageGeneration/providers");
+			await import("@/lib/monsterGeneration/imageGeneration/providers/providers");
 		expect(() => getImageProvider()).toThrow("Missing IMAGE_GENERATION_MODE");
 	});
 });
