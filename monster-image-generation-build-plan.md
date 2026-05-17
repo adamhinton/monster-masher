@@ -3728,25 +3728,24 @@ Add real image provider behind the existing provider interface.
 
 #### Step 18a Install Provider SDK If Needed
 
-- [] Check if the OpenAI SDK is already installed in `frontend/package.json`.
+- [] Check if the vercel AI sdk (just called `ai`) is already installed in `frontend/package.json`.
 - [] If not, run `npm install openai` (or equivalent).
-- [] Import the SDK only inside `openAI_Provider.ts` — do not let it leak into shared modules.
+- [] Import the SDK only inside `vercelaigatewayimageprovider` — do not let it leak into shared modules.
 
 #### Step 18b Implement VercelAIGatewayImageProvider Behind Interface
 
-- [] Implement `generate(prompt: string): Promise<ImageProviderResult>` in `openAI_Provider.ts`.
-- [] Use the Images API (or DALL-E endpoint).
+- [] Implement `generate(prompt: string): Promise<ImageProviderResult>` in `vercelAIGatewayImageProvider.ts`.
 - [] Use the server-side constants for model, size, and quality from Step B1d.
 - [] Decode image bytes safely from the API response (base64 or URL download).
 - [] Return `{ outcome: 'success', imageBytes, mimeType }` on success.
 
 #### Step 18c Add Timeout And Abort Behavior
 
-- [] Set a reasonable timeout on the provider request (e.g. 60 seconds).
+- [] Set a reasonable timeout on the provider request (e.g. 90 seconds).
 - [] Use an `AbortController` or the SDK's built-in timeout option.
 - [] On timeout, return `{ outcome: 'failed', safeErrorMessage: 'Generation timed out.' }`.
 
-#### Step 18d Normalize OpenAI Errors Into Typed Provider Results
+#### Step 18d Normalize vercel AI sdk Errors Into Typed Provider Results
 
 - [] Catch API errors and map them to `{ outcome: 'failed', safeErrorMessage }`.
 - [] Do not expose raw OpenAI error messages to the client.
