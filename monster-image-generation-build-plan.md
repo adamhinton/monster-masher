@@ -3030,7 +3030,10 @@ Keep provider code injectable and testable.
 #### Step B2d Normalize Provider Output And Errors
 
 - [x] Confirm the `ImageProviderResult` union covers all cases the route needs to handle.
-- [x] Add a `getImageProvider()` factory function in `providers.ts` that returns `FakeImageProvider` or `VercelAIGatewayImageProvider` based on `IMAGE_GENERATION_MODE`.
+      <<<<<<< HEAD
+- [x] # Add a `getImageProvider()` factory function in `providers.ts` that returns `FakeImageProvider` or `VercelAIGatewayImageProvider` based on `IMAGE_GENERATION_MODE`.
+- [x] Add a `getImageProvider()` factory function in `providers.ts` that returns `FakeImageProvider` or `OpenAIImageProvider` based on `IMAGE_GENERATION_MODE`.
+  > > > > > > > 5f9317d1c133442ad8fc4a468cb14a287648ac68
 - [x] Import only through the factory — do not import providers directly in the route handler.
 
 Provider result should broadly distinguish:
@@ -3068,8 +3071,13 @@ Prepare for free moderation call before real generation while keeping tests offl
 
 #### Step B3a Define ModerationProvider Interface
 
+<<<<<<< HEAD
+
 - [x] Create `frontend/src/lib/imageGeneration/moderation/moderation.ts`.
-- [x] Define `ModerationResult` discriminated union:
+- [x] # Define `ModerationResult` discriminated union:
+- [] Create `frontend/src/lib/imageGeneration/moderation.ts`.
+- [] Define `ModerationResult` discriminated union:
+  > > > > > > > 5f9317d1c133442ad8fc4a468cb14a287648ac68
   - `{ outcome: 'allowed' }`
   - `{ outcome: 'blocked', safeReason: string }`
   - `{ outcome: 'failed', safeErrorMessage: string }`
@@ -3127,8 +3135,13 @@ Upload generated images from server-side code while keeping tests fake.
 
 #### Step B4a Define ImageStorage Interface
 
+<<<<<<< HEAD
+
 - [x] Create `frontend/src/lib/imageGeneration/storage/storage.ts`.
-- [x] Define `ImageStorageResult` discriminated union:
+- [x] # Define `ImageStorageResult` discriminated union:
+- [] Create `frontend/src/lib/imageGeneration/storage.ts`.
+- [] Define `ImageStorageResult` discriminated union:
+  > > > > > > > 5f9317d1c133442ad8fc4a468cb14a287648ac68
   - `{ outcome: 'success', public_image_url: string, image_storage_path: string }`
   - `{ outcome: 'failed', safeErrorMessage: string }`
 - [x] Define `ImageStorage` interface with `upload(imageBytes: Buffer, options: UploadOptions): Promise<ImageStorageResult>`.
@@ -3205,10 +3218,17 @@ POST /api/monsters/[monsterID]/generate-image
 
 #### Step B5b Add Zod Request Schema And Validation
 
+<<<<<<< HEAD
+
 - Get monster form request schema; I think what we need is in monsterFormSchema.ts
 - Validate it again on the server side, even if we have client-side validation, to ensure the contract is enforced and to prevent bad data from reaching the backend.
 - [x] In the route handler, parse `await request.json()` with the schema.
-- [x] Return a typed 400 error if validation fails — use the project's standard error shape.
+- [x] # Return a typed 400 error if validation fails — use the project's standard error shape.
+- [] Create `frontend/src/lib/imageGeneration/routeSchemas.ts`.
+- [] Define `generateMonsterRequestSchema` matching the form fields from Step A2a.
+- [] In the route handler, parse `await request.json()` with the schema.
+- [] Return a typed 400 error if validation fails — use the project's standard error shape.
+  > > > > > > > 5f9317d1c133442ad8fc4a468cb14a287648ac68
 
 #### Step B5c Extract And Verify User Session Server-Side
 
@@ -3217,6 +3237,8 @@ POST /api/monsters/[monsterID]/generate-image
 - [x] If anonymous generation is allowed in fake mode, note that explicitly and add a comment.
 
 #### Step B5d Wire Full Orchestration Flow
+
+<<<<<<< HEAD
 
 - NOTE the Monster should already exist. If it doesn't exist, go back through our flow and make sure it exists before this step.
 - [x] Call Django `POST /api/imageGeneration-jobs/` to create a job (QUEUED).
@@ -3237,7 +3259,20 @@ More principles:
 - [x] Do not rely on the browser staying open after the request starts.
 - [x] Django job status and MonsterImage records are the source of truth.
 - [x] If the user closes the tab before receiving the response, the completed image should still be discoverable. It should be attached to the Monster in the db; make sure that happens.
-- [x] If the client never receives the final response, the successful job can still be recovered from Django state.
+- [x] # If the client never receives the final response, the successful job can still be recovered from Django state.
+- [] Call Django `POST /api/imageGeneration-jobs/` to create a job (QUEUED).
+- [] Call Django mark-running endpoint (or transition in a combined create+run endpoint).
+- [] Run the banned-term guard from Step B3c.
+- [] Call `getModerationProvider().moderate(prompt)`.
+- [] If blocked: call Django mark-blocked endpoint; return blocked response.
+- [] Call `getImageProvider().generate(prompt)`.
+- [] If provider failed: call Django mark-failed endpoint; return failed response.
+- [] Call `getImageStorage().upload(imageBytes, options)`.
+- [] If storage failed: call Django mark-failed endpoint; return failed response.
+- [] Call Django to create `MonsterImage` and `Monster` (or use a combined endpoint).
+- [] Call Django mark-succeeded endpoint.
+- [] Return validated, normalized response. We have a zod schema for this
+  > > > > > > > 5f9317d1c133442ad8fc4a468cb14a287648ac68
 
 #### Step B5e Add Normalized Error Response Shapes
 
@@ -3310,12 +3345,21 @@ Do not rush this if auth/trust boundaries are unclear.
 
 #### Step B6b Add Or Refine Job Transition Endpoints
 
+<<<<<<< HEAD
+
 - [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-running/`.
 - [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-succeeded/`.
 - [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-failed/`.
 - [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-blocked/`.
 - [x] Each endpoint calls the corresponding service function from Step 3.
-- [x] Each endpoint regenerates the full job serializer response.
+- [x] # Each endpoint regenerates the full job serializer response.
+- [] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-running/`.
+- [] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-succeeded/`.
+- [] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-failed/`.
+- [] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-blocked/`.
+- [] Each endpoint calls the corresponding service function from Step 3.
+- [] Each endpoint regenerates the full job serializer response.
+  > > > > > > > 5f9317d1c133442ad8fc4a468cb14a287648ac68
 
 #### Step B6c Add Auth And Server Secret Checks
 

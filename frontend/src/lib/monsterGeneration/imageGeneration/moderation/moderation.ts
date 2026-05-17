@@ -33,7 +33,7 @@ export type ModerationResult =
  * Route handlers depend ONLY on this interface, never on a concrete class.
  * Implementations:
  *   - `FakeModerationProvider`   → tests and IMAGE_GENERATION_MODE=fake
- *   - `OpenAIModerationProvider` → production with IMAGE_GENERATION_MODE=real
+ *   - `VercelAIGatewayImageProvider` → production with IMAGE_GENERATION_MODE=real
  *
  * Always obtain instances via `getModerationProvider()` rather than importing
  * concrete classes directly in route handlers.
