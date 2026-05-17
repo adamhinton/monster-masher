@@ -3,7 +3,7 @@ import "server-only";
 import { env } from "@/lib/env/env";
 import type { ImageProvider } from "./providersType";
 import { FakeImageProvider } from "./fakeProviderType";
-import { OpenAIImageProvider } from "./openAI_Provider";
+import { VercelAIGatewayImageProvider } from "./vercelAIGatewayImageProvider";
 
 /**
  * Returns the correct ImageProvider for the current IMAGE_GENERATION_MODE.
@@ -12,7 +12,7 @@ import { OpenAIImageProvider } from "./openAI_Provider";
  *     No real API calls. Safe for development, CI, and all test environments.
  *     Does not require an OpenAI API key.
  *
- *   IMAGE_GENERATION_MODE=real → OpenAIImageProvider
+ *   IMAGE_GENERATION_MODE=real → VercelAIGatewayImageProvider
  *     Live API calls via the OpenAI Images API. Costs money. Requires
  *     OPENAI_API_KEY to be set in the server environment.
  *
@@ -28,5 +28,5 @@ export function getImageProvider(): ImageProvider {
 		return new FakeImageProvider();
 	}
 
-	return new OpenAIImageProvider();
+	return new VercelAIGatewayImageProvider();
 }

@@ -488,8 +488,9 @@ export async function POST(
 			monster_image_id: monsterImageId,
 			public_image_url: storageResult.public_image_url,
 			image_storage_path: storageResult.image_storage_path,
-			provider: generationMode === "real" ? "openai" : "fake",
-			provider_model: generationMode === "real" ? "dall-e-3" : "fake",
+			provider: generationMode === "real" ? "vercel-ai-gateway" : "fake",
+			provider_model:
+				generationMode === "real" ? env.vercelAIImageModel : "fake",
 		},
 	);
 

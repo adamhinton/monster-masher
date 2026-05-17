@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { FakeImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/fakeProviderType";
-import { OpenAIImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/openAI_Provider";
+import { VercelAIGatewayImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/vercelAIGatewayImageProvider";
 
 // ---------------------------------------------------------------------------
 // FakeImageProvider
@@ -48,15 +48,15 @@ describe("FakeImageProvider", () => {
 });
 
 // ---------------------------------------------------------------------------
-// OpenAIImageProvider (shell — not yet implemented - TODO write more tests when relevant)
+// VercelAIGatewayImageProvider (shell — not yet implemented - TODO write more tests when relevant)
 // ---------------------------------------------------------------------------
 
-describe("OpenAIImageProvider", () => {
+describe("VercelAIGatewayImageProvider", () => {
 	it("returns a failed result because the real implementation is not yet wired in", async () => {
 		// This test documents the intentional behaviour of the Phase 4 shell.
 		// When Phase 4 Step 18 is complete, this test should be replaced by real
 		// integration / mock tests for the OpenAI API call.
-		const provider = new OpenAIImageProvider();
+		const provider = new VercelAIGatewayImageProvider();
 		const result = await provider.generate("a cute fire salamander");
 
 		expect(result.outcome).toBe("failed");
@@ -91,7 +91,7 @@ describe("getImageProvider", () => {
 		expect(result.outcome).toBe("success");
 	});
 
-	it("returns OpenAIImageProvider when IMAGE_GENERATION_MODE=real", async () => {
+	it("returns VercelAIGatewayImageProvider when IMAGE_GENERATION_MODE=real", async () => {
 		process.env.IMAGE_GENERATION_MODE = "real";
 		const { getImageProvider } =
 			await import("@/lib/monsterGeneration/imageGeneration/providers/providers");

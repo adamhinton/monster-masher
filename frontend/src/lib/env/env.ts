@@ -54,10 +54,22 @@ export const env = {
 		}
 		return value;
 	},
-	get openAIApiKey() {
-		return assertDefined(process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
+	get vercelAIGatewayAPIKey() {
+		// Vercel SDK requires this be called as such
+		const value = assertDefined(
+			process.env.AI_GATEWAY_API_KEY,
+			"AI_GATEWAY_API_KEY",
+		);
+		if (value.startsWith("sk-")) {
+			throw new Error(
+				"Invalid AI_GATEWAY_API_KEY: looks like an OpenAI key. Make sure to set AI_GATEWAY_API_KEY to your Vercel API Gateway key, not your OpenAI key.",
+			);
+		}
+		return value;
 	},
-
+	get vercelAIImageModel() {
+		return assertDefined(process.env.AI_IMAGE_MODEL, "AI_IMAGE_MODEL");
+	},
 	get supabaseStorageBucket() {
 		return assertDefined(
 			process.env.SUPABASE_STORAGE_BUCKET,

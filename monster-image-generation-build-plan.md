@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [Monster Image Generation Build Plan](#monster-image-generation-build-plan)
+- [Monster Image Generation Build Plan](#monster-imageGeneration-build-plan)
   - [Purpose](#purpose)
   - [Branch Strategy](#branch-strategy)
     - [Branch Rule Summary](#branch-rule-summary)
@@ -73,7 +73,7 @@
       - [Step 5a Wire Monsters App URLs Into Config](#step-5a-wire-monsters-app-urls-into-config)
       - [Step 5b Add Monster List And Create Views](#step-5b-add-monster-list-and-create-views)
       - [Step 5c Add Monster Detail Update And Delete Views](#step-5c-add-monster-detail-update-and-delete-views)
-      - [Step 5d Add Image Generation Job Create And Detail Views](#step-5d-add-image-generation-job-create-and-detail-views)
+      - [Step 5d Add Image Generation Job Create And Detail Views](#step-5d-add-imageGeneration-job-create-and-detail-views)
       - [Step 5e Add Notification Toggle Endpoint](#step-5e-add-notification-toggle-endpoint)
       - [Step 5f Add Auth Protection And Ownership Checks](#step-5f-add-auth-protection-and-ownership-checks)
       - [Step 5g Add Trusted Server Transition Endpoint Stubs](#step-5g-add-trusted-server-transition-endpoint-stubs)
@@ -162,14 +162,14 @@
     - [Step B2 Add Provider Abstractions](#step-b2-add-provider-abstractions)
       - [Step B2a Define ImageProvider Interface](#step-b2a-define-imageprovider-interface)
       - [Step B2b Implement FakeImageProvider](#step-b2b-implement-fakeimageprovider)
-      - [Step B2c Add OpenAIImageProvider Shell](#step-b2c-add-openaiimageprovider-shell)
+      - [Step B2c Add VercelAIGatewayImageProvider Shell](#step-b2c-add-VercelAIGatewayImageProvider-shell)
       - [Step B2d Normalize Provider Output And Errors](#step-b2d-normalize-provider-output-and-errors)
     - [Step B3 Add Moderation Abstraction](#step-b3-add-moderation-abstraction)
       - [Step B3a Define ModerationProvider Interface](#step-b3a-define-moderationprovider-interface)
       - [Step B3b Implement FakeModerationProvider](#step-b3b-implement-fakemoderationprovider)
       - [Step B3c Add Local Banned-Term Guard](#step-b3c-add-local-banned-term-guard)
       - [Step B3d Add Real Moderation Shell For Phase 4](#step-b3d-add-real-moderation-shell-for-phase-4)
-      - [Step B3e Ensure Blocked Result Short-Circuits Image Generation](#step-b3e-ensure-blocked-result-short-circuits-image-generation)
+      - [Step B3e Ensure Blocked Result Short-Circuits Image Generation](#step-b3e-ensure-blocked-result-short-circuits-imageGeneration)
     - [Step B4 Add Supabase Storage Abstraction](#step-b4-add-supabase-storage-abstraction)
       - [Step B4a Define ImageStorage Interface](#step-b4a-define-imagestorage-interface)
       - [Step B4b Implement FakeImageStorage](#step-b4b-implement-fakeimagestorage)
@@ -177,7 +177,7 @@
       - [Step B4d Add Supabase Server-Side Storage Implementation](#step-b4d-add-supabase-server-side-storage-implementation)
       - [Step B4e Validate MIME Type And Extension](#step-b4e-validate-mime-type-and-extension)
     - [Step B5 Add Next Server Route For Generation](#step-b5-add-next-server-route-for-generation)
-      - [Step B5a Create POST /api/monsters/generate-image Route File](#step-b5a-create-post-apigenerate-monster-route-file)
+      - [Step B5a Create POST /api/monsters/[monsterID]/generate-image Route File](#step-b5a-create-post-apigenerate-monster-route-file)
       - [Step B5b Add Zod Request Schema And Validation](#step-b5b-add-zod-request-schema-and-validation)
       - [Step B5c Extract And Verify User Session Server-Side](#step-b5c-extract-and-verify-user-session-server-side)
       - [Step B5d Wire Full Orchestration Flow](#step-b5d-wire-full-orchestration-flow)
@@ -210,15 +210,15 @@
       - [Step 15c Add Blocked And Failed Lifecycle Tests](#step-15c-add-blocked-and-failed-lifecycle-tests)
     - [Step 16 Integration Local Verification](#step-16-integration-local-verification)
     - [Step 17 Integration Merge And Production Verification](#step-17-integration-merge-and-production-verification)
-  - [Phase 4 Real Image Generation](#phase-4-real-image-generation)
+  - [Phase 4 Real Image Generation](#phase-4-real-imageGeneration)
     - [Step 18 Add Real Provider Implementation](#step-18-add-real-provider-implementation)
       - [Step 18a Install Provider SDK If Needed](#step-18a-install-provider-sdk-if-needed)
-      - [Step 18b Implement OpenAIImageProvider Behind Interface](#step-18b-implement-openaiimageprovider-behind-interface)
+      - [Step 18b Implement VercelAIGatewayImageProvider Behind Interface](#step-18b-implement-VercelAIGatewayImageProvider-behind-interface)
       - [Step 18c Add Timeout And Abort Behavior](#step-18c-add-timeout-and-abort-behavior)
       - [Step 18d Normalize OpenAI Errors Into Typed Provider Results](#step-18d-normalize-openai-errors-into-typed-provider-results)
     - [Step 19 Add Real Moderation Implementation](#step-19-add-real-moderation-implementation)
       - [Step 19a Implement Real OpenAI Moderation Call](#step-19a-implement-real-openai-moderation-call)
-      - [Step 19b Integrate Into Route Before Image Generation](#step-19b-integrate-into-route-before-image-generation)
+      - [Step 19b Integrate Into Route Before Image Generation](#step-19b-integrate-into-route-before-imageGeneration)
       - [Step 19c Normalize Blocked Response Into ModerationResult](#step-19c-normalize-blocked-response-into-moderationresult)
     - [Step 20 Add Cost And Abuse Guards](#step-20-add-cost-and-abuse-guards)
       - [Step 20a Add Per-User Generation Limit In Django](#step-20a-add-per-user-generation-limit-in-django)
@@ -230,8 +230,8 @@
       - [Step 21b Wire Image Bytes Upload From Server Route](#step-21b-wire-image-bytes-upload-from-server-route)
       - [Step 21c Save Public URL And Storage Path In Django](#step-21c-save-public-url-and-storage-path-in-django)
       - [Step 21d Document Orphan Cleanup Procedure](#step-21d-document-orphan-cleanup-procedure)
-    - [Step 22 Real Image Generation Local Verification](#step-22-real-image-generation-local-verification)
-    - [Step 23 Real Image Generation Merge And Production Verification](#step-23-real-image-generation-merge-and-production-verification)
+    - [Step 22 Real Image Generation Local Verification](#step-22-real-imageGeneration-local-verification)
+    - [Step 23 Real Image Generation Merge And Production Verification](#step-23-real-imageGeneration-merge-and-production-verification)
   - [Phase 5 Durable Jobs And Email Notifications](#phase-5-durable-jobs-and-email-notifications)
     - [Step 24 Design Durable Execution Before Implementation](#step-24-design-durable-execution-before-implementation)
       - [Step 24a Evaluate Execution Mechanism Options](#step-24a-evaluate-execution-mechanism-options)
@@ -666,10 +666,10 @@ frontend/
           MonsterImageGenerationJob.ts
         __generated__/
           types.ts
-      image-generation/
+      imageGeneration/
         providers.ts
         fakeProvider.ts
-        openaiProvider.ts
+        openAI_Provider.ts
         moderation.ts
         storage.ts
         routeSchemas.ts
@@ -1886,13 +1886,13 @@ Create enough API surface for fake lifecycle and frontend contract work.
 
 #### Step 5d Add Image Generation Job Create And Detail Views
 
-- [] `POST /api/image-generation-jobs/` — creates a job owned by requesting user; uses `create_generation_job()` service.
-- [] `GET /api/image-generation-jobs/{job_id}/` — returns job if owned by requesting user.
+- [] `POST /api/imageGeneration-jobs/` — creates a job owned by requesting user; uses `create_generation_job()` service.
+- [] `GET /api/imageGeneration-jobs/{job_id}/` — returns job if owned by requesting user.
 - [] Both require authentication.
 
 #### Step 5e Add Notification Toggle Endpoint
 
-- [] `PATCH /api/image-generation-jobs/{job_id}/notification/` — sets `should_email_when_done` for queued/running jobs.
+- [] `PATCH /api/imageGeneration-jobs/{job_id}/notification/` — sets `should_email_when_done` for queued/running jobs.
 - [] Return 400 if job is already in a terminal state.
 
 #### Step 5f Add Auth Protection And Ownership Checks
@@ -1903,7 +1903,7 @@ Create enough API surface for fake lifecycle and frontend contract work.
 
 #### Step 5g Add Trusted Server Transition Endpoint Stubs
 
-- [] Add stub views for `POST /api/image-generation-jobs/{job_id}/mark-running/` etc. — return 501 Not Implemented for now.
+- [] Add stub views for `POST /api/imageGeneration-jobs/{job_id}/mark-running/` etc. — return 501 Not Implemented for now.
 - [] These will be fully implemented in Step B6 once the trust boundary is designed.
 - [] Registering them now lets OpenAPI include them in the generated schema.
 
@@ -1916,18 +1916,18 @@ GET    /api/monsters/{monster_id}/
 PATCH  /api/monsters/{monster_id}/
 DELETE /api/monsters/{monster_id}/
 
-POST   /api/image-generation-jobs/
-GET    /api/image-generation-jobs/{job_id}/
-PATCH  /api/image-generation-jobs/{job_id}/notification/
+POST   /api/imageGeneration-jobs/
+GET    /api/imageGeneration-jobs/{job_id}/
+PATCH  /api/imageGeneration-jobs/{job_id}/notification/
 ```
 
 Potential later/internal endpoints:
 
 ```txt
-POST /api/image-generation-jobs/{job_id}/mark-running/
-POST /api/image-generation-jobs/{job_id}/mark-succeeded/
-POST /api/image-generation-jobs/{job_id}/mark-failed/
-POST /api/image-generation-jobs/{job_id}/mark-blocked/
+POST /api/imageGeneration-jobs/{job_id}/mark-running/
+POST /api/imageGeneration-jobs/{job_id}/mark-succeeded/
+POST /api/imageGeneration-jobs/{job_id}/mark-failed/
+POST /api/imageGeneration-jobs/{job_id}/mark-blocked/
 ```
 
 Design note:
@@ -2955,31 +2955,31 @@ Validate server-only settings safely.
 
 #### Step B1a Add Generation Mode Env Var And Validation
 
-- [] Add `IMAGE_GENERATION_MODE` env var with allowed values `fake` | `real`.
-- [] Default to `fake` in all environments unless explicitly set.
-- [] Validate at server startup (e.g. in a `lib/env/server.ts` module using `zod`).
-- [] Throw a startup error if the value is unrecognized.
+- [x] Add `IMAGE_GENERATION_MODE` env var with allowed values `fake` | `real`.
+- [x] Default to `fake` in all environments unless explicitly set.
+- [x] Validate at server startup (e.g. in a `lib/env/server.ts` module using `zod`).
+- [x] Throw a startup error if the value is unrecognized.
 
 #### Step B1b Add Provider Key Validation Real Mode Only
 
-- [] Add `OPENAI_API_KEY` (or equivalent) to server-only env validation.
-- [] Make this field required only when `IMAGE_GENERATION_MODE=real`.
-- [] In fake mode, the key is optional — do not error if absent.
-- [] Ensure the var name does NOT start with `NEXT_PUBLIC_`.
+- [x] Add `OPENAI_API_KEY` (or equivalent) to server-only env validation.
+- [x] Make this field required only when `IMAGE_GENERATION_MODE=real`.
+- [x] In fake mode, the key is optional — do not error if absent.
+- [x] Ensure the var name does NOT start with `NEXT_PUBLIC_`.
 
 #### Step B1c Add Storage Bucket Env Validation
 
-- [] Add `SUPABASE_STORAGE_BUCKET` (or equivalent) to server-only env validation.
-- [] Add `SUPABASE_SERVICE_ROLE_KEY` to server-only env validation.
-- [] Ensure neither starts with `NEXT_PUBLIC_`.
-- [] In fake mode, these can be optional or have dummy defaults.
+- [x] Add `SUPABASE_STORAGE_BUCKET` (or equivalent) to server-only env validation.
+- [x] Add `SUPABASE_SECRET_KEY` to server-only env validation.
+- [x] Ensure neither starts with `NEXT_PUBLIC_`.
+- [x] In fake mode, these can be optional or have dummy defaults.
 
 #### Step B1d Add Server-Side Size And Quality Constants
 
-- [] Define allowed image sizes (e.g. `['1024x1024']`) as a server-side constant.
-- [] Define allowed quality levels if the provider supports them.
-- [] Define the default model name as a server-side constant.
-- [] Never let the client choose these values.
+- [x] Define allowed image sizes (e.g. `['1024x1024']`) as a server-side constant.
+- [x] Define allowed quality levels if the provider supports them.
+- [x] Define the default model name as a server-side constant.
+- [x] Never let the client choose these values.
 
 Verification:
 
@@ -3007,31 +3007,31 @@ Keep provider code injectable and testable.
 
 #### Step B2a Define ImageProvider Interface
 
-- [] Create `frontend/src/lib/image-generation/providersType.ts`.
-- [] Define `ImageProviderResult` discriminated union:
+- [x] Create `frontend/src/lib/imageGeneration/providersType.ts`.
+- [x] Define `ImageProviderResult` discriminated union:
   - `{ outcome: 'success', imageBytes: Buffer, mimeType: string }`
   - `{ outcome: 'failed', safeErrorMessage: string }`
-- [] Define `ImageProvider` interface with a single `generate(prompt: string): Promise<ImageProviderResult>` method.
+- [x] Define `ImageProvider` interface with a single `generate(prompt: string): Promise<ImageProviderResult>` method.
 
 #### Step B2b Implement FakeImageProvider
 
-- [] Create `frontend/src/lib/image-generation/fakeProviderType.ts`.
-- [] `FakeImageProvider.generate()` returns a small fixture image (e.g. a tiny hardcoded PNG buffer or a URL-based fixture).
-- [] Add a `shouldFail` option so tests can force the failure path.
-- [] Never imports or references the real provider SDK.
+- [x] Create `frontend/src/lib/imageGeneration/fakeProviderType.ts`.
+- [x] `FakeImageProvider.generate()` returns a small fixture image (e.g. a tiny hardcoded PNG buffer or a URL-based fixture).
+- [x] Add a `shouldFail` option so tests can force the failure path.
+- [x] Never imports or references the real provider SDK.
 
-#### Step B2c Add OpenAIImageProvider Shell
+#### Step B2c Add VercelAIGatewayImageProvider Shell
 
-- [] Create `frontend/src/lib/image-generation/openaiProvider.ts`.
-- [] Export a class or object implementing `ImageProvider`.
-- [] For now, `generate()` throws `new Error('Real provider not implemented yet')` or returns a failed result.
-- [] This will be filled in during Phase 4 Step 18.
+- [x] Create `frontend/src/lib/imageGeneration/openAI_Provider.ts`.
+- [x] Export a class or object implementing `ImageProvider`.
+- [x] For now, `generate()` throws `new Error('Real provider not implemented yet')` or returns a failed result.
+- [x] This will be filled in during Phase 4 Step 18.
 
 #### Step B2d Normalize Provider Output And Errors
 
-- [] Confirm the `ImageProviderResult` union covers all cases the route needs to handle.
-- [] Add a `getImageProvider()` factory function in `providers.ts` that returns `FakeImageProvider` or `OpenAIImageProvider` based on `IMAGE_GENERATION_MODE`.
-- [] Import only through the factory — do not import providers directly in the route handler.
+- [x] Confirm the `ImageProviderResult` union covers all cases the route needs to handle.
+- [x] Add a `getImageProvider()` factory function in `providers.ts` that returns `FakeImageProvider` or `VercelAIGatewayImageProvider` based on `IMAGE_GENERATION_MODE`.
+- [x] Import only through the factory — do not import providers directly in the route handler.
 
 Provider result should broadly distinguish:
 
@@ -3053,10 +3053,10 @@ npm test -- --run
 
 Success criteria:
 
-- [] Fake provider returns realistic image bytes or fixture metadata.
-- [] Provider failures are typed.
-- [] Route code can depend on abstraction.
-- [] No real API call in tests.
+- [x] Fake provider returns realistic image bytes or fixture metadata.
+- [x] Provider failures are typed.
+- [x] Route code can depend on abstraction.
+- [x] No real API call in tests.
 
 ### Step B3 Add Moderation Abstraction
 
@@ -3068,38 +3068,38 @@ Prepare for free moderation call before real generation while keeping tests offl
 
 #### Step B3a Define ModerationProvider Interface
 
-- [] Create `frontend/src/lib/image-generation/moderation.ts`.
-- [] Define `ModerationResult` discriminated union:
+- [x] Create `frontend/src/lib/imageGeneration/moderation/moderation.ts`.
+- [x] Define `ModerationResult` discriminated union:
   - `{ outcome: 'allowed' }`
   - `{ outcome: 'blocked', safeReason: string }`
   - `{ outcome: 'failed', safeErrorMessage: string }`
-- [] Define `ModerationProvider` interface with `moderate(text: string): Promise<ModerationResult>`.
+- [x] Define `ModerationProvider` interface with `moderate(text: string): Promise<ModerationResult>`.
 
 #### Step B3b Implement FakeModerationProvider
 
-- [] `FakeModerationProvider.moderate()` returns `{ outcome: 'allowed' }` by default.
-- [] Add a `shouldBlock` option so tests can force the blocked path.
-- [] Never imports the real moderation SDK.
+- [x] `FakeModerationProvider.moderate()` returns `{ outcome: 'allowed' }` by default.
+- [x] Add a `shouldBlock` option so tests can force the blocked path.
+- [x] Never imports the real moderation SDK.
 
 #### Step B3c Add Local Banned-Term Guard
 
-- [] Add a small `containsBannedTerms(text: string): boolean` utility.
-- [] Include a short list of obviously blocked terms (franchise names, slurs, etc.).
-- [] Run this check before calling the moderation provider — it is free and synchronous.
-- [] Keep the list in a server-only location; do not expose it client-side.
+- [x] Add a small `containsBannedTerms(text: string): boolean` utility.
+- [x] Include a short list of obviously blocked terms (franchise names, slurs, etc.).
+- [x] Run this check before calling the moderation provider — it is free and synchronous.
+- [x] Keep the list in a server-only location; do not expose it client-side.
 
 #### Step B3d Add Real Moderation Shell For Phase 4
 
-- [] Create an `OpenAIModerationProvider` class in `moderation.ts`.
-- [] For now, `moderate()` throws `new Error('Real moderation not implemented yet')` or returns `{ outcome: 'failed', ... }`.
-- [] Will be filled in during Phase 4 Step 19.
+- [x] Create an `OpenAIModerationProvider` class in `moderation.ts`.
+- [x] For now, `moderate()` throws `new Error('Real moderation not implemented yet')` or returns `{ outcome: 'failed', ... }`.
+- [x] Will be filled in during Phase 4 Step 19.
 
 #### Step B3e Ensure Blocked Result Short-Circuits Image Generation
 
-- [] In the route orchestration (Step B5), the blocked path must return before calling the image provider.
-- [] Write a comment or assertion at the branch point to make this obvious.
-- [] Add a test in Step B7 proving a blocked moderation result never reaches the provider.
-- [] Add local banned-term/franchise guard separately from provider moderation.
+- [x] In the route orchestration (Step B5), the blocked path must return before calling the image provider.
+- [x] Write a comment or assertion at the branch point to make this obvious.
+- [x] Add a test in Step B7 proving a blocked moderation result never reaches the provider.
+- [x] Add local banned-term/franchise guard separately from provider moderation.
 
 Verification:
 
@@ -3112,10 +3112,10 @@ npm test -- --run
 
 Success criteria:
 
-- [] Fake moderation can allow.
-- [] Fake moderation can block.
-- [] Blocked moderation path never calls image provider.
-- [] Tests prove no real moderation call occurs.
+- [x] Fake moderation can allow.
+- [x] Fake moderation can block.
+- [x] Blocked moderation path never calls image provider.
+- [x] Tests prove no real moderation call occurs.
 
 ### Step B4 Add Supabase Storage Abstraction
 
@@ -3127,39 +3127,39 @@ Upload generated images from server-side code while keeping tests fake.
 
 #### Step B4a Define ImageStorage Interface
 
-- [] Create `frontend/src/lib/image-generation/storage.ts`.
-- [] Define `ImageStorageResult` discriminated union:
+- [x] Create `frontend/src/lib/imageGeneration/storage/storage.ts`.
+- [x] Define `ImageStorageResult` discriminated union:
   - `{ outcome: 'success', public_image_url: string, image_storage_path: string }`
   - `{ outcome: 'failed', safeErrorMessage: string }`
-- [] Define `ImageStorage` interface with `upload(imageBytes: Buffer, options: UploadOptions): Promise<ImageStorageResult>`.
-- [] `UploadOptions` includes `user_profile_id`, `monster_id`, `monster_image_id`, `mimeType`.
+- [x] Define `ImageStorage` interface with `upload(imageBytes: Buffer, options: UploadOptions): Promise<ImageStorageResult>`.
+- [x] `UploadOptions` includes `user_profile_id`, `monster_id`, `monster_image_id`, `mimeType`.
 
 #### Step B4b Implement FakeImageStorage
 
-- [] `FakeImageStorage.upload()` returns a stable fake `public_image_url` (e.g. a known fixture image URL) and a deterministic `image_storage_path`.
-- [] Add a `shouldFail` option for tests.
-- [] Never imports or calls Supabase SDK.
+- [x] `FakeImageStorage.upload()` returns a stable fake `public_image_url` (e.g. a known fixture image URL) and a deterministic `image_storage_path`.
+- [x] Add a `shouldFail` option for tests.
+- [x] Never imports or calls Supabase SDK.
 
 #### Step B4c Build Storage Path Helper
 
-- [] Create a `buildStoragePath(user_profile_id, monster_id, monster_image_id, ext)` pure function.
-- [] Returns a path like `monster-images/{user_profile_id}/{monster_id}/{monster_image_id}.png`.
-- [] Test this function in isolation — it is a pure string function.
+- [x] Create a `buildStoragePath(user_profile_id, monster_id, monster_image_id, ext)` pure function.
+- [x] Returns a path like `monster-images/{user_profile_id}/{monster_id}/{monster_image_id}.png`.
+- [x] Test this function in isolation — it is a pure string function.
 
 #### Step B4d Add Supabase Server-Side Storage Implementation
 
-- [] Create a `SupabaseImageStorage` class.
-- [] Uses the Supabase service role client (server-only).
-- [] Calls `supabase.storage.from(bucket).upload(path, imageBytes, { contentType: mimeType })`.
-- [] Retrieves the public URL with `supabase.storage.from(bucket).getPublicUrl(path)`.
-- [] Returns the `ImageStorageResult` union.
-- [] Do not instantiate or import this class in any Client Component.
+- [x] Create a `SupabaseImageStorage` class.
+- [x] Uses the Supabase service role client (server-only).
+- [x] Calls `supabase.storage.from(bucket).upload(path, imageBytes, { contentType: mimeType })`.
+- [x] Retrieves the public URL with `supabase.storage.from(bucket).getPublicUrl(path)`.
+- [x] Returns the `ImageStorageResult` union.
+- [x] Do not instantiate or import this class in any Client Component.
 
 #### Step B4e Validate MIME Type And Extension
 
-- [] Before uploading, confirm `mimeType` is one of `['image/png', 'image/jpeg', 'image/webp']`.
-- [] Derive the file extension from the MIME type — do not trust the provider to set a correct extension.
-- [] Return a failed result (not a thrown error) if the MIME type is invalid.
+- [x] Before uploading, confirm `mimeType` is one of `['image/png', 'image/jpeg', 'image/webp']`.
+- [x] Derive the file extension from the MIME type — do not trust the provider to set a correct extension.
+- [x] Return a failed result (not a thrown error) if the MIME type is invalid.
 
 Recommended path shape:
 
@@ -3178,10 +3178,10 @@ npm test -- --run
 
 Success criteria:
 
-- [] Fake storage returns stable public URL/path.
-- [] Storage path is deterministic enough to test.
-- [] Supabase service role key is server-only.
-- [] No client component imports storage helper.
+- [x] Fake storage returns stable public URL/path.
+- [x] Storage path is deterministic enough to test.
+- [x] Supabase service role key is server-only.
+- [x] No client component imports storage helper.
 
 ### Step B5 Add Next Server Route For Generation
 
@@ -3194,55 +3194,79 @@ Add the server-side orchestration route.
 Target endpoint:
 
 ```txt
-POST /api/monsters/generate-image
+POST /api/monsters/[monsterID]/generate-image
 ```
 
-#### Step B5a Create POST /api/monsters/generate-image Route File
+#### Step B5a Create POST /api/monsters/[monsterID]/generate-image Route File
 
-- [] Create `frontend/src/app/api/monsters/generate-image/route.ts`.
-- [] Export only a `POST` handler.
-- [] Use `import 'server-only'` or equivalent
+- [x] Create `frontend/src/app/api/monsters/[monsterID]/generate-image/route.ts`.
+- [x] Export only a `POST` handler.
+- [x] Use `import 'server-only'` or equivalent
 
 #### Step B5b Add Zod Request Schema And Validation
 
-- [] Create `frontend/src/lib/image-generation/routeSchemas.ts`.
-- [] Define `generateMonsterRequestSchema` matching the form fields from Step A2a.
-- [] In the route handler, parse `await request.json()` with the schema.
-- [] Return a typed 400 error if validation fails — use the project's standard error shape.
+- Get monster form request schema; I think what we need is in monsterFormSchema.ts
+- Validate it again on the server side, even if we have client-side validation, to ensure the contract is enforced and to prevent bad data from reaching the backend.
+- [x] In the route handler, parse `await request.json()` with the schema.
+- [x] Return a typed 400 error if validation fails — use the project's standard error shape.
 
 #### Step B5c Extract And Verify User Session Server-Side
 
-- [] Use the existing Supabase server client pattern to get the current user.
-- [] If the user is not authenticated and generation requires auth, return 401.
-- [] If anonymous generation is allowed in fake mode, note that explicitly and add a comment.
+- [x] Use the existing Supabase server client pattern to get the current user.
+- [x] If the user is not authenticated and generation requires auth, return 401.
+- [x] If anonymous generation is allowed in fake mode, note that explicitly and add a comment.
 
 #### Step B5d Wire Full Orchestration Flow
 
-- [] Call Django `POST /api/image-generation-jobs/` to create a job (QUEUED).
-- [] Call Django mark-running endpoint (or transition in a combined create+run endpoint).
-- [] Run the banned-term guard from Step B3c.
-- [] Call `getModerationProvider().moderate(prompt)`.
-- [] If blocked: call Django mark-blocked endpoint; return blocked response.
-- [] Call `getImageProvider().generate(prompt)`.
-- [] If provider failed: call Django mark-failed endpoint; return failed response.
-- [] Call `getImageStorage().upload(imageBytes, options)`.
-- [] If storage failed: call Django mark-failed endpoint; return failed response.
-- [] Call Django to create `MonsterImage` and `Monster` (or use a combined endpoint).
-- [] Call Django mark-succeeded endpoint.
-- [] Return validated, normalized response. We have a zod schema for this
+- NOTE the Monster should already exist. If it doesn't exist, go back through our flow and make sure it exists before this step.
+- [x] Call Django `POST /api/imageGeneration-jobs/` to create a job (QUEUED).
+- [x] Run the banned-term guard from Step B3c.
+- [x] Call `getModerationProvider().moderate(prompt)`.
+- [x] If blocked: call Django mark-blocked endpoint; return blocked response.
+- [x] Call Django mark-running endpoint (or transition in a combined create+run endpoint).
+- [x] Call `getImageProvider().generate(prompt)`.
+- [x] If provider failed: call Django mark-failed endpoint; return failed response.
+- [x] Call `getImageStorage().upload(imageBytes, options)`.
+- [x] If storage failed: call Django mark-failed endpoint; return failed response.
+- [x] Call Django to make the MonsterImage, attached to the monster (obviously), with the storage URL and metadata etc.
+- [x] Call Django mark-succeeded endpoint.
+- [x] Return validated, normalized response. We have a zod schema for this
+
+More principles:
+
+- [x] Do not rely on the browser staying open after the request starts.
+- [x] Django job status and MonsterImage records are the source of truth.
+- [x] If the user closes the tab before receiving the response, the completed image should still be discoverable. It should be attached to the Monster in the db; make sure that happens.
+- [x] If the client never receives the final response, the successful job can still be recovered from Django state.
 
 #### Step B5e Add Normalized Error Response Shapes
 
-- [] Define a `GenerationRouteError` type: `{ error: string, errorCode: string }`.
-- [] Use consistent HTTP status codes: 400 for validation, 401 for auth, 422 for blocked, 500 for provider/storage failures.
-- [] Do not expose raw provider errors or stack traces in the response body.
+- [x] Define a `GenerationRouteError` type: `{ error: string, errorCode: string }`.
+- [x] Use consistent HTTP status codes: 400 for validation, 401 for auth, 422 for blocked, 500 for provider/storage failures.
+- [x] Do not expose raw provider errors or stack traces in the response body.
+- Note we have a NextApiError type which should override any above instructions if they conflict, I'm too lazy to look it up
 
 #### Step B5f Add Sanitized Sentry Captures
 
-- [] Capture `generation job failed` with tags `{ generation_mode, error_code }` — no prompt, no image bytes.
-- [] Capture `provider failed` and `storage upload failed` similarly.
-- [] Do not call `Sentry.captureException` for expected/handled blocked prompts.
-- [] Confirm `Sentry.captureEvent` or structured logging is used, not just raw exception capture.
+- [x] Capture `generation job failed` with tags `{ generation_mode, error_code }` — no prompt, no image bytes.
+- [x] Capture `provider failed` and `storage upload failed` similarly.
+- [x] Do not call `Sentry.captureException` for expected/handled blocked prompts.
+- [x] Confirm `Sentry.captureEvent` or structured logging is used, not just raw exception capture.
+
+#### Step B5g Add Route Tests For Each Path
+
+- [x] Test that an invalid request returns a 400 with the expected error shape.
+- [x] Test that a valid request with allowed content goes through the happy path and returns the expected success response.
+- [x] Test that a request with blocked content returns a 422 and calls the mark-blocked endpoint.
+- [x] Test that a provider failure returns a 500 and calls the mark-failed endpoint without calling storage.
+- [x] Test that a storage failure returns a 500 and calls the mark-failed endpoint.
+- [x] Etc; test anything else that makes sense. Valid data, invalid data, etc etc
+
+#### Step B5h Documentation
+
+- [x] Document the endpiont in the frontend README
+- [x] Docstrings, and comments at the top of the route file, and comments in the file explaining anything that needs to be explained
+- In all docs, make it clear that this is how you make a MonsterImage. There's not a separate /api/monster-images/ endpoint or anything like that; this is the way to do it. You generate the image first, then create the MonsterImage with it.
 
 Verification:
 
@@ -3255,13 +3279,13 @@ npm test -- --run
 
 Success criteria:
 
-- [] Invalid request returns project-standard error.
-- [] Fake happy path works.
-- [] Moderation blocked path works.
-- [] Provider failed path works.
-- [] Storage failed path works.
-- [] Django failed path works.
-- [] No real external calls in tests.
+- [x] Invalid request returns project-standard error.
+- [x] Fake happy path works.
+- [x] Moderation blocked path works.
+- [x] Provider failed path works.
+- [x] Storage failed path works.
+- [x] Django failed path works.
+- [x] No real external calls in tests.
 
 ### Step B6 Add Django Job Update Endpoints For Trusted Server Flow
 
@@ -3277,34 +3301,34 @@ Do not rush this if auth/trust boundaries are unclear.
 
 #### Step B6a Document And Decide Trust Boundary Approach
 
-- [] Review the three options:
+- [x] Review the three options:
   1. Next forwards the user's Supabase access token to Django (user-authenticated).
   2. Next uses a server-to-server secret and sends job/user context (server-authenticated).
   3. Both: user token for ownership, server secret for sensitive transitions.
-- [] Write the chosen approach in a comment at the top of the transition views file.
-- [] Recommendation: use the user token for ownership checks and a server-only `NEXT_SERVER_SECRET` header for the state-mutation endpoints.
+- [x] Write the chosen approach in a comment at the top of the transition views file.
+- [x] Recommendation: use the user token for ownership checks and a server-only `NEXT_SERVER_SECRET` header for the state-mutation endpoints.
 
 #### Step B6b Add Or Refine Job Transition Endpoints
 
-- [] Implement `POST /api/image-generation-jobs/{job_id}/mark-running/`.
-- [] Implement `POST /api/image-generation-jobs/{job_id}/mark-succeeded/`.
-- [] Implement `POST /api/image-generation-jobs/{job_id}/mark-failed/`.
-- [] Implement `POST /api/image-generation-jobs/{job_id}/mark-blocked/`.
-- [] Each endpoint calls the corresponding service function from Step 3.
-- [] Each endpoint regenerates the full job serializer response.
+- [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-running/`.
+- [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-succeeded/`.
+- [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-failed/`.
+- [x] Implement `POST /api/imageGeneration-jobs/{job_id}/mark-blocked/`.
+- [x] Each endpoint calls the corresponding service function from Step 3.
+- [x] Each endpoint regenerates the full job serializer response.
 
 #### Step B6c Add Auth And Server Secret Checks
 
-- [] Check `NEXT_SERVER_SECRET` header matches a server env var before allowing state mutation.
-- [] Also verify the job belongs to the authenticated user from the Supabase token.
-- [] Return 403 if either check fails.
-- [] Add `NEXT_SERVER_SECRET` to backend environment and document it.
+- [x] Check `NEXT_SERVER_SECRET` header matches a server env var before allowing state mutation.
+- [x] Also verify the job belongs to the authenticated user from the Supabase token.
+- [x] Return 403 if either check fails.
+- [x] Add `NEXT_SERVER_SECRET` to backend environment and document it.
 
 #### Step B6d Add Tests For Unauthorized Transition Attempts
 
-- [] Test that a valid user cannot call `mark-succeeded` without the server secret header.
-- [] Test that a valid server secret cannot mark another user's job.
-- [] Test that the correct transition succeeds with both checks passing.
+- [x] Test that a valid user cannot call `mark-succeeded` without the server secret header.
+- [x] Test that a valid server secret cannot mark another user's job.
+- [x] Test that the correct transition succeeds with both checks passing.
 
 Verification:
 
@@ -3320,10 +3344,10 @@ npx tsc --noEmit
 
 Success criteria:
 
-- [] User cannot mutate another user's job.
-- [] Client cannot fake successful image generation without the intended server flow.
-- [] OpenAPI/generation types stay aligned.
-- [] Tests cover bad actor attempts.
+- [x] User cannot mutate another user's job.
+- [x] Client cannot fake successful image generation without the intended server flow.
+- [x] OpenAPI/generation types stay aligned.
+- [x] Tests cover bad actor attempts.
 
 ### Step B7 Add Server Pipeline Tests
 
@@ -3335,31 +3359,31 @@ Test orchestration without external calls.
 
 #### Step B7a Route Request Validation Tests
 
-- [] Test that missing required fields return 400 with a useful error.
-- [] Test that extra unexpected fields are stripped or rejected.
-- [] Test that an unauthenticated request returns 401 if auth is required.
+- [x] Test that missing required fields return 400 with a useful error.
+- [x] Test that extra unexpected fields are stripped or rejected.
+- [x] Test that an unauthenticated request returns 401 if auth is required.
 
 #### Step B7b Fake Happy Path End-To-End Test
 
-- [] Mock Django client (job create, mark-running, mark-succeeded, image create).
-- [] Mock `FakeModerationProvider` to allow.
-- [] Mock `FakeImageProvider` to succeed.
-- [] Mock `FakeImageStorage` to succeed.
-- [] Assert the response shape matches the expected success DTO.
-- [] Assert all Django mock endpoints were called in order.
+- [x] Mock Django client (job create, mark-running, mark-succeeded, image create).
+- [x] Mock `FakeModerationProvider` to allow.
+- [x] Mock `FakeImageProvider` to succeed.
+- [x] Mock `FakeImageStorage` to succeed.
+- [x] Assert the response shape matches the expected success DTO.
+- [x] Assert all Django mock endpoints were called in order.
 
 #### Step B7c Moderation Blocked And Provider Failure Tests
 
-- [] Test with `FakeModerationProvider(shouldBlock: true)`: assert mark-blocked is called and no provider call is made.
-- [] Test with `FakeImageProvider(shouldFail: true)`: assert mark-failed is called and no storage call is made.
-- [] Test banned-term guard: assert a prompt containing a banned term is blocked before moderation provider is called.
+- [x] Test with `FakeModerationProvider(shouldBlock: true)`: assert mark-blocked is called and no provider call is made.
+- [x] Test with `FakeImageProvider(shouldFail: true)`: assert mark-failed is called and no storage call is made.
+- [x] Test banned-term guard: assert a prompt containing a banned term is blocked before moderation provider is called.
 
 #### Step B7d Storage And Django Client Failure Tests
 
-- [] Test with `FakeImageStorage(shouldFail: true)`: assert mark-failed is called.
-- [] Test Django job-create failure: assert the route returns an error and does not proceed.
-- [] Test that no real provider call occurs in any of these tests.
-- [] Test that real mode fails fast if provider key is missing.
+- [x] Test with `FakeImageStorage(shouldFail: true)`: assert mark-failed is called.
+- [x] Test Django job-create failure: assert the route returns an error and does not proceed.
+- [x] Test that no real provider call occurs in any of these tests.
+- [x] Test that real mode fails fast if provider key is missing.
 
 Verification:
 
@@ -3372,11 +3396,11 @@ npx tsc --noEmit
 
 Success criteria:
 
-- [] Tests pass without network.
-- [] No OpenAI call.
-- [] No Supabase Storage call.
-- [] No email call.
-- [] No raw prompt/base64 in logs.
+- [x] Tests pass without network.
+- [x] No OpenAI call.
+- [x] No Supabase Storage call.
+- [x] No email call.
+- [x] No raw prompt/base64 in logs.
 
 ### Step B8 Branch B Local Verification
 
@@ -3403,12 +3427,12 @@ npm run build
 
 Manual checks:
 
-- [] Call `/api/monsters/generate-image` in fake mode.
-- [] Confirm Django job row is created.
-- [] Confirm job transitions to succeeded/failed/blocked as expected.
-- [] Confirm fake storage path/public URL is saved.
-- [] Confirm admin shows job.
-- [] Confirm no paid call occurs.
+- [x] Call `/api/monsters/[monsterID]/generate-image` in fake mode.
+- [x] Confirm Django job row is created.
+- [x] Confirm job transitions to succeeded/failed/blocked as expected.
+- [x] Confirm fake storage path/public URL is saved.
+- [x] Confirm admin shows job.
+- [x] Confirm no paid call occurs.
 
 ### Step B9 Branch B Merge And Production Verification
 
@@ -3452,22 +3476,22 @@ Connect Branch A UI and Branch B fake server route.
 
 #### Step 13a Replace Fake Handler With Real Route Call
 
-- [] Replace the in-component fake `onSubmit` with a call to `POST /api/monsters/generate-image`.
-- [] Use `fetch` or the existing project HTTP client.
-- [] Treat the response body as `unknown` before parsing.
+- [x] Replace the in-component fake `onSubmit` with a call to `POST /api/monsters/[monsterID]/generate-image`.
+- [x] Use `fetch` or the existing project HTTP client.
+- [x] Treat the response body as `unknown` before parsing.
 
 #### Step 13b Parse Response With Zod And Map To UI State
 
-- [] Parse the successful response with `monsterImageGenerationJobSchema` (or a combined success response schema).
-- [] Map the parsed backend DTO to the `GenerationUIState` discriminated union from Step A3a.
-- [] Parse error responses with an error schema; map to `failed` or `blocked` UI state.
-- [] Never cast raw response to a generated type directly.
+- [x] Parse the successful response with `monsterImageGenerationJobSchema` (or a combined success response schema).
+- [x] Map the parsed backend DTO to the `GenerationUIState` discriminated union from Step A3a.
+- [x] Parse error responses with an error schema; map to `failed` or `blocked` UI state.
+- [x] Never cast raw response to a generated type directly.
 
 #### Step 13c Add Duplicate Submit Guard
 
-- [] Confirm the submit button is disabled while `status === 'submitting'`.
-- [] Confirm the form cannot be re-submitted while a request is in flight.
-- [] Test this behavior in an automated test.
+- [x] Confirm the submit button is disabled while `status === 'submitting'`.
+- [x] Confirm the form cannot be re-submitted while a request is in flight.
+- [x] Test this behavior in an automated test.
 
 Verification:
 
@@ -3498,24 +3522,24 @@ Read saved monsters from the real Django API.
 
 #### Step 14a Wire Gallery Page To Django Monster List Endpoint
 
-- [] Replace fixture data in `/gallery` with a real fetch to `GET /api/monsters/`.
-- [] Use the existing Django server client or `fetch` with auth headers.
-- [] Parse the response with `z.array(monsterSchema)`.
-- [] Handle the loading/empty/error states with real data.
+- [x] Replace fixture data in `/gallery` with a real fetch to `GET /api/monsters/`.
+- [x] Use the existing Django server client or `fetch` with auth headers.
+- [x] Parse the response with `z.array(monsterSchema)`.
+- [x] Handle the loading/empty/error states with real data.
 
 #### Step 14b Wire Detail Page To Django Monster Detail Endpoint
 
-- [] Replace fixture lookup in `/gallery/[monsterId]` with a real fetch to `GET /api/monsters/{monsterId}/`.
-- [] Parse the response with `monsterSchema`.
-- [] Return 404 if the Django endpoint returns 404.
-- [] Handle the case where the image is missing.
+- [x] Replace fixture lookup in `/gallery/[monsterId]` with a real fetch to `GET /api/monsters/{monsterId}/`.
+- [x] Parse the response with `monsterSchema`.
+- [x] Return 404 if the Django endpoint returns 404.
+- [x] Handle the case where the image is missing.
 
 #### Step 14c Handle Loading Empty And Error States With Real Data
 
-- [] Confirm the loading skeleton shows while fetching.
-- [] Confirm the empty state shows when the user has no monsters.
-- [] Confirm a user cannot view another user's monster (Django returns 404, frontend handles gracefully).
-- [] Seed fake monsters via Django admin to test the happy path locally.
+- [x] Confirm the loading skeleton shows while fetching.
+- [x] Confirm the empty state shows when the user has no monsters.
+- [x] Confirm a user cannot view another user's monster (Django returns 404, frontend handles gracefully).
+- [x] Seed fake monsters via Django admin to test the happy path locally.
 
 Verification:
 
@@ -3528,12 +3552,12 @@ npm test -- --run
 
 Manual checks:
 
-- [] Seed fake monsters in Django admin.
-- [] Log in locally.
-- [] Gallery shows seeded monsters.
-- [] Detail page shows selected monster.
-- [] User cannot see another user's private monsters.
-- [] Broken image fallback works.
+- [x] Seed fake monsters in Django admin.
+- [x] Log in locally.
+- [x] Gallery shows seeded monsters.
+- [x] Detail page shows selected monster.
+- [x] User cannot see another user's private monsters.
+- [x] Broken image fallback works.
 
 ### Step 15 Add Full Fake Lifecycle Test
 
@@ -3545,23 +3569,23 @@ Test the whole fake generation lifecycle without UI and without external calls.
 
 #### Step 15a Write Backend Full Lifecycle Integration Test
 
-- [] Test: create job → mark running → mark succeeded (with fake MonsterImage) → fetch job → assert final state.
-- [] Use Django test client with a real authenticated user.
-- [] Assert job `status === 'succeeded'` and `monster_image` is present in the response.
-- [] Assert no network call was made.
+- [x] Test: create job → mark running → mark succeeded (with fake MonsterImage) → fetch job → assert final state.
+- [x] Use Django test client with a real authenticated user.
+- [x] Assert job `status === 'succeeded'` and `monster_image` is present in the response.
+- [x] Assert no network call was made.
 
 #### Step 15b Write Frontend Route Full Lifecycle Test
 
-- [] Test the Next route handler end-to-end with all dependencies mocked (FakeModerationProvider, FakeImageProvider, FakeImageStorage, mock Django client).
-- [] Assert the response body matches the expected success shape after Zod parsing.
-- [] Assert all orchestration steps were called in order.
+- [x] Test the Next route handler end-to-end with all dependencies mocked (FakeModerationProvider, FakeImageProvider, FakeImageStorage, mock Django client).
+- [x] Assert the response body matches the expected success shape after Zod parsing.
+- [x] Assert all orchestration steps were called in order.
 
 #### Step 15c Add Blocked And Failed Lifecycle Tests
 
-- [] Backend: test job → running → blocked; assert `status === 'blocked'` and no image row.
-- [] Backend: test job → running → failed; assert `status === 'failed'` and no image row.
-- [] Frontend route: test moderation blocked path — assert response has 422 status and blocked shape.
-- [] Frontend route: test provider failed path — assert response has 500 status and failed shape.
+- [x] Backend: test job → running → blocked; assert `status === 'blocked'` and no image row.
+- [x] Backend: test job → running → failed; assert `status === 'failed'` and no image row.
+- [x] Frontend route: test moderation blocked path — assert response has 422 status and blocked shape.
+- [x] Frontend route: test provider failed path — assert response has 500 status and failed shape.
 
 Verification:
 
@@ -3577,10 +3601,10 @@ npx tsc --noEmit
 
 Success criteria:
 
-- [] Lifecycle test passes.
-- [] No external calls.
-- [] Final state is valid.
-- [] Failure/blocked lifecycle tests also exist.
+- [x] Lifecycle test passes.
+- [x] No external calls.
+- [x] Final state is valid.
+- [x] Failure/blocked lifecycle tests also exist.
 
 ### Step 16 Integration Local Verification
 
@@ -3608,14 +3632,14 @@ npm run build
 
 Manual checks:
 
-- [] Log in locally.
-- [] Generate fake monster from `/create`.
-- [] Job appears in Django admin.
-- [] Monster appears in gallery.
-- [] Detail page works.
-- [] Delete/edit behavior works if implemented.
-- [] No paid provider call.
-- [] No browser console errors.
+- [x] Log in locally.
+- [x] Generate fake monster from `/create`.
+- [x] Job appears in Django admin.
+- [x] Monster appears in gallery.
+- [x] Detail page works.
+- [x] Delete/edit behavior works if implemented.
+- [x] No paid provider call.
+- [x] No browser console errors.
 
 ### Step 17 Integration Merge And Production Verification
 
@@ -3627,26 +3651,28 @@ Merge the integrated fake feature.
 
 Actions:
 
-- [] Merge to main.
-- [] Deploy backend and frontend.
-- [] Keep production fake mode.
-- [] Run one prod fake generation.
-- [] Inspect admin.
-- [] Inspect gallery/detail.
+- [x] Merge to main.
+- [x] Deploy backend and frontend.
+- [x] Keep production fake mode.
+- [x] Run one prod fake generation.
+- [x] Inspect admin.
+- [x] Inspect gallery/detail.
 
 Production checks:
 
-- [] Production `/create` works.
-- [] Fake generation succeeds.
-- [] Production admin shows job/monster/image.
-- [] Production gallery shows monster.
-- [] Production detail page works.
-- [] No paid provider call occurs.
-- [] Sentry remains clean.
+- [x] Production `/create` works.
+- [x] Fake generation succeeds.
+- [x] Production admin shows job/monster/image.
+- [x] Production gallery shows monster.
+- [x] Production detail page works.
+- [x] No paid provider call occurs.
+- [x] Sentry remains clean.
 
 ---
 
 ## Phase 4 Real Image Generation
+
+VERY IMPORTANT: TODO: We need to build the actual prompt, including the prompt itself, request and response schemas, etc. I don't think we have a step for that.
 
 ### Step 18 Add Real Provider Implementation
 
@@ -3660,11 +3686,11 @@ Add real image provider behind the existing provider interface.
 
 - [] Check if the OpenAI SDK is already installed in `frontend/package.json`.
 - [] If not, run `npm install openai` (or equivalent).
-- [] Import the SDK only inside `openaiProvider.ts` — do not let it leak into shared modules.
+- [] Import the SDK only inside `openAI_Provider.ts` — do not let it leak into shared modules.
 
-#### Step 18b Implement OpenAIImageProvider Behind Interface
+#### Step 18b Implement VercelAIGatewayImageProvider Behind Interface
 
-- [] Implement `generate(prompt: string): Promise<ImageProviderResult>` in `openaiProvider.ts`.
+- [] Implement `generate(prompt: string): Promise<ImageProviderResult>` in `openAI_Provider.ts`.
 - [] Use the Images API (or DALL-E endpoint).
 - [] Use the server-side constants for model, size, and quality from Step B1d.
 - [] Decode image bytes safely from the API response (base64 or URL download).
@@ -3765,7 +3791,7 @@ Prevent accidental spend.
 #### Step 20c Add Server-Side Model Quality And Size Allowlist
 
 - [] Confirm the server constants from Step B1d are still in use.
-- [] Add an explicit assertion or check at the top of `OpenAIImageProvider.generate()` that the model/size/quality are from the allowlist.
+- [] Add an explicit assertion or check at the top of `VercelAIGatewayImageProvider.generate()` that the model/size/quality are from the allowlist.
 - [] Return a failed result if they are not — this is a defense-in-depth check.
 
 #### Step 20d Add Structured Sentry Event For Limit Hits

@@ -25,7 +25,7 @@ export type ImageProviderResult =
  * Route handlers depend ONLY on this interface, never on a concrete class.
  * This makes it trivial to swap implementations:
  *   - `FakeImageProvider`  → tests and IMAGE_GENERATION_MODE=fake (no API cost)
- *   - `OpenAIImageProvider` → production with IMAGE_GENERATION_MODE=real
+ *   - `VercelAIGatewayImageProvider` → production with IMAGE_GENERATION_MODE=real
  *
  * Always obtain instances via `getImageProvider()` from providers.ts rather
  * than importing concrete classes directly in route handlers.

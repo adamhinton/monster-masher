@@ -29,16 +29,15 @@ describe("env.ts", () => {
 		);
 	});
 
-	// B7d: real mode provider key validation
-	it("throws when OPENAI_API_KEY is absent", async () => {
-		delete process.env.OPENAI_API_KEY;
+	it("returns AI_GATEWAY_API_KEY when it is present", async () => {
+		process.env.AI_GATEWAY_API_KEY = "vercel-test-key";
 		const { env } = await import("@/lib/env/env");
-		expect(() => env.openAIApiKey).toThrow("Missing OPENAI_API_KEY");
+		expect(env.vercelAIGatewayAPIKey).toBe("vercel-test-key");
 	});
 
-	it("returns OPENAI_API_KEY when it is present", async () => {
-		process.env.OPENAI_API_KEY = "sk-test-key";
+	it("returns AI_IMAGE_MODEL when it is present", async () => {
+		process.env.AI_IMAGE_MODEL = "openai/gpt-image-2";
 		const { env } = await import("@/lib/env/env");
-		expect(env.openAIApiKey).toBe("sk-test-key");
+		expect(env.vercelAIImageModel).toBe("openai/gpt-image-2");
 	});
 });

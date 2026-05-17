@@ -3,21 +3,21 @@ import "server-only";
 import type { ImageProvider, ImageProviderResult } from "./providersType";
 
 /**
- * OpenAI image provider — shell implementation for Phase 4 Step 18.
+ * Vercel AI sdk provider for Vercel AI sdk image generation.
  *
  * This class satisfies the `ImageProvider` interface contract but does NOT
  * yet make real API calls. It returns a `failed` result so the pipeline
  * fails safely and explicitly rather than silently producing nothing.
  *
  * TODO (Phase 4 Step 18): Fill in `generate()` with the real implementation:
- *   1. Read OPENAI_API_KEY from the server env module.
- *   2. Call the OpenAI Images API using server-side size/quality constants.
+ *   1. Read AI_GATEWAY_API_KEY from the server env module.
+ *   2. Call Vercel AI SDK for image generation using server-side size/quality constants.
  *   3. Download the returned image bytes.
  *   4. Return { outcome: "success", imageBytes, mimeType: "image/png" }.
  *   Catch API errors and return { outcome: "failed", safeErrorMessage } —
  *   never let raw OpenAI error messages reach the client.
  */
-export class OpenAIImageProvider implements ImageProvider {
+export class VercelAIGatewayImageProvider implements ImageProvider {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars ---- will be used when we flesh this out
 	async generate(_prompt: string): Promise<ImageProviderResult> {
 		// Shell: real OpenAI integration is wired in Phase 4 Step 18.
@@ -27,7 +27,7 @@ export class OpenAIImageProvider implements ImageProvider {
 		return {
 			outcome: "failed",
 			safeErrorMessage:
-				"Real OpenAI image provider is not yet implemented. Set IMAGE_GENERATION_MODE=fake.",
+				"Real Vercel AI sdk image provider is not yet implemented. Set IMAGE_GENERATION_MODE=fake.",
 		};
 	}
 }
