@@ -1,9 +1,8 @@
 // ________
 // Integration tests for /create — the CreateMonsterExperience full flow.
 //
-// These tests use real timers and findBy* queries to wait out the 900 ms fake
-// generation delay without fake-timer complexity. The generation timeout fires
-// in the real event loop; findByRole(…, { timeout: 2000 }) gives it room.
+// These tests stub global fetch and use findBy* queries to await async state
+// transitions after the mocked API calls resolve.
 // ________
 import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
@@ -11,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CreatePage from "@/app/create/page";
 import { TestStoreProvider } from "../__testUtils__/store";
-import { validUserProfile } from "../__testUtils__/fixtures";
+import { validMonster, validUserProfile } from "../__testUtils__/fixtures";
 
 vi.mock("next/navigation", () => ({
 	useRouter: () => ({ push: vi.fn() }),
@@ -100,8 +99,29 @@ describe("CreatePage", () => {
 		).toBeInTheDocument();
 	});
 
-	it("submits the fake create flow through running to succeeded for authenticated users", async () => {
+	it("submits the create flow through running to succeeded for authenticated users", async () => {
 		const user = userEvent.setup();
+
+		mockFetch.mockImplementation(async (input) => {
+			const url = String(input);
+			if (url === "/api/monsters/") {
+				return {
+					ok: true,
+					status: 201,
+					json: async () => ({ monster: validMonster }),
+				} as Response;
+			}
+			// /api/monsters/[id]/generate-image
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ({
+					outcome: "succeeded",
+					public_image_url: "https://example.com/img.png",
+					image_storage_path: "monster-images/test/img.png",
+				}),
+			} as Response;
+		});
 
 		renderCreatePage({
 			status: "authenticated",
@@ -111,64 +131,102 @@ describe("CreatePage", () => {
 		await fillRequiredFields(user);
 		await user.click(screen.getByRole("button", { name: /generate monster/i }));
 
-		// Running state visible immediately
+		// Wait for generation to complete (fetches are mocked and resolve immediately)
 		expect(
-			screen.getByText(
-				/keep this tab open while your monster is being generated/i,
-			),
-		).toBeInTheDocument();
-		expect(mockFetch).not.toHaveBeenCalled();
-
-		// Wait for the 900 ms fake generation delay to complete.
-		// AlertTitle renders as a <div>, not a heading — use findByText.
-		expect(
-			await screen.findByText(/monster ready/i, {}, { timeout: 2000 }),
+			await screen.findByText(/monster ready/i, {}, { timeout: 3000 }),
 		).toBeInTheDocument();
 		expect(
 			screen.getByRole("button", { name: /save to gallery/i }),
 		).toBeInTheDocument();
-		expect(mockFetch).not.toHaveBeenCalled();
+		expect(mockFetch).toHaveBeenCalledTimes(2);
 	});
 
 	it("shows the failed state and returns to idle when retrying", async () => {
 		const user = userEvent.setup();
 
+		mockFetch.mockImplementation(async (input) => {
+			const url = String(input);
+			if (url === "/api/monsters/") {
+				return {
+					ok: true,
+					status: 201,
+					json: async () => ({ monster: validMonster }),
+				} as Response;
+			}
+			// generate-image fails with 500
+			return {
+				ok: false,
+				status: 500,
+				json: async () => ({
+					error: {
+						code: "provider_failed",
+						message: "Image generation failed. Please try again.",
+					},
+				}),
+			} as Response;
+		});
+
 		renderCreatePage();
 
-		await fillRequiredFields(user, { display_name: "error" });
+		await fillRequiredFields(user);
 		await user.click(screen.getByRole("button", { name: /generate monster/i }));
 
 		expect(
-			await screen.findByText(/generation failed/i, {}, { timeout: 2000 }),
+			await screen.findByText("Generation failed", {}, { timeout: 3000 }),
 		).toBeInTheDocument();
-		expect(screen.getByText(/pretend snag/i)).toBeInTheDocument();
+		expect(
+			screen.getByText(/image generation failed\. please try again/i),
+		).toBeInTheDocument();
 
 		await user.click(screen.getByRole("button", { name: /try again/i }));
 
 		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
-		expect(mockFetch).not.toHaveBeenCalled();
 	});
 
 	it("shows the blocked state and returns to idle when editing the prompt", async () => {
 		const user = userEvent.setup();
 
+		mockFetch.mockImplementation(async (input) => {
+			const url = String(input);
+			if (url === "/api/monsters/") {
+				return {
+					ok: true,
+					status: 201,
+					json: async () => ({ monster: validMonster }),
+				} as Response;
+			}
+			// generate-image returns 422 blocked
+			return {
+				ok: false,
+				status: 422,
+				json: async () => ({
+					error: {
+						code: "blocked",
+						message:
+							"Please revise the prompt and keep the monster cute, original, and non-graphic.",
+					},
+				}),
+			} as Response;
+		});
+
 		renderCreatePage();
 
-		await fillRequiredFields(user, { personality: "graphic menace" });
+		await fillRequiredFields(user);
 		await user.click(screen.getByRole("button", { name: /generate monster/i }));
 
 		expect(
 			await screen.findByText(
 				/prompt needs a softer touch/i,
 				{},
-				{ timeout: 2000 },
+				{ timeout: 3000 },
 			),
 		).toBeInTheDocument();
-		expect(screen.getByText(/your prompt was not allowed/i)).toBeInTheDocument();
+		expect(
+			screen.getByText(/your prompt was not allowed/i),
+		).toBeInTheDocument();
 
 		await user.click(screen.getByRole("button", { name: /edit prompt/i }));
 
 		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
-		expect(mockFetch).not.toHaveBeenCalled();
 	});
 });

@@ -3,7 +3,6 @@ import "server-only";
 import { env } from "@/lib/env/env";
 import type { ImageProvider } from "./providersType";
 import { FakeImageProvider } from "./fakeProviderType";
-// import { VercelAIGatewayImageProvider } from "./vercelAIGatewayImageProvider";
 import { VercelAIGatewayImageProvider } from "./vercelAIGatewayImageProvider";
 
 /**
@@ -11,11 +10,11 @@ import { VercelAIGatewayImageProvider } from "./vercelAIGatewayImageProvider";
  *
  *   IMAGE_GENERATION_MODE=fake → FakeImageProvider
  *     No real API calls. Safe for development, CI, and all test environments.
- *     Does not require an OpenAI API key.
+ *     Does not require any API keys.
  *
  *   IMAGE_GENERATION_MODE=real → VercelAIGatewayImageProvider
- *     Live API calls via the OpenAI Images API. Costs money. Requires
- *     OPENAI_API_KEY to be set in the server environment.
+ *     Live API calls via the Vercel AI Gateway. Costs money. Requires
+ *     AI_GATEWAY_API_KEY and AI_IMAGE_MODEL to be set in the server environment.
  *
  * Route handlers MUST call this factory rather than importing provider classes
  * directly. Keeping provider selection here means:

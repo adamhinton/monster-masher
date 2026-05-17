@@ -79,7 +79,8 @@ class MonsterImage(models.Model):
         related_name="images",
     )
 
-    public_image_url = models.URLField(blank=True, null=True)
+    # max length of 500 because Supabase storage URLs are typically 214 chars
+    public_image_url = models.URLField(max_length=500, blank=True, null=True)
     image_storage_path = models.TextField(blank=True)
 
     provider = models.CharField(max_length=50)

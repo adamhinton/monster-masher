@@ -1,3 +1,7 @@
+// _______________
+// Helpers for sending user prompts to OpenAI's free moderation endpoint before calling the image generation provider.
+// _______________
+
 import "server-only";
 
 import { env } from "@/lib/env/env";
@@ -105,7 +109,7 @@ export function containsBannedTerms(text: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// FakeModerationProvider (B3b)
+// FakeModerationProvider
 // ---------------------------------------------------------------------------
 
 /**
@@ -141,11 +145,11 @@ export class FakeModerationProvider implements ModerationProvider {
 }
 
 // ---------------------------------------------------------------------------
-// OpenAIModerationProvider shell (B3d)
+// OpenAIModerationProvider shell
 // ---------------------------------------------------------------------------
 
 /**
- * OpenAI Moderation API provider — shell for Phase 4 Step 19.
+ * OpenAI sdk Moderation API provider — shell implementation.
  *
  * Returns `{ outcome: 'failed' }` until the real implementation is wired in.
  * This is deliberate: if real mode is enabled before Phase 4 Step 19 is complete,

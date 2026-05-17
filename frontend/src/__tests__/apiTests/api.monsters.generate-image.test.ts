@@ -592,3 +592,75 @@ describe("happy path", () => {
 		expect(jobBody.should_email_when_done).toBe(true);
 	});
 });
+
+// ── Transition endpoint failures ─────────────────────────────────────────────
+
+describe("transition endpoint failures", () => {
+	beforeEach(() => {
+		wireHappyPath();
+	});
+
+	it("returns 500 when mark-running returns non-ok", async () => {
+		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/generate-image/jobs/") {
+				return {
+					ok: true,
+					status: 201,
+					json: vi.fn().mockResolvedValue(mockQueuedJob),
+				};
+			}
+
+			if (path.includes("mark-running")) {
+				return {
+					ok: false,
+					status: 500,
+					text: vi.fn().mockResolvedValue("transition failure"),
+				};
+			}
+
+			return {
+				ok: true,
+				status: 200,
+				json: vi.fn().mockResolvedValue({}),
+			};
+		}) as Mock);
+
+		const res = await POST(makeRequest(validFormBody), makeParams());
+		expect(res.status).toBe(500);
+
+		const body = await res.json();
+		expect(body.error.code).toBe("job_transition_failed");
+	});
+
+	it("returns 500 when mark-succeeded returns non-ok", async () => {
+		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/generate-image/jobs/") {
+				return {
+					ok: true,
+					status: 201,
+					json: vi.fn().mockResolvedValue(mockQueuedJob),
+				};
+			}
+
+			if (path.includes("mark-succeeded")) {
+				return {
+					ok: false,
+					status: 500,
+					text: vi.fn().mockResolvedValue("db write failed"),
+				};
+			}
+
+			return {
+				ok: true,
+				status: 200,
+				json: vi.fn().mockResolvedValue({}),
+			};
+		}) as Mock);
+
+		const res = await POST(makeRequest(validFormBody), makeParams());
+		expect(res.status).toBe(500);
+
+		const body = await res.json();
+		expect(body.error.code).toBe("job_finalize_failed");
+	});
+});

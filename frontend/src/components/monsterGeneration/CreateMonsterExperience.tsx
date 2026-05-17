@@ -1,14 +1,15 @@
 // _______________
 // Here the user fills in details to generate their Monster.
-// Stores form values in localStorage for conveninence.
+// Stores form values in localStorage for convenience.
 
-// This is a wrapper for GenerateMonsterForm and GenerationStatusPanel, which are where the real work happens. This component manages shared state and simulates the generation flow for now while the provider integration is still in progress.
+// This is a wrapper for GenerateMonsterForm and GenerationStatusPanel, which are where the real work happens. This component manages shared state and drives the generation pipeline.
 // _______________
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import z from "zod";
 
 import { GenerateMonsterForm } from "@/components/monsterGeneration/GenerateMonsterForm";
 import { GenerationStatusPanel } from "@/components/monsterGeneration/GenerationStatusPanel";
@@ -26,19 +27,29 @@ import {
 } from "@/components/monsterGeneration/monsterFormSchema";
 import {
 	beginGeneration,
-	resolveFakeGeneration,
 	resetGenerationState,
 } from "@/lib/monsterGeneration/createMonsterFlow";
 import type { GenerationUIState } from "@/lib/monsterGeneration/generationState";
 import {
 	MonsterForPOSTSchema,
 	MonsterSchema,
+	type Monster,
 } from "@/lib/api/schemas/monster/MonsterSchema";
-import { useDispatch } from "react-redux";
+import { nextApiErrorSchema } from "@/lib/api/errors";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { monsterAdded } from "../../../store/authSlice";
 /**Ongoing form values stored in localStorage for convenience */
 const createMonsterFormStorageKey = "monster-masher:create-monster-form";
+
+/** Zod schema for validating the POST /api/monsters/ success response */
+const monsterResponseSchema = z.object({ monster: MonsterSchema });
+
+/** Zod schema for validating the POST /api/monsters/[id]/generate-image success response */
+const generateImageSuccessSchema = z.object({
+	outcome: z.literal("succeeded"),
+	public_image_url: z.string(),
+	image_storage_path: z.string(),
+});
 
 export function CreateMonsterExperience() {
 	const router = useRouter();
@@ -51,8 +62,6 @@ export function CreateMonsterExperience() {
 	const [generationState, setGenerationState] = useState<GenerationUIState>({
 		status: "idle",
 	});
-	const [isSaving, setIsSaving] = useState(false);
-
 	const dispatch = useAppDispatch();
 
 	// Check if ongoing form values are stored in localStorage and load them if so. This allows users to refresh or leave and come back without losing their progress.
@@ -68,17 +77,150 @@ export function CreateMonsterExperience() {
 		return () => window.clearTimeout(timeoutId);
 	}, []);
 
+	// When generation is running, POST the monster then call the image-gen pipeline.
 	useEffect(() => {
 		if (generationState.status !== "running") {
 			return;
 		}
 
-		const timeoutId = window.setTimeout(() => {
-			setGenerationState(resolveFakeGeneration(submittedFormValuesRef.current));
-		}, 900);
+		let isCancelled = false;
 
-		return () => window.clearTimeout(timeoutId);
-	}, [generationState]);
+		async function runGenerationPipeline() {
+			const formValues = submittedFormValuesRef.current;
+			const {
+				display_name,
+				element,
+				habitat,
+				personality,
+				color_palette,
+				flavor_text,
+			} = formValues;
+
+			const monsterPayload = {
+				display_name,
+				traits: { element, habitat, personality, color_palette },
+				flavor_text: flavor_text ?? "",
+			};
+
+			const isValidMonster = MonsterForPOSTSchema.safeParse(monsterPayload);
+			if (!isValidMonster.success) {
+				if (!isCancelled) {
+					setGenerationState({
+						status: "failed",
+						safeErrorMessage: "Unexpected error. Please try again.",
+					});
+				}
+				return;
+			}
+
+			// Step 1: Create the monster in Django.
+			let monster: Monster;
+			try {
+				const monsterResponse = await fetch("/api/monsters/", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(monsterPayload),
+				});
+
+				const monsterRaw: unknown = await monsterResponse.json();
+
+				if (!monsterResponse.ok) {
+					const parsedError = nextApiErrorSchema.safeParse(monsterRaw);
+					const message = parsedError.success
+						? parsedError.data.error.message
+						: "Failed to create monster. Please try again.";
+					if (!isCancelled) {
+						setGenerationState({ status: "failed", safeErrorMessage: message });
+					}
+					return;
+				}
+
+				const parsedMonster = monsterResponseSchema.safeParse(monsterRaw);
+				if (!parsedMonster.success) {
+					if (!isCancelled) {
+						setGenerationState({
+							status: "failed",
+							safeErrorMessage:
+								"Received unexpected data from server. Please try again.",
+						});
+					}
+					return;
+				}
+				monster = parsedMonster.data.monster;
+			} catch {
+				if (!isCancelled) {
+					setGenerationState({
+						status: "failed",
+						safeErrorMessage:
+							"Network error. Check your connection and try again.",
+					});
+				}
+				return;
+			}
+
+			// Step 2: Generate the image.
+			try {
+				const generateResponse = await fetch(
+					`/api/monsters/${monster.id}/generate-image`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(formValues),
+					},
+				);
+
+				const generateRaw: unknown = await generateResponse.json();
+
+				if (!generateResponse.ok) {
+					const parsedError = nextApiErrorSchema.safeParse(generateRaw);
+					const errorMessage = parsedError.success
+						? parsedError.data.error.message
+						: "Image generation failed. Please try again.";
+					if (!isCancelled) {
+						setGenerationState(
+							generateResponse.status === 422
+								? { status: "blocked", safeErrorMessage: errorMessage }
+								: { status: "failed", safeErrorMessage: errorMessage },
+						);
+					}
+					return;
+				}
+
+				const parsedGenerate =
+					generateImageSuccessSchema.safeParse(generateRaw);
+				if (!parsedGenerate.success) {
+					if (!isCancelled) {
+						setGenerationState({
+							status: "failed",
+							safeErrorMessage:
+								"Received unexpected response from image generation. Please try again.",
+						});
+					}
+					return;
+				}
+			} catch {
+				if (!isCancelled) {
+					setGenerationState({
+						status: "failed",
+						safeErrorMessage:
+							"Network error during image generation. Please try again.",
+					});
+				}
+				return;
+			}
+
+			if (!isCancelled) {
+				dispatch(monsterAdded(monster));
+				setGenerationState({ status: "succeeded" });
+			}
+		}
+
+		void runGenerationPipeline();
+
+		return () => {
+			isCancelled = true;
+		};
+	}, [generationState.status, dispatch]);
 
 	/**Delete all form values */
 	function handleClearForm() {
@@ -117,92 +259,13 @@ export function CreateMonsterExperience() {
 		setGenerationState(resetGenerationState());
 	}
 
-	/**Send Monster to API for generation
-	 * TODO actually generate the image when generation pipeline is ready; right now this just saves the monster to the db
-	 */
-	async function handleSave(dispatch: ReturnType<typeof useDispatch>) {
-		if (isSaving) return;
-		setIsSaving(true);
-
-		const {
-			display_name,
-			element,
-			habitat,
-			personality,
-			color_palette,
-			flavor_text,
-		} = submittedFormValuesRef.current;
-
-		// Transform flat form values into the nested structure Django expects:
-		// { display_name, traits: { element, habitat, personality, color_palette }, flavor_text }
-		const payload = {
-			display_name,
-			traits: { element, habitat, personality, color_palette },
-			flavor_text: flavor_text ?? "",
-		};
-
-		// Determines that monster is expected data structure for Django API
-		const isValidMonster = MonsterForPOSTSchema.safeParse(payload);
-
-		// TODO not sure this is the right error flow
-		if (!isValidMonster.success) {
-			setGenerationState({
-				status: "failed",
-				safeErrorMessage: "Unexpected error. Please try again.",
-			});
-			setIsSaving(false);
-			return;
-		}
-
-		try {
-			// Send to Next's /api/monsters which sends to django
-			// TODO put this in a server helper
-			const response = await fetch("/api/monsters/", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
-			});
-
-			if (response.ok) {
-				// Add to redux state
-				const { monster } = await response.json();
-				if (MonsterSchema.safeParse(monster).success) {
-					dispatch(monsterAdded(monster));
-					router.push("/gallery");
-					return;
-				} else {
-					setGenerationState({
-						status: "failed",
-						safeErrorMessage:
-							"Received unexpected data from server. Please try again.",
-					});
-					setIsSaving(false);
-					return;
-				}
-			}
-
-			setGenerationState({
-				status: "failed",
-				safeErrorMessage: "Failed to save your monster. Please try again.",
-			});
-		} catch {
-			setGenerationState({
-				status: "failed",
-				safeErrorMessage: "Network error. Check your connection and try again.",
-			});
-		}
-
-		setIsSaving(false);
-	}
-
 	return (
 		<div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.85fr)] lg:items-start">
 			<Card>
 				<CardHeader>
 					<CardTitle>Create a Monster</CardTitle>
 					<CardDescription>
-						Choose a few traits and run the fake generation flow while the real
-						image provider is still under construction.
+						Fill in your monster&apos;s traits and kick off image generation.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -221,15 +284,15 @@ export function CreateMonsterExperience() {
 				<CardHeader>
 					<CardTitle>Generation Status</CardTitle>
 					<CardDescription>
-						Status only. No image preview is shown until real images exist.
+						Image generation can take up to 90 seconds.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<GenerationStatusPanel
 						generationState={generationState}
 						onReset={handleResetGeneration}
-						onSave={() => handleSave(dispatch)}
-						isSaving={isSaving}
+						onSave={() => router.push("/gallery")}
+						isSaving={false}
 					/>
 				</CardContent>
 			</Card>

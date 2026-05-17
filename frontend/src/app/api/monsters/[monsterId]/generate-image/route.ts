@@ -1,5 +1,7 @@
 // TODO IMPORTANT: More robust and secure prompt-building; there's a step for this in our build plan but I'm including it here too because it's important
 
+// TODO Sentry logging for image generation - how long each step takes, any failures, etc etc. Metric tracking for time taken especially
+
 // ______________
 // POST /api/monsters/[monsterId]/generate-image/
 //
@@ -147,16 +149,25 @@ type TransitionPathKey = Extract<
  *
  * Validates that the path is one of the known transition endpoints via the `TransitionPathKey` based on openAPI-generated endpoint path schema. This is to handle dynamic URLs with monsterid params.
  *
- * This function never throws; failures are handled gracefully so the outer
- * route handler can make its own success/error decision.
+ * This function never throws. It returns a structured result that the caller
+ * can use to decide whether a transition failure is fatal for that step.
  */
+type TransitionEndpointResult =
+	| { ok: true }
+	| {
+			ok: false;
+			status: number | null;
+			responseBody: string | null;
+			errorMessage?: string;
+	  };
+
 async function callTransitionEndpoint(
 	path: TransitionPathKey,
 	pathParams: { monster_id: Monster["id"] },
 	jobId: MonsterImageGenJob["id"],
 	accessToken: string,
 	additionalBody?: Record<string, unknown>,
-): Promise<void> {
+): Promise<TransitionEndpointResult> {
 	try {
 		const res = await fetchFromDjango(path, pathParams, {
 			method: "POST",
@@ -168,16 +179,35 @@ async function callTransitionEndpoint(
 		});
 
 		if (!res.ok) {
+			let responseBody: string | null = null;
+			if (typeof res.text === "function") {
+				try {
+					responseBody = await res.text();
+				} catch {
+					responseBody = null;
+				}
+			}
+
 			Sentry.captureMessage("generate_image.transition_endpoint_failed", {
 				level: "warning",
-				extra: { path, status: res.status },
+				extra: { path, status: res.status, responseBody },
 			});
+
+			return { ok: false, status: res.status, responseBody };
 		}
+
+		return { ok: true };
 	} catch {
 		Sentry.captureMessage("generate_image.transition_endpoint_error", {
 			level: "warning",
 			extra: { path },
 		});
+		return {
+			ok: false,
+			status: null,
+			responseBody: null,
+			errorMessage: "Request to transition endpoint threw an exception.",
+		};
 	}
 }
 
@@ -375,42 +405,63 @@ export async function POST(
 		});
 	}
 
-	if (moderationResult.outcome === "failed") {
-		await callTransitionEndpoint(
-			"/api/monsters/{monster_id}/generate-image/mark-failed/",
-			{ monster_id: monsterId },
-			jobId,
-			accessToken,
-			{
-				error_code: "moderation_failed",
-				error_message: "Moderation check failed.",
-			},
-		);
-		Sentry.captureEvent({
-			message: "generate_image.moderation_failed",
-			level: "error",
-			tags: {
-				generation_mode: generationMode,
-				error_code: "moderation_failed",
-			},
-		});
-		return jsonError({
-			status: 500,
-			code: "moderation_failed",
-			message: "Content moderation check failed. Please try again.",
-		});
-	}
+	// if (moderationResult.outcome === "failed") {
+	// 	await callTransitionEndpoint(
+	// 		"/api/monsters/{monster_id}/generate-image/mark-failed/",
+	// 		{ monster_id: monsterId },
+	// 		jobId,
+	// 		accessToken,
+	// 		{
+	// 			error_code: "moderation_failed",
+	// 			error_message: "Moderation check failed.",
+	// 		},
+	// 	);
+	// 	Sentry.captureEvent({
+	// 		message: "generate_image.moderation_failed",
+	// 		level: "error",
+	// 		tags: {
+	// 			generation_mode: generationMode,
+	// 			error_code: "moderation_failed",
+	// 		},
+	// 	});
+	// 	return jsonError({
+	// 		status: 500,
+	// 		code: "moderation_failed",
+	// 		message: "Content moderation check failed. Please try again.",
+	// 	});
+	// }
 
 	// ── Step 6: Mark job as RUNNING ───────────────────────────────────────────
 	//
 	// Job transitions to RUNNING only after moderation passes, meaning a job in
 	// RUNNING state always has a clean prompt.
-	await callTransitionEndpoint(
+	const markRunningResult = await callTransitionEndpoint(
 		"/api/monsters/{monster_id}/generate-image/mark-running/",
 		{ monster_id: monsterId },
 		jobId,
 		accessToken,
 	);
+
+	if (!markRunningResult.ok) {
+		Sentry.captureEvent({
+			message: "generate_image.mark_running_failed",
+			level: "error",
+			tags: {
+				generation_mode: generationMode,
+				error_code: "job_transition_failed",
+			},
+			extra: {
+				status: markRunningResult.status,
+				responseBody: markRunningResult.responseBody,
+			},
+		});
+
+		return jsonError({
+			status: 500,
+			code: "job_transition_failed",
+			message: "Failed to update image generation job status.",
+		});
+	}
 
 	// ── Step 7: Generate image ────────────────────────────────────────────────
 	const imageResult = await getImageProvider().generate(prompt);
@@ -479,7 +530,7 @@ export async function POST(
 	//
 	// Django atomically creates the MonsterImage, links it to the Monster,
 	// and transitions the job to SUCCEEDED.
-	await callTransitionEndpoint(
+	const markSucceededResult = await callTransitionEndpoint(
 		"/api/monsters/{monster_id}/generate-image/mark-succeeded/",
 		{ monster_id: monsterId },
 		jobId,
@@ -493,6 +544,28 @@ export async function POST(
 				generationMode === "real" ? env.vercelAIImageModel : "fake",
 		},
 	);
+
+	if (!markSucceededResult.ok) {
+		Sentry.captureEvent({
+			message: "generate_image.mark_succeeded_failed",
+			level: "error",
+			tags: {
+				generation_mode: generationMode,
+				error_code: "job_finalize_failed",
+			},
+			extra: {
+				status: markSucceededResult.status,
+				responseBody: markSucceededResult.responseBody,
+			},
+		});
+
+		return jsonError({
+			status: 500,
+			code: "job_finalize_failed",
+			message:
+				"Image was generated but could not be finalized. Please try again.",
+		});
+	}
 
 	// ── Return success ────────────────────────────────────────────────────────
 	return NextResponse.json(
