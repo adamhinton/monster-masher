@@ -134,21 +134,21 @@ DELETE /api/monsters/{monster_id}/ → delete; returns 204
 
 All require `Authorization: Bearer <supabase_access_token>`.
 
-Owner is always derived from the verified JWT.
+Owner is always derived from the verified JWT. `{monster_id}` must belong to the authenticated user.
 
 ```
-POST  /api/image-generation-jobs/                          → create a job (owner set from JWT)
-GET   /api/image-generation-jobs/{job_id}/                 → retrieve job status and result
-PATCH /api/image-generation-jobs/{job_id}/notification/    → toggle should_email_when_done (returns 400 on terminal jobs)
+POST  /api/monsters/{monster_id}/generate-image/jobs/                        → create a job
+GET   /api/monsters/{monster_id}/generate-image/jobs/{job_id}/               → retrieve job status and result
+PATCH /api/monsters/{monster_id}/generate-image/jobs/{job_id}/notification/  → toggle should_email_when_done (returns 400 on terminal jobs)
 ```
 
-**Trusted-server transition stubs** — the following endpoints exist in the schema but return `501 Not Implemented`. They are reserved for server-to-server use once the trust boundary is designed:
+**Trusted-server transition endpoints** — called by the Next.js server route (`POST /api/monsters/[monsterId]/generate-image`) using the user's Supabase access token. Django verifies ownership via JWT before accepting transitions:
 
 ```
-POST /api/image-generation-jobs/{job_id}/mark-running/
-POST /api/image-generation-jobs/{job_id}/mark-succeeded/
-POST /api/image-generation-jobs/{job_id}/mark-failed/
-POST /api/image-generation-jobs/{job_id}/mark-blocked/
+POST /api/monsters/{monster_id}/generate-image/mark-running/
+POST /api/monsters/{monster_id}/generate-image/mark-succeeded/
+POST /api/monsters/{monster_id}/generate-image/mark-failed/
+POST /api/monsters/{monster_id}/generate-image/mark-blocked/
 ```
 
 ## Regenerating the API Schema

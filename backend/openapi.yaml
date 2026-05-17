@@ -4,181 +4,6 @@ info:
   version: 0.1.0
   description: Django REST API for Monster Masher.
 paths:
-  /api/image-generation-jobs/:
-    post:
-      operationId: api_image_generation_jobs_create
-      description: |-
-        POST /api/image-generation-jobs/ — create a generation job.
-
-        Uses create_generation_job() service.  Defaults to fake mode for the
-        contract phase; real provider wiring happens in a later step.
-      summary: Create an image generation job
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
-      security:
-      - SupabaseJWTAuthentication: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MonsterImageGenerationJob'
-          description: ''
-  /api/image-generation-jobs/{job_id}/:
-    get:
-      operationId: api_image_generation_jobs_retrieve
-      description: |-
-        GET /api/image-generation-jobs/{job_id}/ — retrieve a generation job.
-
-        Returns 404 (not 403) when the job does not exist or belongs to another
-        user.
-      summary: Get an image generation job
-      parameters:
-      - in: path
-        name: job_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - SupabaseJWTAuthentication: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MonsterImageGenerationJob'
-          description: ''
-  /api/image-generation-jobs/{job_id}/mark-blocked/:
-    post:
-      operationId: api_image_generation_jobs_mark_blocked_create
-      description: Not yet implemented. Reserved for trusted-server use only.
-      summary: '[Stub] Mark job as blocked'
-      parameters:
-      - in: path
-        name: job_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - SupabaseJWTAuthentication: []
-      responses:
-        '501':
-          description: No response body
-  /api/image-generation-jobs/{job_id}/mark-failed/:
-    post:
-      operationId: api_image_generation_jobs_mark_failed_create
-      description: Not yet implemented. Reserved for trusted-server use only.
-      summary: '[Stub] Mark job as failed'
-      parameters:
-      - in: path
-        name: job_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - SupabaseJWTAuthentication: []
-      responses:
-        '501':
-          description: No response body
-  /api/image-generation-jobs/{job_id}/mark-running/:
-    post:
-      operationId: api_image_generation_jobs_mark_running_create
-      description: Not yet implemented. Reserved for trusted-server use only.
-      summary: '[Stub] Mark job as running'
-      parameters:
-      - in: path
-        name: job_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - SupabaseJWTAuthentication: []
-      responses:
-        '501':
-          description: No response body
-  /api/image-generation-jobs/{job_id}/mark-succeeded/:
-    post:
-      operationId: api_image_generation_jobs_mark_succeeded_create
-      description: Not yet implemented. Reserved for trusted-server use only.
-      summary: '[Stub] Mark job as succeeded'
-      parameters:
-      - in: path
-        name: job_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      security:
-      - SupabaseJWTAuthentication: []
-      responses:
-        '501':
-          description: No response body
-  /api/image-generation-jobs/{job_id}/notification/:
-    patch:
-      operationId: api_image_generation_jobs_notification_partial_update
-      description: |-
-        PATCH /api/image-generation-jobs/{job_id}/notification/ — toggle email
-        notification preference.
-
-        Returns 400 if the job is already in a terminal state (succeeded, failed,
-        or blocked) because the notification window has closed.
-      summary: Toggle email notification preference for a job
-      parameters:
-      - in: path
-        name: job_id
-        schema:
-          type: string
-          format: uuid
-        required: true
-      tags:
-      - api
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
-      security:
-      - SupabaseJWTAuthentication: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MonsterImageGenerationJob'
-          description: ''
-        '400':
-          description: No response body
   /api/me/:
     get:
       operationId: api_me_retrieve
@@ -360,6 +185,309 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/monsters/{monster_id}/generate-image/jobs/:
+    post:
+      operationId: api_monsters_generate_image_jobs_create
+      description: |-
+        POST /api/monsters/{monster_id}/generate-image/jobs/
+
+        Creates a generation job attached to the given monster. monster_id is
+        always taken from the URL — never from the request body.
+      summary: Create an image generation job
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MonsterImageGenerationJobCreate'
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+  /api/monsters/{monster_id}/generate-image/jobs/{job_id}/:
+    get:
+      operationId: api_monsters_generate_image_jobs_retrieve
+      description: |-
+        GET /api/monsters/{monster_id}/generate-image/jobs/{job_id}/
+
+        Returns 404 (not 403) when the job does not exist, belongs to another
+        user, or is not attached to the given monster.
+      summary: Get an image generation job
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+  /api/monsters/{monster_id}/generate-image/jobs/{job_id}/notification/:
+    patch:
+      operationId: api_monsters_generate_image_jobs_notification_partial_update
+      description: |-
+        PATCH /api/monsters/{monster_id}/generate-image/jobs/{job_id}/notification/
+
+        Toggle email notification preference. Returns 400 if the job is already
+        in a terminal state (succeeded, failed, or blocked) because the
+        notification window has closed.
+      summary: Toggle email notification preference for a job
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMonsterImageGenerationJobNotificationUpdate'
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+        '400':
+          description: No response body
+  /api/monsters/{monster_id}/generate-image/mark-blocked/:
+    post:
+      operationId: api_monsters_generate_image_mark_blocked_create
+      description: |-
+        POST /api/monsters/{monster_id}/generate-image/mark-blocked/
+
+        Transitions a QUEUED or RUNNING job to BLOCKED. Called by the Next.js
+        pipeline when the banned-terms guard or moderation provider rejects the prompt.
+
+        Body: { job_id, error_code, error_message }
+        Returns: the updated MonsterImageGenerationJob.
+      summary: Mark image generation job as blocked (content policy)
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkJobBlocked'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkJobBlocked'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkJobBlocked'
+        required: true
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+        '404':
+          description: No response body
+        '409':
+          description: No response body
+  /api/monsters/{monster_id}/generate-image/mark-failed/:
+    post:
+      operationId: api_monsters_generate_image_mark_failed_create
+      description: |-
+        POST /api/monsters/{monster_id}/generate-image/mark-failed/
+
+        Transitions a QUEUED or RUNNING job to FAILED. Called by the Next.js
+        pipeline on provider or storage errors.
+
+        Body: { job_id, error_code, error_message }
+        Returns: the updated MonsterImageGenerationJob.
+      summary: Mark image generation job as failed
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkJobFailed'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkJobFailed'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkJobFailed'
+        required: true
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+        '404':
+          description: No response body
+        '409':
+          description: No response body
+  /api/monsters/{monster_id}/generate-image/mark-running/:
+    post:
+      operationId: api_monsters_generate_image_mark_running_create
+      description: |-
+        POST /api/monsters/{monster_id}/generate-image/mark-running/
+
+        Transitions a QUEUED job to RUNNING. Called by the Next.js pipeline
+        after moderation passes and before image generation begins.
+
+        Body: { job_id }
+        Returns: the updated MonsterImageGenerationJob.
+      summary: Mark image generation job as running
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkJobRunning'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkJobRunning'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkJobRunning'
+        required: true
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+        '404':
+          description: No response body
+        '409':
+          description: No response body
+  /api/monsters/{monster_id}/generate-image/mark-succeeded/:
+    post:
+      operationId: api_monsters_generate_image_mark_succeeded_create
+      description: |-
+        POST /api/monsters/{monster_id}/generate-image/mark-succeeded/
+
+        Transitions a RUNNING job to SUCCEEDED and creates the MonsterImage record.
+        Called by the Next.js pipeline after the image has been uploaded to storage.
+
+        Body: { job_id, monster_image_id, public_image_url, image_storage_path,
+                provider, provider_model }
+        Returns: the updated MonsterImageGenerationJob (including the linked image).
+      summary: Mark image generation job as succeeded and create MonsterImage
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkJobSucceeded'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MarkJobSucceeded'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MarkJobSucceeded'
+        required: true
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonsterImageGenerationJob'
+          description: ''
+        '404':
+          description: No response body
+        '409':
+          description: No response body
   /health/:
     get:
       operationId: health_retrieve
@@ -494,6 +622,89 @@ components:
       - finished_at
       - started_at
       - updated_at
+    MarkJobBlocked:
+      type: object
+      description: |-
+        POST body for mark-blocked.
+
+        Used for content policy violations (banned-terms guard, moderation provider).
+        The job may be in QUEUED or RUNNING state when this is called.
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        error_code:
+          type: string
+          maxLength: 100
+        error_message:
+          type: string
+      required:
+      - error_code
+      - error_message
+      - job_id
+    MarkJobFailed:
+      type: object
+      description: |-
+        POST body for mark-failed.
+
+        error_code is required; error_message is the safe user-facing description.
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        error_code:
+          type: string
+          maxLength: 100
+        error_message:
+          type: string
+      required:
+      - error_code
+      - error_message
+      - job_id
+    MarkJobRunning:
+      type: object
+      description: |-
+        POST body for mark-running.
+
+        Identifies the specific job to transition; the monster is in the URL.
+      properties:
+        job_id:
+          type: string
+          format: uuid
+      required:
+      - job_id
+    MarkJobSucceeded:
+      type: object
+      description: |-
+        POST body for mark-succeeded.
+
+        Carries the image metadata that Django will use to create the MonsterImage
+        record and link it to the job.
+      properties:
+        job_id:
+          type: string
+          format: uuid
+        monster_image_id:
+          type: string
+          format: uuid
+        public_image_url:
+          type: string
+          format: uri
+        image_storage_path:
+          type: string
+        provider:
+          type: string
+          maxLength: 50
+        provider_model:
+          type: string
+          maxLength: 100
+      required:
+      - image_storage_path
+      - job_id
+      - monster_image_id
+      - provider
+      - provider_model
+      - public_image_url
     Monster:
       type: object
       description: |-
@@ -698,18 +909,13 @@ components:
       description: |-
         POST request serializer for MonsterImageGenerationJob.
 
-        Owner is always set from request context. Status, provider, prompt,
-        and all other internal fields are never accepted from client input.
+        Owner is always set from request context. monster_id comes from the URL
+        kwargs, not the request body. Status, provider, prompt, and all other
+        internal fields are never accepted from client input.
       properties:
         should_email_when_done:
           type: boolean
           default: false
-        monster_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: 'Optional: attach this job to an existing monster owned by
-            the requesting user.'
     MonsterTraits:
       type: object
       description: |-

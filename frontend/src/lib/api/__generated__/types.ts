@@ -4,156 +4,6 @@
  */
 
 export interface paths {
-    "/api/image-generation-jobs/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create an image generation job
-         * @description POST /api/image-generation-jobs/ — create a generation job.
-         *
-         *     Uses create_generation_job() service.  Defaults to fake mode for the
-         *     contract phase; real provider wiring happens in a later step.
-         */
-        post: operations["api_image_generation_jobs_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/image-generation-jobs/{job_id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get an image generation job
-         * @description GET /api/image-generation-jobs/{job_id}/ — retrieve a generation job.
-         *
-         *     Returns 404 (not 403) when the job does not exist or belongs to another
-         *     user.
-         */
-        get: operations["api_image_generation_jobs_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/image-generation-jobs/{job_id}/mark-blocked/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [Stub] Mark job as blocked
-         * @description Not yet implemented. Reserved for trusted-server use only.
-         */
-        post: operations["api_image_generation_jobs_mark_blocked_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/image-generation-jobs/{job_id}/mark-failed/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [Stub] Mark job as failed
-         * @description Not yet implemented. Reserved for trusted-server use only.
-         */
-        post: operations["api_image_generation_jobs_mark_failed_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/image-generation-jobs/{job_id}/mark-running/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [Stub] Mark job as running
-         * @description Not yet implemented. Reserved for trusted-server use only.
-         */
-        post: operations["api_image_generation_jobs_mark_running_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/image-generation-jobs/{job_id}/mark-succeeded/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * [Stub] Mark job as succeeded
-         * @description Not yet implemented. Reserved for trusted-server use only.
-         */
-        post: operations["api_image_generation_jobs_mark_succeeded_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/image-generation-jobs/{job_id}/notification/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Toggle email notification preference for a job
-         * @description PATCH /api/image-generation-jobs/{job_id}/notification/ — toggle email
-         *     notification preference.
-         *
-         *     Returns 400 if the job is already in a terminal state (succeeded, failed,
-         *     or blocked) because the notification window has closed.
-         */
-        patch: operations["api_image_generation_jobs_notification_partial_update"];
-        trace?: never;
-    };
     "/api/me/": {
         parameters: {
             query?: never;
@@ -266,6 +116,181 @@ export interface paths {
         patch: operations["api_monsters_partial_update"];
         trace?: never;
     };
+    "/api/monsters/{monster_id}/generate-image/jobs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create an image generation job
+         * @description POST /api/monsters/{monster_id}/generate-image/jobs/
+         *
+         *     Creates a generation job attached to the given monster. monster_id is
+         *     always taken from the URL — never from the request body.
+         */
+        post: operations["api_monsters_generate_image_jobs_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/generate-image/jobs/{job_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get an image generation job
+         * @description GET /api/monsters/{monster_id}/generate-image/jobs/{job_id}/
+         *
+         *     Returns 404 (not 403) when the job does not exist, belongs to another
+         *     user, or is not attached to the given monster.
+         */
+        get: operations["api_monsters_generate_image_jobs_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/generate-image/jobs/{job_id}/notification/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Toggle email notification preference for a job
+         * @description PATCH /api/monsters/{monster_id}/generate-image/jobs/{job_id}/notification/
+         *
+         *     Toggle email notification preference. Returns 400 if the job is already
+         *     in a terminal state (succeeded, failed, or blocked) because the
+         *     notification window has closed.
+         */
+        patch: operations["api_monsters_generate_image_jobs_notification_partial_update"];
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/generate-image/mark-blocked/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark image generation job as blocked (content policy)
+         * @description POST /api/monsters/{monster_id}/generate-image/mark-blocked/
+         *
+         *     Transitions a QUEUED or RUNNING job to BLOCKED. Called by the Next.js
+         *     pipeline when the banned-terms guard or moderation provider rejects the prompt.
+         *
+         *     Body: { job_id, error_code, error_message }
+         *     Returns: the updated MonsterImageGenerationJob.
+         */
+        post: operations["api_monsters_generate_image_mark_blocked_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/generate-image/mark-failed/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark image generation job as failed
+         * @description POST /api/monsters/{monster_id}/generate-image/mark-failed/
+         *
+         *     Transitions a QUEUED or RUNNING job to FAILED. Called by the Next.js
+         *     pipeline on provider or storage errors.
+         *
+         *     Body: { job_id, error_code, error_message }
+         *     Returns: the updated MonsterImageGenerationJob.
+         */
+        post: operations["api_monsters_generate_image_mark_failed_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/generate-image/mark-running/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark image generation job as running
+         * @description POST /api/monsters/{monster_id}/generate-image/mark-running/
+         *
+         *     Transitions a QUEUED job to RUNNING. Called by the Next.js pipeline
+         *     after moderation passes and before image generation begins.
+         *
+         *     Body: { job_id }
+         *     Returns: the updated MonsterImageGenerationJob.
+         */
+        post: operations["api_monsters_generate_image_mark_running_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/generate-image/mark-succeeded/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark image generation job as succeeded and create MonsterImage
+         * @description POST /api/monsters/{monster_id}/generate-image/mark-succeeded/
+         *
+         *     Transitions a RUNNING job to SUCCEEDED and creates the MonsterImage record.
+         *     Called by the Next.js pipeline after the image has been uploaded to storage.
+         *
+         *     Body: { job_id, monster_image_id, public_image_url, image_storage_path,
+         *             provider, provider_model }
+         *     Returns: the updated MonsterImageGenerationJob (including the linked image).
+         */
+        post: operations["api_monsters_generate_image_mark_succeeded_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/": {
         parameters: {
             query?: never;
@@ -348,6 +373,55 @@ export interface components {
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
+        };
+        /**
+         * @description POST body for mark-blocked.
+         *
+         *     Used for content policy violations (banned-terms guard, moderation provider).
+         *     The job may be in QUEUED or RUNNING state when this is called.
+         */
+        MarkJobBlocked: {
+            /** Format: uuid */
+            job_id: string;
+            error_code: string;
+            error_message: string;
+        };
+        /**
+         * @description POST body for mark-failed.
+         *
+         *     error_code is required; error_message is the safe user-facing description.
+         */
+        MarkJobFailed: {
+            /** Format: uuid */
+            job_id: string;
+            error_code: string;
+            error_message: string;
+        };
+        /**
+         * @description POST body for mark-running.
+         *
+         *     Identifies the specific job to transition; the monster is in the URL.
+         */
+        MarkJobRunning: {
+            /** Format: uuid */
+            job_id: string;
+        };
+        /**
+         * @description POST body for mark-succeeded.
+         *
+         *     Carries the image metadata that Django will use to create the MonsterImage
+         *     record and link it to the job.
+         */
+        MarkJobSucceeded: {
+            /** Format: uuid */
+            job_id: string;
+            /** Format: uuid */
+            monster_image_id: string;
+            /** Format: uri */
+            public_image_url: string;
+            image_storage_path: string;
+            provider: string;
+            provider_model: string;
         };
         /**
          * @description Read/response serializer for Monster.
@@ -454,17 +528,13 @@ export interface components {
         /**
          * @description POST request serializer for MonsterImageGenerationJob.
          *
-         *     Owner is always set from request context. Status, provider, prompt,
-         *     and all other internal fields are never accepted from client input.
+         *     Owner is always set from request context. monster_id comes from the URL
+         *     kwargs, not the request body. Status, provider, prompt, and all other
+         *     internal fields are never accepted from client input.
          */
         MonsterImageGenerationJobCreate: {
             /** @default false */
             should_email_when_done: boolean;
-            /**
-             * Format: uuid
-             * @description Optional: attach this job to an existing monster owned by the requesting user.
-             */
-            monster_id?: string | null;
         };
         /**
          * @description Nested traits sub-object. Maps to flat columns on Monster.
@@ -558,166 +628,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    api_image_generation_jobs_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["MonsterImageGenerationJobCreate"];
-                "application/x-www-form-urlencoded": components["schemas"]["MonsterImageGenerationJobCreate"];
-                "multipart/form-data": components["schemas"]["MonsterImageGenerationJobCreate"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
-                };
-            };
-        };
-    };
-    api_image_generation_jobs_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
-                };
-            };
-        };
-    };
-    api_image_generation_jobs_mark_blocked_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_image_generation_jobs_mark_failed_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_image_generation_jobs_mark_running_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_image_generation_jobs_mark_succeeded_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_image_generation_jobs_notification_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
-                "multipart/form-data": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
-                };
-            };
-            /** @description No response body */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     api_me_retrieve: {
         parameters: {
             query?: never;
@@ -865,6 +775,254 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Monster"];
                 };
+            };
+        };
+    };
+    api_monsters_generate_image_jobs_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MonsterImageGenerationJobCreate"];
+                "application/x-www-form-urlencoded": components["schemas"]["MonsterImageGenerationJobCreate"];
+                "multipart/form-data": components["schemas"]["MonsterImageGenerationJobCreate"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+        };
+    };
+    api_monsters_generate_image_jobs_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+        };
+    };
+    api_monsters_generate_image_jobs_notification_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
+                "multipart/form-data": components["schemas"]["PatchedMonsterImageGenerationJobNotificationUpdate"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+            /** @description No response body */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_monsters_generate_image_mark_blocked_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkJobBlocked"];
+                "application/x-www-form-urlencoded": components["schemas"]["MarkJobBlocked"];
+                "multipart/form-data": components["schemas"]["MarkJobBlocked"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+            /** @description No response body */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No response body */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_monsters_generate_image_mark_failed_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkJobFailed"];
+                "application/x-www-form-urlencoded": components["schemas"]["MarkJobFailed"];
+                "multipart/form-data": components["schemas"]["MarkJobFailed"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+            /** @description No response body */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No response body */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_monsters_generate_image_mark_running_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkJobRunning"];
+                "application/x-www-form-urlencoded": components["schemas"]["MarkJobRunning"];
+                "multipart/form-data": components["schemas"]["MarkJobRunning"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+            /** @description No response body */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No response body */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_monsters_generate_image_mark_succeeded_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkJobSucceeded"];
+                "application/x-www-form-urlencoded": components["schemas"]["MarkJobSucceeded"];
+                "multipart/form-data": components["schemas"]["MarkJobSucceeded"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonsterImageGenerationJob"];
+                };
+            };
+            /** @description No response body */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No response body */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

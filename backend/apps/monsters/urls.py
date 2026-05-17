@@ -2,6 +2,10 @@
 URL patterns for the monsters app.
 
 All routes are mounted under /api/ via apps.common.urls.
+
+All image-generation-job endpoints live under
+  /monsters/{monster_id}/generate-image/
+so that the monster context is always explicit in the URL.
 """
 
 from django.urls import path
@@ -9,58 +13,58 @@ from django.urls import path
 from .views import (
     ImageGenerationJobCreateView,
     ImageGenerationJobDetailView,
-    ImageGenerationJobMarkBlockedView,
-    ImageGenerationJobMarkFailedView,
-    ImageGenerationJobMarkRunningView,
-    ImageGenerationJobMarkSucceededView,
     ImageGenerationJobNotificationView,
     MonsterDetailView,
+    MonsterGenerateImageMarkBlockedView,
+    MonsterGenerateImageMarkFailedView,
+    MonsterGenerateImageMarkRunningView,
+    MonsterGenerateImageMarkSucceededView,
     MonsterListCreateView,
 )
 
 urlpatterns = [
-    # Monster endpoints
+    # Monster CRUD
     path("monsters/", MonsterListCreateView.as_view(), name="monster-list-create"),
     path(
         "monsters/<uuid:monster_id>/",
         MonsterDetailView.as_view(),
         name="monster-detail",
     ),
-    # Image generation job endpoints
+    # Image generation job lifecycle — all nested under monsters/{monster_id}/generate-image/
     path(
-        "image-generation-jobs/",
+        "monsters/<uuid:monster_id>/generate-image/jobs/",
         ImageGenerationJobCreateView.as_view(),
-        name="job-list-create",
+        name="monster-generate-image-jobs",
     ),
     path(
-        "image-generation-jobs/<uuid:job_id>/",
+        "monsters/<uuid:monster_id>/generate-image/jobs/<uuid:job_id>/",
         ImageGenerationJobDetailView.as_view(),
-        name="job-detail",
+        name="monster-generate-image-job-detail",
     ),
     path(
-        "image-generation-jobs/<uuid:job_id>/notification/",
+        "monsters/<uuid:monster_id>/generate-image/jobs/<uuid:job_id>/notification/",
         ImageGenerationJobNotificationView.as_view(),
-        name="job-notification",
+        name="monster-generate-image-job-notification",
     ),
-    # Trusted-server transition stubs (return 501 until Step B6)
+    # Trusted-server transition endpoints
     path(
-        "image-generation-jobs/<uuid:job_id>/mark-running/",
-        ImageGenerationJobMarkRunningView.as_view(),
-        name="job-mark-running",
-    ),
-    path(
-        "image-generation-jobs/<uuid:job_id>/mark-succeeded/",
-        ImageGenerationJobMarkSucceededView.as_view(),
-        name="job-mark-succeeded",
+        "monsters/<uuid:monster_id>/generate-image/mark-running/",
+        MonsterGenerateImageMarkRunningView.as_view(),
+        name="monster-generate-image-mark-running",
     ),
     path(
-        "image-generation-jobs/<uuid:job_id>/mark-failed/",
-        ImageGenerationJobMarkFailedView.as_view(),
-        name="job-mark-failed",
+        "monsters/<uuid:monster_id>/generate-image/mark-succeeded/",
+        MonsterGenerateImageMarkSucceededView.as_view(),
+        name="monster-generate-image-mark-succeeded",
     ),
     path(
-        "image-generation-jobs/<uuid:job_id>/mark-blocked/",
-        ImageGenerationJobMarkBlockedView.as_view(),
-        name="job-mark-blocked",
+        "monsters/<uuid:monster_id>/generate-image/mark-failed/",
+        MonsterGenerateImageMarkFailedView.as_view(),
+        name="monster-generate-image-mark-failed",
+    ),
+    path(
+        "monsters/<uuid:monster_id>/generate-image/mark-blocked/",
+        MonsterGenerateImageMarkBlockedView.as_view(),
+        name="monster-generate-image-mark-blocked",
     ),
 ]

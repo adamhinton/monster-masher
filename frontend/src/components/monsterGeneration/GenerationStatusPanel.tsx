@@ -53,6 +53,7 @@ export function GenerationStatusPanel({
 						aria-hidden="true"
 					/>
 					<p>
+						{/* TODO(image-gen-durable-jobs): once generation is durable across page leave/reload, replace this copy with the "you can leave this page and we can email you" variant and align the toggle helper text. */}
 						Image generation can take up to a minute. Keep this tab open while
 						your monster is being generated.
 					</p>

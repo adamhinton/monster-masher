@@ -1,6 +1,8 @@
 """
-Comprehensive tests for the MonsterImageGenerationJob service functions in
+Comprehensive lifecycle tests for the MonsterImageGenerationJob service functions in
 apps.monsters.services.generation_jobs.
+
+Runs through the major scenarios for job creation and state transitions, asserting that the correct status changes, timestamps, and other side effects occur — and that invalid transitions are properly blocked with informative exceptions.
 
 No external calls. No network. No providers.
 """
@@ -590,14 +592,18 @@ class MarkJobBlockedTests(TestCase):
 
     # ── Invalid source states ────────────────────────────────────────────────
 
-    def test_raises_if_queued(self):
-        """BLOCKED can only come from RUNNING, never from QUEUED."""
+    def test_queued_job_can_be_blocked(self):
+        """QUEUED → BLOCKED is valid for pre-flight content checks."""
         job = _make_queued_job(self.owner)
-        with self.assertRaises(InvalidJobTransition) as ctx:
-            mark_job_blocked(job, error_code="policy", safe_error_message="msg")
-        self.assertEqual(
-            ctx.exception.current_status, MonsterImageGenerationStatus.QUEUED
-        )
+        updated = mark_job_blocked(job, error_code="policy", safe_error_message="msg")
+        self.assertEqual(updated.status, MonsterImageGenerationStatus.BLOCKED)
+
+    def test_queued_blocked_sets_both_timestamps(self):
+        """Blocking a QUEUED job must set both started_at and finished_at."""
+        job = _make_queued_job(self.owner)
+        updated = mark_job_blocked(job, error_code="policy", safe_error_message="msg")
+        self.assertIsNotNone(updated.started_at)
+        self.assertIsNotNone(updated.finished_at)
 
     def test_raises_if_succeeded(self):
         monster = _make_monster(self.owner)

@@ -7,9 +7,10 @@ Valid transitions:
     create  → QUEUED
     QUEUED  → RUNNING   (mark_job_running)
     QUEUED  → FAILED    (mark_job_failed)   # job can fail before it ever starts
+    QUEUED  → BLOCKED   (mark_job_blocked)  # pre-flight content policy block
     RUNNING → SUCCEEDED (mark_job_succeeded)
     RUNNING → FAILED    (mark_job_failed)
-    RUNNING → BLOCKED   (mark_job_blocked)
+    RUNNING → BLOCKED   (mark_job_blocked)  # content policy block during run
 
 Terminal states (SUCCEEDED, FAILED, BLOCKED) cannot transition further.
 
@@ -237,18 +238,23 @@ def mark_job_blocked(
     safe_error_message: str,
 ) -> MonsterImageGenerationJob:
     """
-    Transition a RUNNING job to BLOCKED.
+    Transition a QUEUED or RUNNING job to BLOCKED.
 
-    BLOCKED is used for content moderation rejections or policy blocks —
-    cases where the job ran but was intentionally stopped rather than
-    failing due to a technical error. BLOCKED only transitions from RUNNING
-    (the job must have started before it could be blocked).
+    BLOCKED is used for content moderation rejections or policy blocks.
+    It is reachable from both QUEUED (pre-flight content check, e.g. banned-terms
+    guard or moderation provider block before the job ever starts) and RUNNING
+    (content policy block after the job has started).
 
-    Sets both started_at (already set from RUNNING) and finished_at.
+    When transitioning from QUEUED, both started_at and finished_at are set to
+    the current time simultaneously — the job never had a meaningful start, but
+    the DB constraint for BLOCKED requires both timestamps to be present.
+    When transitioning from RUNNING, only finished_at is set (started_at already
+    populated by mark_job_running).
+
     Records safe error information. Does not attach an image.
 
     Args:
-        job:               A MonsterImageGenerationJob that must currently be RUNNING.
+        job:               A MonsterImageGenerationJob in QUEUED or RUNNING status.
         error_code:        Short machine-readable code, e.g. 'content_policy_violation'.
         safe_error_message: User-safe description of why the job was blocked.
 
@@ -256,17 +262,26 @@ def mark_job_blocked(
         The updated job instance.
 
     Raises:
-        InvalidJobTransition: If the job is not currently RUNNING.
+        InvalidJobTransition: If the job is already in a terminal state or SUCCEEDED.
         ValueError:           If error_code is blank.
     """
-    if job.status != MonsterImageGenerationStatus.RUNNING:
+    if job.status not in (
+        MonsterImageGenerationStatus.QUEUED,
+        MonsterImageGenerationStatus.RUNNING,
+    ):
         raise InvalidJobTransition(job, attempted="mark as blocked")
 
     if not error_code:
         raise ValueError("error_code must not be blank when marking a job blocked.")
 
+    now = timezone.now()
     job.status = MonsterImageGenerationStatus.BLOCKED
-    job.finished_at = timezone.now()
+    job.finished_at = now
+    # BLOCKED requires both timestamps. For QUEUED → BLOCKED (pre-flight content
+    # check), started_at was never set, so we set it to now. For RUNNING → BLOCKED,
+    # started_at is already set from mark_job_running.
+    if job.started_at is None:
+        job.started_at = now
     job.error_code = error_code
     job.safe_error_message = safe_error_message
     # Ensure no image is attached — blocked jobs never produce an image.

@@ -12,9 +12,7 @@ Copy `.env.local.example` to `.env.local` and fill in values before running.
 
 ## Environment Variables
 
-| Variable                          | Description                                                        |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `NEXT_PUBLIC_DJANGO_API_BASE_URL` | Base URL for the Django API (e.g. `http://127.0.0.1:8000` locally) |
+Check `.env.local.example` for required environment variables.
 
 ## Regenerating API Types
 
@@ -90,10 +88,26 @@ Auth is handled by Next.js + Supabase Auth. Magic links are delivered by Resend.
 
 Next.js route handlers that proxy to Django after verifying the Supabase session server-side.
 
-| Method   | Path                        | Description                                                                                                                                     |
-| -------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST`   | `/api/monsters`             | Creates a monster. Validates the body against `MonsterForPOSTSchema`, forwards to Django `POST /api/monsters/`, returns `{ monster: Monster }`. |
-| `DELETE` | `/api/monsters/[monsterId]` | Deletes a monster. Forwards to Django `DELETE /api/monsters/{monster_id}/`. Returns `{ ok: true }` on success or a `NextApiError` on failure.   |
+| Method   | Path                                       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST`   | `/api/monsters`                            | Creates a monster. Validates the body against `MonsterForPOSTSchema`, forwards to Django `POST /api/monsters/`, returns `{ monster: Monster }`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `DELETE` | `/api/monsters/[monsterId]`                | Deletes a monster. Forwards to Django `DELETE /api/monsters/{monster_id}/`. Returns `{ ok: true }` on success or a `NextApiError` on failure.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `POST`   | `/api/monsters/[monsterId]/generate-image` | **The only way to create a `MonsterImage`.** Runs the full generation pipeline: validates the request, verifies auth, creates a `MonsterImageGenerationJob` in Django, runs the banned-terms guard and moderation provider, generates the image via the image provider, uploads it to Supabase Storage, and calls Django mark-succeeded. Returns `{ outcome: "succeeded", public_image_url, image_storage_path }` on success. Returns 400 for invalid input, 401 for unauthenticated requests, 422 for blocked content, and 500 for provider/storage failures. There is no separate `/api/monster-images/` endpoint — this route is the entry point for all image creation. |
+
+#### Image generation pipeline details
+
+`POST /api/monsters/[monsterId]/generate-image` orchestrates these steps in order:
+
+1. **Auth** — Supabase session verified; `user_profile_id` comes from the JWT `sub` claim, never from the request body.
+2. **Validation** — Request body re-validated server-side against `monsterFormSchema` (same schema the form uses).
+3. **Job creation** — `POST /api/monsters/{monster_id}/generate-image/jobs/` in Django creates a `MonsterImageGenerationJob` (status: `QUEUED`). Django is the source of truth for job lifecycle.
+4. **Banned-terms guard** — `containsBannedTerms(prompt)` runs before any external call. If blocked → `mark-blocked` → 422.
+5. **Moderation** — `getModerationProvider().moderate(prompt)`. If blocked → `mark-blocked` → 422. If failed → `mark-failed` → 500.
+6. **Mark running** — `mark-running` called after moderation passes. Only clean-prompt jobs reach RUNNING.
+7. **Image generation** — `getImageProvider().generate(prompt)`. If failed → `mark-failed` → 500.
+8. **Storage upload** — `getImageStorage().upload(imageBytes, options)`. If failed → `mark-failed` → 500.
+9. **Mark succeeded** — `mark-succeeded` called with the image metadata. Django atomically creates the `MonsterImage` row, links it to the `Monster`, and transitions the job to `SUCCEEDED`.
+10. **Response** — Returns the public image URL and storage path.
 
 ### Auth state (Redux)
 

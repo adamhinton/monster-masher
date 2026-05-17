@@ -5,6 +5,16 @@ Ownership is enforced by filtering all querysets and get_object_or_404 calls
 on owner=request.user, which causes non-owner access to return 404, not 403
 (per Step 5c requirement).  No endpoint accepts owner_id as input from the
 client; ownership always comes from the verified request.user.
+
+Trust boundary for image-generation transition endpoints:
+    Next.js forwards the user's Supabase access token to Django.
+    Django verifies the JWT (IsAuthenticated), confirms that the monster
+    belongs to the authenticated user, and confirms that the job belongs to
+    the same user and is attached to that monster.
+    This keeps the implementation simple and avoids a shared server secret.
+    Because the user's own token is used, the client could in principle call
+    these endpoints directly; the views are designed to be safe at the user
+    level (correct ownership checks, valid state transitions).
 """
 
 from django.shortcuts import get_object_or_404
@@ -18,11 +28,16 @@ from rest_framework.views import APIView
 
 from apps.monsters.models import (
     Monster,
+    MonsterImage,
     MonsterImageGenerationJob,
     MonsterImageGenerationMode,
     MonsterImageGenerationStatus,
 )
 from apps.monsters.serializers import (
+    MarkJobBlockedSerializer,
+    MarkJobFailedSerializer,
+    MarkJobRunningSerializer,
+    MarkJobSucceededSerializer,
     MonsterCreateSerializer,
     MonsterImageGenerationJobCreateSerializer,
     MonsterImageGenerationJobNotificationUpdateSerializer,
@@ -30,7 +45,14 @@ from apps.monsters.serializers import (
     MonsterSerializer,
     MonsterUpdateSerializer,
 )
-from apps.monsters.services.generation_jobs import create_generation_job
+from apps.monsters.services.generation_jobs import (
+    InvalidJobTransition,
+    create_generation_job,
+    mark_job_blocked,
+    mark_job_failed,
+    mark_job_running,
+    mark_job_succeeded,
+)
 
 _TERMINAL_STATUSES = frozenset(
     [
@@ -129,10 +151,10 @@ class MonsterDetailView(GenericAPIView):
 
 class ImageGenerationJobCreateView(GenericAPIView):
     """
-    POST /api/image-generation-jobs/ — create a generation job.
+    POST /api/monsters/{monster_id}/generate-image/jobs/
 
-    Uses create_generation_job() service.  Defaults to fake mode for the
-    contract phase; real provider wiring happens in a later step.
+    Creates a generation job attached to the given monster. monster_id is
+    always taken from the URL — never from the request body.
     """
 
     permission_classes = [IsAuthenticated]
@@ -143,15 +165,12 @@ class ImageGenerationJobCreateView(GenericAPIView):
         request=MonsterImageGenerationJobCreateSerializer,
         responses={201: MonsterImageGenerationJobSerializer},
     )
-    def post(self, request: Request) -> Response:
+    def post(self, request: Request, monster_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
+
         serializer = MonsterImageGenerationJobCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         vd = serializer.validated_data
-
-        monster_id = vd.get("monster_id")
-        monster = None
-        if monster_id:
-            monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
 
         job = create_generation_job(
             owner=request.user,
@@ -160,10 +179,8 @@ class ImageGenerationJobCreateView(GenericAPIView):
             provider_model="fake-fixture-v1",
             should_email_when_done=vd["should_email_when_done"],
         )
-
-        if monster is not None:
-            job.monster = monster
-            job.save()
+        job.monster = monster
+        job.save()
 
         return Response(
             MonsterImageGenerationJobSerializer(job).data,
@@ -173,10 +190,10 @@ class ImageGenerationJobCreateView(GenericAPIView):
 
 class ImageGenerationJobDetailView(GenericAPIView):
     """
-    GET /api/image-generation-jobs/{job_id}/ — retrieve a generation job.
+    GET /api/monsters/{monster_id}/generate-image/jobs/{job_id}/
 
-    Returns 404 (not 403) when the job does not exist or belongs to another
-    user.
+    Returns 404 (not 403) when the job does not exist, belongs to another
+    user, or is not attached to the given monster.
     """
 
     permission_classes = [IsAuthenticated]
@@ -186,20 +203,21 @@ class ImageGenerationJobDetailView(GenericAPIView):
         summary="Get an image generation job",
         responses={200: MonsterImageGenerationJobSerializer},
     )
-    def get(self, request: Request, job_id) -> Response:
+    def get(self, request: Request, monster_id, job_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
         job = get_object_or_404(
-            MonsterImageGenerationJob, id=job_id, owner=request.user
+            MonsterImageGenerationJob, id=job_id, owner=request.user, monster=monster
         )
         return Response(MonsterImageGenerationJobSerializer(job).data)
 
 
 class ImageGenerationJobNotificationView(GenericAPIView):
     """
-    PATCH /api/image-generation-jobs/{job_id}/notification/ — toggle email
-    notification preference.
+    PATCH /api/monsters/{monster_id}/generate-image/jobs/{job_id}/notification/
 
-    Returns 400 if the job is already in a terminal state (succeeded, failed,
-    or blocked) because the notification window has closed.
+    Toggle email notification preference. Returns 400 if the job is already
+    in a terminal state (succeeded, failed, or blocked) because the
+    notification window has closed.
     """
 
     permission_classes = [IsAuthenticated]
@@ -210,9 +228,10 @@ class ImageGenerationJobNotificationView(GenericAPIView):
         request=MonsterImageGenerationJobNotificationUpdateSerializer,
         responses={200: MonsterImageGenerationJobSerializer, 400: None},
     )
-    def patch(self, request: Request, job_id) -> Response:
+    def patch(self, request: Request, monster_id, job_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
         job = get_object_or_404(
-            MonsterImageGenerationJob, id=job_id, owner=request.user
+            MonsterImageGenerationJob, id=job_id, owner=request.user, monster=monster
         )
 
         if job.status in _TERMINAL_STATUSES:
@@ -231,73 +250,249 @@ class ImageGenerationJobNotificationView(GenericAPIView):
 
 
 # ---------------------------------------------------------------------------
-# Trusted-server transition stubs (Step 5g)
-# These return 501 until the trust boundary is designed in Step B6.
-# Registering them now ensures OpenAPI includes them in the schema.
+# Trusted-server transition endpoints
+#
+# Trust boundary: Next.js forwards the user's Supabase access token.
+# See module docstring for rationale.
+#
+# All four views follow the same pattern:
+#   1. Verify the monster exists and belongs to the authenticated user (404 if not).
+#   2. Parse and validate the request body (job_id + any transition-specific fields).
+#   3. Verify the job exists, belongs to the user, and is attached to that monster.
+#   4. Attempt the transition; return 409 if the state machine rejects it.
+#   5. Return the updated job serialized as MonsterImageGenerationJobSerializer.
 # ---------------------------------------------------------------------------
 
-_STUB_501 = Response(
-    {"detail": "Not implemented. Reserved for trusted server use."},
-    status=status.HTTP_501_NOT_IMPLEMENTED,
-)
 
-
-class _TransitionStubView(APIView):
+def _get_job_for_transition(
+    request: Request,
+    monster: Monster,
+    job_id,
+) -> MonsterImageGenerationJob | None:
     """
-    Base class for trusted-server transition stubs.
+    Fetch the job, verifying ownership and monster attachment.
 
-    All stubs return 501 until Step B6 implements real trust-boundary logic.
-    Do not add user-accessible logic here — these must remain server-only.
+    Returns None if the job does not exist, belongs to another user,
+    or is not attached to the given monster (caller should return 404).
+    """
+    try:
+        return MonsterImageGenerationJob.objects.get(
+            id=job_id,
+            owner=request.user,
+            monster=monster,
+        )
+    except MonsterImageGenerationJob.DoesNotExist:
+        return None
+
+
+class MonsterGenerateImageMarkRunningView(APIView):
+    """
+    POST /api/monsters/{monster_id}/generate-image/mark-running/
+
+    Transitions a QUEUED job to RUNNING. Called by the Next.js pipeline
+    after moderation passes and before image generation begins.
+
+    Body: { job_id }
+    Returns: the updated MonsterImageGenerationJob.
     """
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request: Request, job_id) -> Response:
-        return Response(
-            {"detail": "Not implemented. Reserved for trusted server use."},
-            status=status.HTTP_501_NOT_IMPLEMENTED,
+    @extend_schema(
+        summary="Mark image generation job as running",
+        request=MarkJobRunningSerializer,
+        responses={200: MonsterImageGenerationJobSerializer, 404: None, 409: None},
+    )
+    def post(self, request: Request, monster_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
+
+        serializer = MarkJobRunningSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        job = _get_job_for_transition(
+            request, monster, serializer.validated_data["job_id"]
+        )
+        if job is None:
+            return Response(
+                {"error": {"code": "not_found", "message": "Job not found."}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            updated_job = mark_job_running(job)
+        except InvalidJobTransition as exc:
+            return Response(
+                {
+                    "error": {
+                        "code": "invalid_transition",
+                        "message": str(exc),
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(MonsterImageGenerationJobSerializer(updated_job).data)
+
+
+class MonsterGenerateImageMarkSucceededView(APIView):
+    """
+    POST /api/monsters/{monster_id}/generate-image/mark-succeeded/
+
+    Transitions a RUNNING job to SUCCEEDED and creates the MonsterImage record.
+    Called by the Next.js pipeline after the image has been uploaded to storage.
+
+    Body: { job_id, monster_image_id, public_image_url, image_storage_path,
+            provider, provider_model }
+    Returns: the updated MonsterImageGenerationJob (including the linked image).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Mark image generation job as succeeded and create MonsterImage",
+        request=MarkJobSucceededSerializer,
+        responses={200: MonsterImageGenerationJobSerializer, 404: None, 409: None},
+    )
+    def post(self, request: Request, monster_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
+
+        serializer = MarkJobSucceededSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        vd = serializer.validated_data
+
+        job = _get_job_for_transition(request, monster, vd["job_id"])
+        if job is None:
+            return Response(
+                {"error": {"code": "not_found", "message": "Job not found."}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        monster_image = MonsterImage.objects.create(
+            id=vd["monster_image_id"],
+            monster=monster,
+            public_image_url=vd["public_image_url"],
+            image_storage_path=vd["image_storage_path"],
+            provider=vd["provider"],
+            provider_model=vd["provider_model"],
         )
 
+        try:
+            updated_job = mark_job_succeeded(job, monster_image)
+        except InvalidJobTransition as exc:
+            # Roll back the image we just created since the transition failed.
+            monster_image.delete()
+            return Response(
+                {
+                    "error": {
+                        "code": "invalid_transition",
+                        "message": str(exc),
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
-class ImageGenerationJobMarkRunningView(_TransitionStubView):
+        return Response(MonsterImageGenerationJobSerializer(updated_job).data)
+
+
+class MonsterGenerateImageMarkFailedView(APIView):
+    """
+    POST /api/monsters/{monster_id}/generate-image/mark-failed/
+
+    Transitions a QUEUED or RUNNING job to FAILED. Called by the Next.js
+    pipeline on provider or storage errors.
+
+    Body: { job_id, error_code, error_message }
+    Returns: the updated MonsterImageGenerationJob.
+    """
+
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(
-        summary="[Stub] Mark job as running",
-        description="Not yet implemented. Reserved for trusted-server use only.",
-        request=None,
-        responses={501: None},
+        summary="Mark image generation job as failed",
+        request=MarkJobFailedSerializer,
+        responses={200: MonsterImageGenerationJobSerializer, 404: None, 409: None},
     )
-    def post(self, request: Request, job_id) -> Response:
-        return super().post(request, job_id)
+    def post(self, request: Request, monster_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
+
+        serializer = MarkJobFailedSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        vd = serializer.validated_data
+
+        job = _get_job_for_transition(request, monster, vd["job_id"])
+        if job is None:
+            return Response(
+                {"error": {"code": "not_found", "message": "Job not found."}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            updated_job = mark_job_failed(
+                job,
+                error_code=vd["error_code"],
+                safe_error_message=vd["error_message"],
+            )
+        except InvalidJobTransition as exc:
+            return Response(
+                {
+                    "error": {
+                        "code": "invalid_transition",
+                        "message": str(exc),
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(MonsterImageGenerationJobSerializer(updated_job).data)
 
 
-class ImageGenerationJobMarkSucceededView(_TransitionStubView):
+class MonsterGenerateImageMarkBlockedView(APIView):
+    """
+    POST /api/monsters/{monster_id}/generate-image/mark-blocked/
+
+    Transitions a QUEUED or RUNNING job to BLOCKED. Called by the Next.js
+    pipeline when the banned-terms guard or moderation provider rejects the prompt.
+
+    Body: { job_id, error_code, error_message }
+    Returns: the updated MonsterImageGenerationJob.
+    """
+
+    permission_classes = [IsAuthenticated]
+
     @extend_schema(
-        summary="[Stub] Mark job as succeeded",
-        description="Not yet implemented. Reserved for trusted-server use only.",
-        request=None,
-        responses={501: None},
+        summary="Mark image generation job as blocked (content policy)",
+        request=MarkJobBlockedSerializer,
+        responses={200: MonsterImageGenerationJobSerializer, 404: None, 409: None},
     )
-    def post(self, request: Request, job_id) -> Response:
-        return super().post(request, job_id)
+    def post(self, request: Request, monster_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
 
+        serializer = MarkJobBlockedSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        vd = serializer.validated_data
 
-class ImageGenerationJobMarkFailedView(_TransitionStubView):
-    @extend_schema(
-        summary="[Stub] Mark job as failed",
-        description="Not yet implemented. Reserved for trusted-server use only.",
-        request=None,
-        responses={501: None},
-    )
-    def post(self, request: Request, job_id) -> Response:
-        return super().post(request, job_id)
+        job = _get_job_for_transition(request, monster, vd["job_id"])
+        if job is None:
+            return Response(
+                {"error": {"code": "not_found", "message": "Job not found."}},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
+        try:
+            updated_job = mark_job_blocked(
+                job,
+                error_code=vd["error_code"],
+                safe_error_message=vd["error_message"],
+            )
+        except InvalidJobTransition as exc:
+            return Response(
+                {
+                    "error": {
+                        "code": "invalid_transition",
+                        "message": str(exc),
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
-class ImageGenerationJobMarkBlockedView(_TransitionStubView):
-    @extend_schema(
-        summary="[Stub] Mark job as blocked",
-        description="Not yet implemented. Reserved for trusted-server use only.",
-        request=None,
-        responses={501: None},
-    )
-    def post(self, request: Request, job_id) -> Response:
-        return super().post(request, job_id)
+        return Response(MonsterImageGenerationJobSerializer(updated_job).data)

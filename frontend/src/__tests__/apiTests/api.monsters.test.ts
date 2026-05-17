@@ -36,6 +36,7 @@ const validMonsterPayload = {
 		color_palette: "green and brown",
 	},
 	flavor_text: "Lurks in the shallows.",
+	should_email_when_done: true,
 };
 
 const validMonsterResponse: Monster = {

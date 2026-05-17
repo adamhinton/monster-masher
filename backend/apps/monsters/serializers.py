@@ -295,17 +295,12 @@ class MonsterImageGenerationJobCreateSerializer(serializers.Serializer):
     """
     POST request serializer for MonsterImageGenerationJob.
 
-    Owner is always set from request context. Status, provider, prompt,
-    and all other internal fields are never accepted from client input.
+    Owner is always set from request context. monster_id comes from the URL
+    kwargs, not the request body. Status, provider, prompt, and all other
+    internal fields are never accepted from client input.
     """
 
     should_email_when_done = serializers.BooleanField(required=False, default=False)
-    monster_id = serializers.UUIDField(
-        required=False,
-        allow_null=True,
-        default=None,
-        help_text="Optional: attach this job to an existing monster owned by the requesting user.",
-    )
 
 
 class MonsterImageGenerationJobNotificationUpdateSerializer(serializers.Serializer):
@@ -317,3 +312,59 @@ class MonsterImageGenerationJobNotificationUpdateSerializer(serializers.Serializ
     """
 
     should_email_when_done = serializers.BooleanField()
+
+
+# ---------------------------------------------------------------------------
+# Trusted-server transition serializers (Step B6)
+# ---------------------------------------------------------------------------
+
+
+class MarkJobRunningSerializer(serializers.Serializer):
+    """
+    POST body for mark-running.
+
+    Identifies the specific job to transition; the monster is in the URL.
+    """
+
+    job_id = serializers.UUIDField()
+
+
+class MarkJobSucceededSerializer(serializers.Serializer):
+    """
+    POST body for mark-succeeded.
+
+    Carries the image metadata that Django will use to create the MonsterImage
+    record and link it to the job.
+    """
+
+    job_id = serializers.UUIDField()
+    monster_image_id = serializers.UUIDField()
+    public_image_url = serializers.URLField()
+    image_storage_path = serializers.CharField()
+    provider = serializers.CharField(max_length=50)
+    provider_model = serializers.CharField(max_length=100)
+
+
+class MarkJobFailedSerializer(serializers.Serializer):
+    """
+    POST body for mark-failed.
+
+    error_code is required; error_message is the safe user-facing description.
+    """
+
+    job_id = serializers.UUIDField()
+    error_code = serializers.CharField(max_length=100)
+    error_message = serializers.CharField()
+
+
+class MarkJobBlockedSerializer(serializers.Serializer):
+    """
+    POST body for mark-blocked.
+
+    Used for content policy violations (banned-terms guard, moderation provider).
+    The job may be in QUEUED or RUNNING state when this is called.
+    """
+
+    job_id = serializers.UUIDField()
+    error_code = serializers.CharField(max_length=100)
+    error_message = serializers.CharField()

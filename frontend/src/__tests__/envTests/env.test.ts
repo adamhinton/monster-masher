@@ -28,4 +28,17 @@ describe("env.ts", () => {
 			"Missing NEXT_PUBLIC_DJANGO_API_BASE_URL",
 		);
 	});
+
+	// B7d: real mode provider key validation
+	it("throws when OPENAI_API_KEY is absent", async () => {
+		delete process.env.OPENAI_API_KEY;
+		const { env } = await import("@/lib/env/env");
+		expect(() => env.openAIApiKey).toThrow("Missing OPENAI_API_KEY");
+	});
+
+	it("returns OPENAI_API_KEY when it is present", async () => {
+		process.env.OPENAI_API_KEY = "sk-test-key";
+		const { env } = await import("@/lib/env/env");
+		expect(env.openAIApiKey).toBe("sk-test-key");
+	});
 });

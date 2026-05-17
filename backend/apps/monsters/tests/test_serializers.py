@@ -737,18 +737,19 @@ class JobCreateSerializerTests(TestCase):
         self.assertTrue(s.is_valid(), s.errors)
         self.assertTrue(s.validated_data["should_email_when_done"])
 
-    def test_monster_id_accepted(self):
+    def test_monster_id_not_in_serializer(self):
+        """monster_id now comes from URL kwargs, not the request body."""
+        s = MonsterImageGenerationJobCreateSerializer()
+        self.assertNotIn("monster_id", s.fields)
+
+    def test_monster_id_in_body_is_ignored(self):
+        """Supplying monster_id in the body is harmlessly ignored by DRF."""
         monster_id = uuid.uuid4()
         s = MonsterImageGenerationJobCreateSerializer(
             data={"monster_id": str(monster_id)}
         )
         self.assertTrue(s.is_valid(), s.errors)
-        self.assertEqual(s.validated_data["monster_id"], monster_id)
-
-    def test_monster_id_can_be_null(self):
-        s = MonsterImageGenerationJobCreateSerializer(data={"monster_id": None})
-        self.assertTrue(s.is_valid(), s.errors)
-        self.assertIsNone(s.validated_data["monster_id"])
+        self.assertNotIn("monster_id", s.validated_data)
 
     def test_status_field_not_in_serializer(self):
         """status is server-controlled; clients must never be able to set it."""

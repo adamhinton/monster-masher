@@ -13,7 +13,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { type NextApiError } from "@/lib/api/errors";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
-import { paths } from "@/lib/api/__generated__/types";
 
 export const dynamic = "force-dynamic";
 
@@ -68,9 +67,8 @@ export async function DELETE(
 	let response: Response;
 	try {
 		response = await fetchFromDjango(
-			// Our generated API routes aren't smart enough to recognize dynamic paths
-			// But it'll alert us if this fails, and I have automated tests to catch it before it gets to prod
-			`/api/monsters/${monsterId}/` as unknown as keyof paths,
+			"/api/monsters/{monster_id}/",
+			{ monster_id: monsterId },
 			{
 				method: "DELETE",
 				headers: { Authorization: `Bearer ${accessToken}` },
