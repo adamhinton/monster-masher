@@ -82,4 +82,16 @@ export const env = {
 			"SUPABASE_SECRET_KEY",
 		);
 	},
+	get OpenAIApiKey() {
+		const value = assertDefined(process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
+		return value;
+	},
+	/**
+	 * When `true`, the full sanitised prompt is included in Sentry moderation
+	 * context. Defaults to `false`. Must remain server-only — never expose this
+	 * flag or its value through a `NEXT_PUBLIC_` var or API response.
+	 */
+	get sentryLogFullModerationPrompts() {
+		return process.env.SENTRY_LOG_FULL_MODERATION_PROMPTS === "true";
+	},
 };

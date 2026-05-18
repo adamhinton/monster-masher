@@ -3,7 +3,25 @@ import {
 	containsBannedTerms,
 	FakeModerationProvider,
 	OpenAIModerationProvider,
+	type ModerationInput,
 } from "@/lib/monsterGeneration/imageGeneration/moderation/moderation";
+
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+function makeModerationInput(
+	text: string,
+	overrides?: Partial<ModerationInput>,
+): ModerationInput {
+	return {
+		promptText: text,
+		imageGenerationJobId: "test-job-id",
+		authState: "authenticated",
+		generationMode: "fake",
+		...overrides,
+	};
+}
 
 // ---------------------------------------------------------------------------
 // containsBannedTerms — synchronous local guard
@@ -49,7 +67,9 @@ describe("containsBannedTerms", () => {
 describe("FakeModerationProvider", () => {
 	it("allows all prompts by default", async () => {
 		const provider = new FakeModerationProvider();
-		const result = await provider.moderate("a mossy bog creature");
+		const result = await provider.moderate(
+			makeModerationInput("a mossy bog creature"),
+		);
 
 		expect(result.outcome).toBe("allowed");
 	});
@@ -58,13 +78,17 @@ describe("FakeModerationProvider", () => {
 		// Moderation providers don't run banned-term guards — that's the caller's job.
 		// The fake provider's only job is to return allowed/blocked based on shouldBlock.
 		const provider = new FakeModerationProvider(false);
-		const result = await provider.moderate("pikachu with gore");
+		const result = await provider.moderate(
+			makeModerationInput("pikachu with gore"),
+		);
 		expect(result.outcome).toBe("allowed");
 	});
 
 	it("returns blocked when shouldBlock=true", async () => {
 		const provider = new FakeModerationProvider(true);
-		const result = await provider.moderate("a mossy bog creature");
+		const result = await provider.moderate(
+			makeModerationInput("a mossy bog creature"),
+		);
 
 		expect(result.outcome).toBe("blocked");
 		if (result.outcome !== "blocked") return; // narrow for TS
@@ -74,14 +98,18 @@ describe("FakeModerationProvider", () => {
 
 	it("never includes fields from other outcome variants when blocked", async () => {
 		const provider = new FakeModerationProvider(true);
-		const result = await provider.moderate("a mossy bog creature");
+		const result = await provider.moderate(
+			makeModerationInput("a mossy bog creature"),
+		);
 
 		expect(result).not.toHaveProperty("safeErrorMessage");
 	});
 
 	it("never includes fields from other outcome variants when allowed", async () => {
 		const provider = new FakeModerationProvider();
-		const result = await provider.moderate("a mossy bog creature");
+		const result = await provider.moderate(
+			makeModerationInput("a mossy bog creature"),
+		);
 
 		expect(result).not.toHaveProperty("safeReason");
 		expect(result).not.toHaveProperty("safeErrorMessage");
@@ -89,15 +117,17 @@ describe("FakeModerationProvider", () => {
 });
 
 // ---------------------------------------------------------------------------
-// OpenAIModerationProvider (shell — not yet implemented)
+// OpenAIModerationProvider
 // ---------------------------------------------------------------------------
 
 describe("OpenAIModerationProvider", () => {
-	it("returns failed because the real implementation is not yet wired in", async () => {
-		// Documents the intentional shell behaviour.
-		// Replace this test in Phase 4 Step 19 with proper mock-based API tests.
+	it("returns failed when OPENAI_API_KEY is missing (no real API call in tests)", async () => {
+		// Without a real API key the SDK throws; the provider catches it and fails
+		// closed. Replace this with mock-based API tests in Step 19i.
 		const provider = new OpenAIModerationProvider();
-		const result = await provider.moderate("a mossy bog creature");
+		const result = await provider.moderate(
+			makeModerationInput("a mossy bog creature"),
+		);
 
 		expect(result.outcome).toBe("failed");
 		if (result.outcome !== "failed") return;
@@ -126,7 +156,9 @@ describe("getModerationProvider", () => {
 		const { getModerationProvider } =
 			await import("@/lib/monsterGeneration/imageGeneration/moderation/moderation");
 		const provider = getModerationProvider();
-		const result = await provider.moderate("a bog creature");
+		const result = await provider.moderate(
+			makeModerationInput("a bog creature"),
+		);
 		expect(result.outcome).toBe("allowed");
 	});
 
@@ -135,8 +167,10 @@ describe("getModerationProvider", () => {
 		const { getModerationProvider } =
 			await import("@/lib/monsterGeneration/imageGeneration/moderation/moderation");
 		const provider = getModerationProvider();
-		// Shell returns failed — confirms we got the OpenAI provider
-		const result = await provider.moderate("a bog creature");
+		// No real API key in test env — provider catches the SDK error and returns failed.
+		const result = await provider.moderate(
+			makeModerationInput("a bog creature"),
+		);
 		expect(result.outcome).toBe("failed");
 	});
 

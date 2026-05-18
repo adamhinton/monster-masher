@@ -70,8 +70,7 @@ export const dynamic = "force-dynamic";
  * Shape returned on successful image generation.
  *
  * The client should refetch the Monster from Django to hydrate the full
- * MonsterImage record once Step B6 implements mark-succeeded — until then,
- * the public_image_url can be used to display the result immediately.
+ * MonsterImage record on mark-succeeded
  */
 export type GenerateImageSuccessResponse = {
 	outcome: "succeeded";
@@ -232,6 +231,11 @@ export async function POST(
 	const { monsterId } = await params;
 	const generationMode = env.imageGenerationMode;
 
+	// Captures the full request duration, including auth, validation, and all
+	// external calls. Set as a Sentry measurement on the success path so the
+	// metric only reflects completed pipelines.
+	const pipelineStart = performance.now();
+
 	// ── Step 1: Verify Supabase session ───────────────────────────────────────
 	//
 	// NOTE: There is no anonymous or fake-user mode for this endpoint. A real
@@ -363,7 +367,12 @@ export async function POST(
 		});
 	}
 
-	// ── Step 4: Banned-terms guard (fast path before any external calls) ──────
+	// ── Step 4: Banned-terms guard ───────────────────────────────────────────
+	//
+	// ORDER: Must run BEFORE the moderation provider.
+	//   - Free and synchronous — no API round-trip.
+	//   - If this blocks, we short-circuit here and MUST NOT call the moderation
+	//     provider or the image provider.
 
 	if (containsBannedTerms(prompt)) {
 		await callTransitionEndpoint(
@@ -384,8 +393,35 @@ export async function POST(
 		});
 	}
 
-	// ── Step 5: Moderation provider check ─────────────────────────────────────
-	const moderationResult = await getModerationProvider().moderate(prompt);
+	// ── Step 5: Moderation provider ──────────────────────────────────────────
+	//
+	// ORDER: Must run AFTER the banned-terms guard and BEFORE the image provider.
+	//   - If the result is `blocked`, mark the job blocked and return — do NOT
+	//     call the image provider.
+	//   - If the result is `failed`, mark the job failed and return — do NOT
+	//     call the image provider. Moderation failures always fail closed.
+	//   - Only a `allowed` result proceeds to Step 6.
+	const moderationStart = performance.now();
+	const moderationResult = await Sentry.startSpan(
+		{
+			name: "moderation_check",
+			op: "ai.moderation",
+			attributes: { generation_mode: generationMode, job_id: jobId },
+		},
+		() =>
+			getModerationProvider().moderate({
+				promptText: prompt,
+				imageGenerationJobId: jobId,
+				userId: userProfileId,
+				authState: "authenticated",
+				generationMode,
+			}),
+	);
+	Sentry.setMeasurement(
+		"moderation_duration_ms",
+		Math.round(performance.now() - moderationStart),
+		"millisecond",
+	);
 
 	if (moderationResult.outcome === "blocked") {
 		await callTransitionEndpoint(
@@ -400,8 +436,8 @@ export async function POST(
 		);
 		return jsonError({
 			status: 422,
-			code: "content_blocked",
-			message: moderationResult.safeReason,
+			code: "PROMPT_BLOCKED",
+			message: "Prompt was blocked by moderation. Try changing the request.",
 		});
 	}
 
@@ -416,17 +452,11 @@ export async function POST(
 				error_message: "Moderation check failed.",
 			},
 		);
-		Sentry.captureEvent({
-			message: "generate_image.moderation_failed",
-			level: "error",
-			tags: {
-				generation_mode: generationMode,
-				error_code: "moderation_failed",
-			},
-		});
+		// Do NOT Sentry.captureEvent here — OpenAIModerationProvider already
+		// logs one scoped event per evaluation (Step 19f).
 		return jsonError({
 			status: 500,
-			code: "moderation_failed",
+			code: "GENERATION_FAILED",
 			message: "Content moderation check failed. Please try again.",
 		});
 	}
@@ -464,7 +494,35 @@ export async function POST(
 	}
 
 	// ── Step 7: Generate image ────────────────────────────────────────────────
-	const imageResult = await getImageProvider().generate(prompt);
+	const imageGenStart = performance.now();
+	const imageResult = await Sentry.startSpan(
+		{
+			name: "image_provider.generate",
+			op: "ai.image_generation",
+			attributes: { generation_mode: generationMode, job_id: jobId },
+		},
+		() => getImageProvider().generate(prompt),
+	);
+	const imageGenDurationMs = Math.round(performance.now() - imageGenStart);
+	Sentry.setMeasurement(
+		"image_gen_duration_ms",
+		imageGenDurationMs,
+		"millisecond",
+	);
+
+	// Alert if generation took longer than the 90-second threshold. Fired
+	// regardless of whether the provider returned success or failure so slow
+	// timeouts are always visible.
+	if (imageGenDurationMs > 90_000) {
+		Sentry.captureMessage("generate_image.image_gen_slow", {
+			level: "warning",
+			extra: {
+				duration_ms: imageGenDurationMs,
+				job_id: jobId,
+				generation_mode: generationMode,
+			},
+		});
+	}
 
 	if (imageResult.outcome === "failed") {
 		await callTransitionEndpoint(
@@ -496,12 +554,16 @@ export async function POST(
 	// consistent ID that matches the storage path once B6 is implemented.
 	const monsterImageId = crypto.randomUUID();
 
-	const storageResult = await getImageStorage().upload(imageResult.imageBytes, {
-		user_profile_id: userProfileId,
-		monster_id: monsterId,
-		monster_image_id: monsterImageId,
-		mimeType: imageResult.mimeType,
-	});
+	const storageResult = await Sentry.startSpan(
+		{ name: "image_storage.upload", op: "storage.upload" },
+		() =>
+			getImageStorage().upload(imageResult.imageBytes, {
+				user_profile_id: userProfileId,
+				monster_id: monsterId,
+				monster_image_id: monsterImageId,
+				mimeType: imageResult.mimeType,
+			}),
+	);
 
 	if (storageResult.outcome === "failed") {
 		await callTransitionEndpoint(
@@ -568,9 +630,16 @@ export async function POST(
 	}
 
 	// ── Return success ────────────────────────────────────────────────────────
+	// Record total image generation pipeline duration as a Sentry measurement so it appears in
+	// the performance dashboard alongside the per-step span durations.
+	Sentry.setMeasurement(
+		"image_generation_pipeline_total_duration_ms",
+		Math.round(performance.now() - pipelineStart),
+		"millisecond",
+	);
 	return NextResponse.json(
 		{
-			outcome: "succeeded" as const,
+			outcome: "succeeded",
 			public_image_url: storageResult.public_image_url,
 			image_storage_path: storageResult.image_storage_path,
 		},

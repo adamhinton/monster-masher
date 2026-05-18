@@ -31,6 +31,8 @@ vi.mock("@/lib/django/fetchFromDjango", () => ({
 vi.mock("@sentry/nextjs", () => ({
 	captureEvent: vi.fn(),
 	captureMessage: vi.fn(),
+	startSpan: vi.fn((_ctx: unknown, cb: () => unknown) => cb()),
+	setMeasurement: vi.fn(),
 }));
 
 vi.mock(
@@ -73,8 +75,7 @@ const JOB_ID = "00000000-0000-1000-8000-000000000002";
 const USER_SUB = "00000000-0000-1000-8000-000000000003";
 const ACCESS_TOKEN = "valid-access-token";
 const PUBLIC_IMAGE_URL = "https://storage.example.com/image.png";
-const STORAGE_PATH =
-	`monster-images/${USER_SUB}/${MONSTER_ID}/img.png` as const;
+const STORAGE_PATH = `monster-images/${USER_SUB}/${MONSTER_ID}/img.png`;
 
 const VALID_FORM: MonsterFormValues = {
 	display_name: "Blobsworth",

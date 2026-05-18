@@ -26,6 +26,10 @@ vi.mock("@/lib/django/fetchFromDjango", () => ({
 vi.mock("@sentry/nextjs", () => ({
 	captureEvent: vi.fn(),
 	captureMessage: vi.fn(),
+	// startSpan must invoke its callback and return the result so the route's
+	// awaited assignments (moderationResult, imageResult, storageResult) work.
+	startSpan: vi.fn((_ctx: unknown, cb: () => unknown) => cb()),
+	setMeasurement: vi.fn(),
 }));
 
 vi.mock(
@@ -396,6 +400,22 @@ describe("content blocking", () => {
 		expect(calls.some((p) => p.includes("mark-blocked"))).toBe(true);
 	});
 
+	it("does NOT call getModerationProvider when banned terms are detected", async () => {
+		vi.mocked(containsBannedTerms).mockReturnValue(true);
+
+		await POST(makeRequest(validFormBody), makeParams());
+
+		expect(vi.mocked(getModerationProvider)).not.toHaveBeenCalled();
+	});
+
+	it("does NOT call getImageProvider when banned terms are detected", async () => {
+		vi.mocked(containsBannedTerms).mockReturnValue(true);
+
+		await POST(makeRequest(validFormBody), makeParams());
+
+		expect(vi.mocked(getImageProvider)).not.toHaveBeenCalled();
+	});
+
 	it("returns 422 and calls mark-blocked when moderation provider blocks", async () => {
 		vi.mocked(containsBannedTerms).mockReturnValue(false);
 		vi.mocked(getModerationProvider).mockReturnValue({
@@ -407,7 +427,7 @@ describe("content blocking", () => {
 		const res = await POST(makeRequest(validFormBody), makeParams());
 		expect(res.status).toBe(422);
 		const body = await res.json();
-		expect(body.error.code).toBe("content_blocked");
+		expect(body.error.code).toBe("PROMPT_BLOCKED");
 	});
 
 	it("does NOT call Sentry when moderation provider blocks", async () => {
@@ -422,7 +442,20 @@ describe("content blocking", () => {
 		expect(vi.mocked(Sentry.captureEvent)).not.toHaveBeenCalled();
 	});
 
-	it("returns 500 and calls Sentry when moderation provider fails", async () => {
+	it("does NOT call getImageProvider when moderation provider blocks", async () => {
+		vi.mocked(containsBannedTerms).mockReturnValue(false);
+		vi.mocked(getModerationProvider).mockReturnValue({
+			moderate: vi
+				.fn()
+				.mockResolvedValue({ outcome: "blocked", safeReason: "NSFW content." }),
+		});
+
+		await POST(makeRequest(validFormBody), makeParams());
+
+		expect(vi.mocked(getImageProvider)).not.toHaveBeenCalled();
+	});
+
+	it("returns 500 when moderation provider fails", async () => {
 		vi.mocked(containsBannedTerms).mockReturnValue(false);
 		vi.mocked(getModerationProvider).mockReturnValue({
 			moderate: vi.fn().mockResolvedValue({
@@ -434,10 +467,21 @@ describe("content blocking", () => {
 		const res = await POST(makeRequest(validFormBody), makeParams());
 		expect(res.status).toBe(500);
 		const body = await res.json();
-		expect(body.error.code).toBe("moderation_failed");
-		expect(vi.mocked(Sentry.captureEvent)).toHaveBeenCalledOnce();
-		const sentryCall = vi.mocked(Sentry.captureEvent).mock.calls[0][0];
-		expect(sentryCall.tags).toMatchObject({ error_code: "moderation_failed" });
+		expect(body.error.code).toBe("GENERATION_FAILED");
+	});
+
+	it("does NOT call getImageProvider when moderation provider fails", async () => {
+		vi.mocked(containsBannedTerms).mockReturnValue(false);
+		vi.mocked(getModerationProvider).mockReturnValue({
+			moderate: vi.fn().mockResolvedValue({
+				outcome: "failed",
+				safeErrorMessage: "Moderation service unavailable.",
+			}),
+		});
+
+		await POST(makeRequest(validFormBody), makeParams());
+
+		expect(vi.mocked(getImageProvider)).not.toHaveBeenCalled();
 	});
 });
 
