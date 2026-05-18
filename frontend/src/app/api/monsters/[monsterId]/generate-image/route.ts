@@ -38,10 +38,7 @@ import "server-only";
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-	monsterFormSchema,
-	type MonsterFormValues,
-} from "@/components/monsterGeneration/monsterFormSchema";
+import { monsterFormSchema } from "@/components/monsterGeneration/monsterFormSchema";
 import { type NextApiError } from "@/lib/api/errors";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
@@ -51,6 +48,7 @@ import {
 	getModerationProvider,
 } from "@/lib/monsterGeneration/imageGeneration/moderation/moderation";
 import { getImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/providers";
+import { buildPrompt } from "@/lib/monsterGeneration/imageGeneration/prompt/buildPrompt";
 import {
 	getImageStorage,
 	type MonsterImageStoragePath,
@@ -95,27 +93,6 @@ function jsonError({
 		{ error: { code, message } },
 		{ status },
 	);
-}
-
-/**
- * Builds the image-generation prompt from the validated form values.
- *
- * Constructed server-side so the user cannot inject arbitrary prompt text that
- * bypasses field-level validation. Fields are assembled in a stable order so
- * identical form values always produce the same prompt string.
- */
-function buildPrompt(formValues: MonsterFormValues): string {
-	const parts = [
-		`Monster name: ${formValues.display_name}`,
-		`Element: ${formValues.element}`,
-		`Habitat: ${formValues.habitat}`,
-		`Personality: ${formValues.personality}`,
-		`Color palette: ${formValues.color_palette}`,
-	];
-	if (formValues.flavor_text) {
-		parts.push(`Description: ${formValues.flavor_text}`);
-	}
-	return parts.join(". ");
 }
 
 /**
@@ -298,7 +275,16 @@ export async function POST(
 	}
 
 	const formValues = parsedBody.data;
-	const prompt = buildPrompt(formValues);
+	const promptResult = buildPrompt(formValues);
+	if (!promptResult.ok) {
+		return jsonError({
+			status: 422,
+			code: "content_blocked",
+			message:
+				"Prompt content could not be processed. Please revise and try again.",
+		});
+	}
+	const prompt = promptResult.prompt;
 
 	// ── Step 3: Create MonsterImageGenerationJob in Django (QUEUED) ──────────
 	let jobId: string;
@@ -402,25 +388,17 @@ export async function POST(
 	//     call the image provider. Moderation failures always fail closed.
 	//   - Only a `allowed` result proceeds to Step 6.
 	const moderationStart = performance.now();
-	const moderationResult = await Sentry.startSpan(
-		{
-			name: "moderation_check",
-			op: "ai.moderation",
-			attributes: { generation_mode: generationMode, job_id: jobId },
-		},
-		() =>
-			getModerationProvider().moderate({
-				promptText: prompt,
-				imageGenerationJobId: jobId,
-				userId: userProfileId,
-				authState: "authenticated",
-				generationMode,
-			}),
-	);
-	Sentry.setMeasurement(
-		"moderation_duration_ms",
+	const moderationResult = await getModerationProvider().moderate({
+		promptText: prompt,
+		imageGenerationJobId: jobId,
+		userId: userProfileId,
+		authState: "authenticated",
+		generationMode,
+	});
+	Sentry.metrics.distribution(
+		"image_generation.moderation_duration_ms",
 		Math.round(performance.now() - moderationStart),
-		"millisecond",
+		{ unit: "millisecond" },
 	);
 
 	if (moderationResult.outcome === "blocked") {
@@ -495,19 +473,12 @@ export async function POST(
 
 	// ── Step 7: Generate image ────────────────────────────────────────────────
 	const imageGenStart = performance.now();
-	const imageResult = await Sentry.startSpan(
-		{
-			name: "image_provider.generate",
-			op: "ai.image_generation",
-			attributes: { generation_mode: generationMode, job_id: jobId },
-		},
-		() => getImageProvider().generate(prompt),
-	);
+	const imageResult = await getImageProvider().generate(prompt);
 	const imageGenDurationMs = Math.round(performance.now() - imageGenStart);
-	Sentry.setMeasurement(
-		"image_gen_duration_ms",
+	Sentry.metrics.distribution(
+		"image_generation.image_gen_duration_ms",
 		imageGenDurationMs,
-		"millisecond",
+		{ unit: "millisecond" },
 	);
 
 	// Alert if generation took longer than the 90-second threshold. Fired
@@ -554,16 +525,12 @@ export async function POST(
 	// consistent ID that matches the storage path once B6 is implemented.
 	const monsterImageId = crypto.randomUUID();
 
-	const storageResult = await Sentry.startSpan(
-		{ name: "image_storage.upload", op: "storage.upload" },
-		() =>
-			getImageStorage().upload(imageResult.imageBytes, {
-				user_profile_id: userProfileId,
-				monster_id: monsterId,
-				monster_image_id: monsterImageId,
-				mimeType: imageResult.mimeType,
-			}),
-	);
+	const storageResult = await getImageStorage().upload(imageResult.imageBytes, {
+		user_profile_id: userProfileId,
+		monster_id: monsterId,
+		monster_image_id: monsterImageId,
+		mimeType: imageResult.mimeType,
+	});
 
 	if (storageResult.outcome === "failed") {
 		await callTransitionEndpoint(
@@ -630,12 +597,12 @@ export async function POST(
 	}
 
 	// ── Return success ────────────────────────────────────────────────────────
-	// Record total image generation pipeline duration as a Sentry measurement so it appears in
-	// the performance dashboard alongside the per-step span durations.
-	Sentry.setMeasurement(
-		"image_generation_pipeline_total_duration_ms",
+	// Record total pipeline duration so successful completions are queryable
+	// as a distribution metric in Sentry.
+	Sentry.metrics.distribution(
+		"image_generation.pipeline_duration_ms",
 		Math.round(performance.now() - pipelineStart),
-		"millisecond",
+		{ unit: "millisecond" },
 	);
 	return NextResponse.json(
 		{

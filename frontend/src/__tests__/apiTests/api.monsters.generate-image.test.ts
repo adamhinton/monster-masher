@@ -26,10 +26,11 @@ vi.mock("@/lib/django/fetchFromDjango", () => ({
 vi.mock("@sentry/nextjs", () => ({
 	captureEvent: vi.fn(),
 	captureMessage: vi.fn(),
-	// startSpan must invoke its callback and return the result so the route's
-	// awaited assignments (moderationResult, imageResult, storageResult) work.
-	startSpan: vi.fn((_ctx: unknown, cb: () => unknown) => cb()),
-	setMeasurement: vi.fn(),
+	metrics: {
+		distribution: vi.fn(),
+		count: vi.fn(),
+		gauge: vi.fn(),
+	},
 }));
 
 vi.mock(

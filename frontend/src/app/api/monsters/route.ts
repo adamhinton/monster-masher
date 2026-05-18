@@ -1,5 +1,7 @@
 // _______________
 // /api/monsters/
+
+// TODO right now, a monster can get made with no image if the image gen job fails. Need a way to handle that gracefully
 //
 // Proxies monster creation to Django. Reads the Supabase session server-side
 // to get the access token, then forwards the JSON body to Django.
