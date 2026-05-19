@@ -19,9 +19,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { EmailAuthForm } from "./EmailAuthForm";
 
-// TODO uncomment this (and the implementation of it) when we write EmailAuthForm
-// import { EmailAuthForm } from "./EmailAuthForm";
-
 type AuthCardProps = {
 	readonly nextPath: string;
 	readonly errorCode?: string;

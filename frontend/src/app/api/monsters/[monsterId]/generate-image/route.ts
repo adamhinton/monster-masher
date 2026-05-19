@@ -1,7 +1,3 @@
-// TODO IMPORTANT: More robust and secure prompt-building; there's a step for this in our build plan but I'm including it here too because it's important
-
-// TODO Sentry logging for image generation - how long each step takes, any failures, etc etc. Metric tracking for time taken especially
-
 // ______________
 // POST /api/monsters/[monsterId]/generate-image/
 //
@@ -39,7 +35,7 @@ import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { monsterFormSchema } from "@/components/monsterGeneration/monsterFormSchema";
-import { type NextApiError } from "@/lib/api/errors";
+import { type NextApiError, nextApiErrorSchema } from "@/lib/api/errors";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
 import { env } from "@/lib/env/env";
@@ -215,9 +211,9 @@ export async function POST(
 
 	// ── Step 1: Verify Supabase session ───────────────────────────────────────
 	//
-	// NOTE: There is no anonymous or fake-user mode for this endpoint. A real
-	// authenticated session is always required so the generated image can be
-	// tied to the correct Monster and UserProfile in Django.
+	// NOTE: Auth is required for ALL generation modes — there is no anonymous or
+	// fake-user path through this endpoint. Real mode (IMAGE_GENERATION_MODE=real)
+	// therefore always requires a valid session by definition (Step 20b).
 	const supabase = await createClientSSROnly();
 
 	const { data: claimsData, error: claimsError } =
@@ -305,6 +301,22 @@ export async function POST(
 		);
 
 		if (!jobResponse.ok) {
+			// Pass 429 (rate limit) through to the client with a user-friendly message.
+			if (jobResponse.status === 429) {
+				let message =
+					"You've reached the daily limit for image generations. Try again tomorrow.";
+				try {
+					const raw: unknown = await jobResponse.json();
+					const parsed = nextApiErrorSchema.safeParse(raw);
+					if (parsed.success) {
+						message = parsed.data.error.message;
+					}
+				} catch {
+					// Use default message if the response body can't be read.
+				}
+				return jsonError({ status: 429, code: "RATE_LIMITED", message });
+			}
+
 			Sentry.captureEvent({
 				message: "generate_image.job_create_failed",
 				level: "error",

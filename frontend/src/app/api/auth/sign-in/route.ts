@@ -7,9 +7,7 @@
 // 4. AuthWatcher component detects the user is signed in, gets their profile info from Django
 // and propagates it to redux state
 // 5. User is redirected to "next" path, probably /gallery
-// TODO magic link email sends user to prod in development. Make sure it sends to localhost in dev
 
-// TODO make sure user can stay signed in, would be annoying to have to do this every page visit
 // ____________
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -85,6 +83,6 @@ export async function POST(
 	}
 
 	// Signin successful; user redirected to "next" link, probably /gallery
-	// Here the AuthWatcher component will (should) detect the signin, get additional profile data from the db and propagate their info to redux state. TODO make sure that all works smoothly
+	// Here the AuthWatcher component will (should) detect the signin, get additional profile data from the db and propagate their info to redux state.
 	return NextResponse.json<SignInResponse>({ ok: true });
 }

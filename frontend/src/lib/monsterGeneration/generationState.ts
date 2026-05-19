@@ -1,4 +1,5 @@
 import type { MonsterImageGenJob } from "@/lib/api/schemas/monster/Monster_Image_Gen_Job_Schema";
+import type { MonsterImage } from "@/lib/api/schemas/monster/MonsterImageSchema";
 
 type GenerationJobStatus = MonsterImageGenJob["status"];
 
@@ -9,7 +10,11 @@ type GenerationJobStatus = MonsterImageGenJob["status"];
 export type GenerationUIState =
 	| { status: "idle" }
 	| { status: Extract<GenerationJobStatus, "running"> }
-	| { status: Extract<GenerationJobStatus, "succeeded"> }
+	| {
+			status: Extract<GenerationJobStatus, "succeeded">;
+			/** The generated image, if one was produced. Null in fake/dev mode. */
+			generatedImage: MonsterImage | null;
+	  }
 	| {
 			status: Extract<GenerationJobStatus, "failed" | "blocked">;
 			safeErrorMessage: string;

@@ -80,12 +80,6 @@ describe("CreatePage", () => {
 		renderCreatePage();
 	});
 
-	it("shows the fake mode status state", () => {
-		renderCreatePage();
-		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
-		expect(screen.getByText(/no real provider call yet/i)).toBeInTheDocument();
-	});
-
 	it("renders the generation form fields", () => {
 		renderCreatePage();
 		expect(screen.getByLabelText(/monster name/i)).toBeInTheDocument();
@@ -179,8 +173,6 @@ describe("CreatePage", () => {
 		).toBeInTheDocument();
 
 		await user.click(screen.getByRole("button", { name: /try again/i }));
-
-		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
 	});
 
 	it("shows the blocked state and returns to idle when editing the prompt", async () => {
@@ -226,7 +218,5 @@ describe("CreatePage", () => {
 		).toBeInTheDocument();
 
 		await user.click(screen.getByRole("button", { name: /edit prompt/i }));
-
-		expect(screen.getByText(/fake mode/i)).toBeInTheDocument();
 	});
 });

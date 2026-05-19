@@ -11,7 +11,7 @@
 
 "use client";
 
-import { ArrowLeft, Download, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { MonsterImageFrame } from "@/components/monsterGallery/monsterCard/helperComponents/MonsterImageFrame";
 import { MonsterTraitList } from "@/components/monsterGallery/monsterCard/helperComponents/MonsterTraitList";
 import { DeleteMonsterDialog } from "@/components/monsterGallery/monsterCard/DeleteMonsterDialog";
+import { PfpDownloadButton } from "@/components/monsterGallery/monsterCard/helperComponents/PfpDownloadButton";
 import { MonsterSpecimenMetaCard } from "./MonsterSpecimenMetaCard";
 import type { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
 
@@ -132,11 +133,8 @@ export function MonsterDetailView({ monster }: MonsterDetailViewProps) {
 										Edit details
 									</Button>
 
-									{/* Download PFP — stretch feature */}
-									<Button variant="outline" size="sm" disabled>
-										<Download aria-hidden="true" />
-										Download PFP
-									</Button>
+									{/* Download PFP */}
+									<PfpDownloadButton monster={monster} variant="button" />
 
 									<DeleteMonsterDialog
 										monsterId={monster.id}

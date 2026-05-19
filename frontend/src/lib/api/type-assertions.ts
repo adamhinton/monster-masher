@@ -7,7 +7,6 @@
 // So, we use this utility to assert that the output of our Zod schemas matches the OpenAPI types exactly.
 
 // This should cause a TypeScript error if they ever get out of sync, which can happen if we update the OpenAPI spec but forget to update the Zod schemas, or vice versa.
-// TODO ongoing - make sure this is applied to data coming from the API.
 //
 // Usage: Put this at the bottom of any Zod schema file that replicates data retrieved from the API, and replace ZodOutputType and OpenAPIType with the appropriate types. For example:
 //   type _Check = Assert<AssertExact<ZodOutputType, OpenAPIType>>;

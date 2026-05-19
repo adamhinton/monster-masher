@@ -92,7 +92,6 @@ export function GenerateMonsterForm({
 		onClear();
 	}
 
-	/**TODO update this with backend submission logic when we have that implementeda */
 	function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 
