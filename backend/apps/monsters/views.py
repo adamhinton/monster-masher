@@ -180,7 +180,7 @@ class ImageGenerationJobCreateView(GenericAPIView):
             owner=request.user,
             created_at__gte=cutoff,
         ).count()
-        max_per_day: int = getattr(settings, "MAX_GENERATIONS_PER_DAY", 6)
+        max_per_day: int = getattr(settings, "MAX_GENERATIONS_PER_DAY", 12)
         if recent_count >= max_per_day:
             # Hash the user ID so Sentry sees an abuse signal without raw PII.
             user_id_hash = hashlib.sha256(

@@ -159,10 +159,10 @@ describe("MonsterDetailView — action buttons", () => {
 		).toBeDisabled();
 	});
 
-	it("renders the Download PFP button in a disabled state", () => {
+	it("renders the Download Picture button in a disabled state", () => {
 		renderView(validMonster);
 		expect(
-			screen.getByRole("button", { name: /download pfp/i }),
+			screen.getByRole("button", { name: /Download Picture/i }),
 		).toBeDisabled();
 	});
 

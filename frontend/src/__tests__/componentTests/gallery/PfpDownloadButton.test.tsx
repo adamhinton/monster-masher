@@ -119,24 +119,24 @@ describe("PfpDownloadButton — button variant", () => {
 		renderButton();
 	});
 
-	it("renders a labelled 'Download PFP' button", () => {
+	it("renders a labelled 'Download Picture' button", () => {
 		renderButton();
 		expect(
-			screen.getByRole("button", { name: /download pfp/i }),
+			screen.getByRole("button", { name: /Download Picture/i }),
 		).toBeInTheDocument();
 	});
 
 	it("is enabled when the monster has an image", () => {
 		renderButton(validMonsterWithImage);
 		expect(
-			screen.getByRole("button", { name: /download pfp/i }),
+			screen.getByRole("button", { name: /Download Picture/i }),
 		).not.toBeDisabled();
 	});
 
 	it("is disabled when the monster has no image", () => {
 		renderButton(validMonster);
 		expect(
-			screen.getByRole("button", { name: /download pfp/i }),
+			screen.getByRole("button", { name: /Download Picture/i }),
 		).toBeDisabled();
 	});
 });
@@ -154,14 +154,14 @@ describe("PfpDownloadButton — confirmation dialog", () => {
 	it("opens the dialog when the button is clicked", async () => {
 		const user = userEvent.setup();
 		renderButton();
-		await user.click(screen.getByRole("button", { name: /download pfp/i }));
+		await user.click(screen.getByRole("button", { name: /Download Picture/i }));
 		expect(screen.getByRole("alertdialog")).toBeInTheDocument();
 	});
 
 	it("dialog title contains the monster's name", async () => {
 		const user = userEvent.setup();
 		renderButton();
-		await user.click(screen.getByRole("button", { name: /download pfp/i }));
+		await user.click(screen.getByRole("button", { name: /Download Picture/i }));
 		expect(
 			screen.getByRole("heading", {
 				name: new RegExp(validMonsterWithImage.display_name, "i"),
@@ -172,7 +172,7 @@ describe("PfpDownloadButton — confirmation dialog", () => {
 	it("closes the dialog when Cancel is clicked", async () => {
 		const user = userEvent.setup();
 		renderButton();
-		await user.click(screen.getByRole("button", { name: /download pfp/i }));
+		await user.click(screen.getByRole("button", { name: /Download Picture/i }));
 		await user.click(screen.getByRole("button", { name: /cancel/i }));
 		await waitFor(() => {
 			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -197,7 +197,7 @@ describe("PfpDownloadButton — download flow", () => {
 	it("calls downloadMonsterImage with the correct URL and filename on confirm", async () => {
 		const user = userEvent.setup();
 		renderButton();
-		await user.click(screen.getByRole("button", { name: /download pfp/i }));
+		await user.click(screen.getByRole("button", { name: /Download Picture/i }));
 		await user.click(screen.getByRole("button", { name: /^download$/i }));
 		await waitFor(() => {
 			expect(mockDownloadMonsterImage).toHaveBeenCalledWith(
@@ -210,7 +210,7 @@ describe("PfpDownloadButton — download flow", () => {
 	it("shows a success toast and closes the dialog on success", async () => {
 		const user = userEvent.setup();
 		renderButton();
-		await user.click(screen.getByRole("button", { name: /download pfp/i }));
+		await user.click(screen.getByRole("button", { name: /Download Picture/i }));
 		await user.click(screen.getByRole("button", { name: /^download$/i }));
 		await waitFor(() => {
 			expect(mockToastSuccess).toHaveBeenCalledOnce();
@@ -227,7 +227,7 @@ describe("PfpDownloadButton — download flow", () => {
 		});
 		const user = userEvent.setup();
 		renderButton();
-		await user.click(screen.getByRole("button", { name: /download pfp/i }));
+		await user.click(screen.getByRole("button", { name: /Download Picture/i }));
 		await user.click(screen.getByRole("button", { name: /^download$/i }));
 		await waitFor(() => {
 			expect(mockToastError).toHaveBeenCalledWith(

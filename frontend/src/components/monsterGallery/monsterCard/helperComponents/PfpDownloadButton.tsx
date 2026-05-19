@@ -116,7 +116,7 @@ export function PfpDownloadButton({
 					onClick={() => setIsOpen(true)}
 				>
 					<Download aria-hidden="true" />
-					Download PFP
+					Download Picture
 				</Button>
 				{confirmDialog}
 			</>

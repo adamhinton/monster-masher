@@ -133,7 +133,7 @@ export function MonsterDetailView({ monster }: MonsterDetailViewProps) {
 										Edit details
 									</Button>
 
-									{/* Download PFP */}
+									{/* Download Picture */}
 									<PfpDownloadButton monster={monster} variant="button" />
 
 									<DeleteMonsterDialog
