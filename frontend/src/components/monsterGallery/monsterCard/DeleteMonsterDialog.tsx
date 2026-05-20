@@ -51,7 +51,6 @@ export function DeleteMonsterDialog({
 	async function handleConfirmDelete() {
 		setIsDeleting(true);
 		try {
-			// TODO write helper for this
 			const response = await fetch(`/api/monsters/${monsterId}`, {
 				method: "DELETE",
 			});

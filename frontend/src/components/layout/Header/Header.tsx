@@ -20,7 +20,7 @@ export function Header() {
 					href="/"
 					className="flex items-center gap-2 font-semibold text-foreground transition-colors hover:text-primary"
 				>
-					{/* Emoji placeholder — replace with real logo asset later */}
+					{/* Emoji placeholder — TODO replace with real logo asset later */}
 					<span aria-hidden="true">🧌</span>
 					<span>Monster Masher</span>
 				</Link>

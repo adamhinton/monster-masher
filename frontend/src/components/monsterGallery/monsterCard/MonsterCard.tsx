@@ -6,7 +6,7 @@
 
 "use client";
 
-import { Download, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Route } from "next";
 import { useId } from "react";
@@ -16,8 +16,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuShortcut,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
@@ -25,6 +23,7 @@ import { formatDate } from "@/lib/date/formatDate";
 import { cn } from "@/lib/utils";
 import { MonsterBadges } from "./helperComponents/MonsterBadges";
 import { MonsterImageFrame } from "./helperComponents/MonsterImageFrame";
+import { PfpDownloadButton } from "./helperComponents/PfpDownloadButton";
 
 export type GalleryMode = "detailed" | "image-only";
 
@@ -147,14 +146,6 @@ export function MonsterCard({
 								<Trash2 />
 								Delete
 							</DropdownMenuItem>
-
-							<DropdownMenuSeparator />
-
-							<DropdownMenuItem disabled>
-								<Download />
-								Download PFP
-								<DropdownMenuShortcut>Soon</DropdownMenuShortcut>
-							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</header>
@@ -174,7 +165,7 @@ export function MonsterCard({
 					{monster.flavor_text ?? "No lore recorded yet."}
 				</p>
 
-				{/* Footer: creation date + view link */}
+				{/* Footer: creation date + action icons + view link */}
 				<footer className="mt-auto flex items-center justify-between gap-2 pt-0.5">
 					<time
 						dateTime={monster.created_at}
@@ -183,13 +174,18 @@ export function MonsterCard({
 						{formatDate(monster.created_at)}
 					</time>
 
-					<Link
-						href={`/gallery/${monster.id}` as unknown as Route}
-						className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
-					>
-						<Eye size={14} />
-						View
-					</Link>
+					<div className="flex items-center gap-1">
+						<PfpDownloadButton monster={monster} variant="icon" />
+						<Link
+							href={`/gallery/${monster.id}` as unknown as Route}
+							className={cn(
+								buttonVariants({ variant: "secondary", size: "sm" }),
+							)}
+						>
+							<Eye size={14} />
+							View
+						</Link>
+					</div>
 				</footer>
 			</div>
 		</article>

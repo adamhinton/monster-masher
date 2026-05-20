@@ -139,8 +139,6 @@ describe("MonsterCard — actions menu", () => {
 				name: `Actions for ${validMonsterWithImage.display_name}`,
 			}),
 		);
-		expect(await screen.findByText(/download pfp/i)).toBeInTheDocument();
-		expect(screen.getByText(/soon/i)).toBeInTheDocument();
 
 		await user.click(await screen.findByText("Edit"));
 
@@ -183,15 +181,16 @@ describe("MonsterCard — actions menu", () => {
 		await user.click(deleteItem);
 	});
 
-	it("Download PFP is present as a 'coming soon' item in the menu", async () => {
-		const user = userEvent.setup();
-		render(<MonsterCard monster={validMonster} />);
-		await user.click(
+	it("Download icon button is present in the card footer", () => {
+		render(<MonsterCard monster={validMonsterWithImage} />);
+		expect(
 			screen.getByRole("button", {
-				name: `Actions for ${validMonster.display_name}`,
+				name: new RegExp(
+					`download ${validMonsterWithImage.display_name} as profile picture`,
+					"i",
+				),
 			}),
-		);
-		expect(await screen.findByText(/download pfp/i)).toBeInTheDocument();
+		).toBeInTheDocument();
 	});
 });
 

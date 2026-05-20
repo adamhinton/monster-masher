@@ -103,7 +103,6 @@ describe("GalleryPage", () => {
 		expect(summaryStrip).not.toBeNull();
 		expect(summaryStrip).toHaveTextContent(/1 monster saved/i);
 		expect(screen.getByText(/showing page 1 of 1/i)).toBeInTheDocument();
-		expect(screen.getByText(/images immutable/i)).toBeInTheDocument();
 		expect(
 			screen.getByRole("heading", { name: /flamox/i }),
 		).toBeInTheDocument();

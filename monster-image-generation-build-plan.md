@@ -3723,8 +3723,6 @@ Production checks:
 
 ## Phase 4 Real Image Generation
 
-VERY IMPORTANT: TODO: We need to build the actual prompt, including the prompt itself, request and response schemas, etc. I don't think we have a step for that.
-
 ### Step 18 Add Real Provider Implementation
 
 branch: image-gen-real-provider
@@ -4261,16 +4259,14 @@ Prevent accidental spend.
 - [] In the Next route handler, if `IMAGE_GENERATION_MODE=real` and the user is not authenticated, return 401.
 - [] Do not allow anonymous real generation under any circumstances without a deliberate rate-limited design.
 
-#### Step 20c Add Server-Side Model Quality And Size Allowlist
-
-- [] Confirm the server constants from Step B1d are still in use.
-- [] Add an explicit assertion or check at the top of `VercelAIGatewayImageProvider.generate()` that the model/size/quality are from the allowlist.
-- [] Return a failed result if they are not — this is a defense-in-depth check.
-
 #### Step 20d Add Structured Sentry Event For Limit Hits
 
 - [] When the per-user limit is hit, capture a structured Sentry event (not an exception) with tags `{ user_id_hash, limit }` — no raw user IDs.
 - [] This makes it easy to spot abuse patterns without capturing PII.
+
+#### Step 20e Better error messages in monster generation form
+
+- [] Specify to user if it failed moderation, if there was a network error, etc at appropriate places in CreateMonsterExperience. Right now it just says it failed sometimes. Also need an option for too many image creations today. Use sentry to alert me (not just log) when a user hits the limit, I want to know.
 
 Verification:
 
@@ -4293,6 +4289,8 @@ Success criteria:
 - [] Limit errors are user-friendly.
 
 ### Step 21 Add Real Storage Upload Path
+
+**NOTE This is already done**
 
 branch: image-gen-real-provider
 
@@ -8507,8 +8505,6 @@ Production checks:
 ---
 
 ## Phase 4 Real Image Generation
-
-VERY IMPORTANT: TODO: We need to build the actual prompt, including the prompt itself, request and response schemas, etc. I don't think we have a step for that.
 
 ### Step 18 Add Real Provider Implementation
 

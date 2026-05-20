@@ -16,6 +16,7 @@ mark-failed, mark-blocked) are tested separately in test_transition_views.py.
 import uuid
 from unittest.mock import patch
 
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
@@ -142,6 +143,99 @@ class JobCreateViewTests(APITestCase):
                 url, {}, format="json", HTTP_AUTHORIZATION="Bearer token"
             )
         self.assertEqual(response.status_code, 404)
+
+
+# ---------------------------------------------------------------------------
+# Job create — rate limit
+# ---------------------------------------------------------------------------
+
+
+class JobCreateRateLimitTests(APITestCase):
+    """Per-user rolling 24-hour generation limit."""
+
+    def setUp(self):
+        self.uid = uuid.uuid4()
+        self.profile = _make_profile(self.uid)
+        self.monster = _create_monster(self.profile)
+        self.url = reverse(
+            "monster-generate-image-jobs",
+            kwargs={"monster_id": self.monster.id},
+        )
+
+    def _post(self, uid=None):
+        uid = uid or self.uid
+        with patch(PATCH_JWT, return_value=_make_claims(uid)):
+            return self.client.post(
+                self.url,
+                {},
+                format="json",
+                HTTP_AUTHORIZATION="Bearer token",
+            )
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=3)
+    def test_within_limit_allows_creation(self):
+        # Two existing jobs — still under the limit of 3.
+        _make_job(self.profile)
+        _make_job(self.profile)
+        response = self._post()
+        self.assertEqual(response.status_code, 201)
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=3)
+    def test_at_limit_returns_429(self):
+        for _ in range(3):
+            _make_job(self.profile)
+        response = self._post()
+        self.assertEqual(response.status_code, 429)
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=3)
+    def test_limit_response_has_rate_limited_code(self):
+        for _ in range(3):
+            _make_job(self.profile)
+        response = self._post()
+        self.assertEqual(response.data["error"]["code"], "RATE_LIMITED")
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=3)
+    def test_limit_response_has_user_friendly_message(self):
+        for _ in range(3):
+            _make_job(self.profile)
+        response = self._post()
+        self.assertIn("3", response.data["error"]["message"])
+        self.assertIn("Try again tomorrow", response.data["error"]["message"])
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=3)
+    def test_limit_is_per_user_not_global(self):
+        """Another user's jobs must not count against this user's limit."""
+        other_profile = _make_profile(uuid.uuid4(), "other@test.com")
+        for _ in range(3):
+            _make_job(other_profile)
+        response = self._post()
+        self.assertEqual(response.status_code, 201)
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=3)
+    @patch("apps.monsters.views.sentry_sdk.capture_message")
+    def test_limit_hit_fires_sentry_warning(self, mock_capture):
+        for _ in range(3):
+            _make_job(self.profile)
+        self._post()
+        mock_capture.assert_called_once()
+        event_name, = mock_capture.call_args.args
+        self.assertEqual(event_name, "image_generation.per_user_daily_limit_hit")
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=3)
+    @patch("apps.monsters.views.sentry_sdk.capture_message")
+    def test_sentry_event_does_not_include_raw_user_id(self, mock_capture):
+        for _ in range(3):
+            _make_job(self.profile)
+        self._post()
+        tags = mock_capture.call_args.kwargs["tags"]
+        # The hashed user ID is included but the raw UUID must not appear.
+        self.assertIn("user_id_hash", tags)
+        self.assertNotIn(str(self.uid), str(tags))
+
+    @override_settings(MAX_GENERATIONS_PER_DAY=0)
+    def test_zero_limit_blocks_immediately(self):
+        response = self._post()
+        self.assertEqual(response.status_code, 429)
 
 
 # ---------------------------------------------------------------------------

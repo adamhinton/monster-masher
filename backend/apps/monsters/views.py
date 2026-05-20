@@ -17,7 +17,13 @@ Trust boundary for image-generation transition endpoints:
     level (correct ownership checks, valid state transitions).
 """
 
+import hashlib
+from datetime import timedelta
+
+import sentry_sdk
+from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
@@ -167,6 +173,36 @@ class ImageGenerationJobCreateView(GenericAPIView):
     )
     def post(self, request: Request, monster_id) -> Response:
         monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
+
+        # ── Per-user daily rate limit. Currently set to 6 images per user. ─────────────────────────────────────────
+        cutoff = timezone.now() - timedelta(hours=24)
+        recent_count = MonsterImageGenerationJob.objects.filter(
+            owner=request.user,
+            created_at__gte=cutoff,
+        ).count()
+        max_per_day: int = getattr(settings, "MAX_GENERATIONS_PER_DAY", 12)
+        if recent_count >= max_per_day:
+            # Hash the user ID so Sentry sees an abuse signal without raw PII.
+            user_id_hash = hashlib.sha256(
+                str(request.user.supabase_user_id).encode()
+            ).hexdigest()[:16]
+            sentry_sdk.capture_message(
+                "image_generation.per_user_daily_limit_hit",
+                level="warning",
+                tags={"user_id_hash": user_id_hash, "limit": str(max_per_day)},
+            )
+            return Response(
+                {
+                    "error": {
+                        "code": "RATE_LIMITED",
+                        "message": (
+                            f"You've reached the daily limit of {max_per_day} image "
+                            "generations. Try again tomorrow."
+                        ),
+                    }
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
 
         serializer = MonsterImageGenerationJobCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

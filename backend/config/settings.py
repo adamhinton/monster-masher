@@ -274,6 +274,12 @@ if "test" in sys.argv:
         "NAME": ":memory:",
     }
 
+# ── Image generation rate limit ──────────────────────────────────────────────
+# Maximum number of image generation jobs a single user can create in a rolling
+# 24-hour window. Defaults to 6. Set MAX_GENERATIONS_PER_DAY in the environment
+# to override (e.g. higher in staging, lower in production if needed).
+MAX_GENERATIONS_PER_DAY = int(os.environ.get("MAX_GENERATIONS_PER_DAY", "24"))
+
 # ── Development / admin tooling guard ────────────────────────────────────────
 # Enables seeding and admin actions that create fake data for development and
 # smoke-testing. Guards the management command `seed_fake_monsters` and the

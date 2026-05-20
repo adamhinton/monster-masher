@@ -65,7 +65,6 @@ export default function GalleryPage() {
 								<span>
 									Showing page {currentlyVisiblePage} of {totalNumPages}
 								</span>
-								<span>Images immutable · details editable</span>
 							</CardContent>
 						</Card>
 					)}

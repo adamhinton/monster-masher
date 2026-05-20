@@ -10,8 +10,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { ProgressBar } from "@/components/ProgressBar";
+import { MonsterImageFrame } from "@/components/monsterGallery/monsterCard/helperComponents/MonsterImageFrame";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { GenerationUIState } from "@/lib/monsterGeneration/generationState";
 import { useAppSelector } from "@/lib/store/hooks";
@@ -34,29 +35,23 @@ export function GenerationStatusPanel({
 
 	switch (generationState.status) {
 		case "idle":
-			return (
-				<div className="grid gap-3">
-					<Badge variant="secondary" className="w-fit">
-						Fake mode
-					</Badge>
-					<p className="text-sm text-muted-foreground">
-						No real provider call yet. Submit the form to exercise the local UI
-						flow.
-					</p>
-				</div>
-			);
+			// Hidden until the user starts generation — prevents layout shift on page load.
+			return null;
 		case "running":
 			return (
-				<div className="flex items-start gap-3 text-sm text-muted-foreground">
-					<LoaderCircle
-						className="mt-0.5 size-4 animate-spin text-primary"
-						aria-hidden="true"
-					/>
-					<p>
-						{/* TODO(image-gen-durable-jobs): once generation is durable across page leave/reload, replace this copy with the "you can leave this page and we can email you" variant and align the toggle helper text. */}
-						Image generation can take up to a minute. Keep this tab open while
-						your monster is being generated.
-					</p>
+				<div className="grid gap-4">
+					<div className="flex items-start gap-3 text-sm text-muted-foreground">
+						<LoaderCircle
+							className="mt-0.5 size-4 animate-spin text-primary"
+							aria-hidden="true"
+						/>
+						<p>
+							{/* TODO(image-gen-durable-jobs): Say something about emailing them when done. */}
+							You can leave this page and come back later; we will save your
+							monster for you. The image should be ready in about 90 seconds.
+						</p>
+					</div>
+					<ProgressBar durationMs={85_000} />
 				</div>
 			);
 		case "succeeded":
@@ -64,7 +59,14 @@ export function GenerationStatusPanel({
 				<Alert>
 					<CheckCircle2 aria-hidden="true" />
 					<AlertTitle>Monster ready</AlertTitle>
-					<AlertDescription className="grid gap-3">
+					<AlertDescription className="grid gap-4">
+						{generationState.generatedImage !== null && (
+							<MonsterImageFrame
+								image={generationState.generatedImage}
+								variant="card"
+								altText="Generated monster image"
+							/>
+						)}
 						{authState.status === "authenticated" ? (
 							<>
 								<span>Save your monster to your gallery.</span>

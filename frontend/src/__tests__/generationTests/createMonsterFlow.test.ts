@@ -25,8 +25,11 @@ describe("createMonsterFlow", () => {
 		});
 
 		it("does not expose impossible transitions from terminal states", () => {
-			expect(beginGeneration({ status: "succeeded" })).toEqual({
+			expect(
+				beginGeneration({ status: "succeeded", generatedImage: null }),
+			).toEqual({
 				status: "succeeded",
+				generatedImage: null,
 			});
 			expect(
 				beginGeneration({
@@ -53,6 +56,7 @@ describe("createMonsterFlow", () => {
 		it("resolves valid prompts to succeeded", () => {
 			expect(resolveFakeGeneration(validFormValues)).toEqual({
 				status: "succeeded",
+				generatedImage: null,
 			});
 		});
 

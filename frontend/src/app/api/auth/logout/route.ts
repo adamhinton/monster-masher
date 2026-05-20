@@ -3,8 +3,6 @@
 
 // Call this to log the user out (obviously)
 // This clears the supabase auth signed in user
-// NOTE this doesn't mess with redux state - the AuthWatcher component should detect the signout automatically and propagate the change to global state. TODO make sure that happens cleanly
-// TODO write a client-side uti to call this
 // __________
 
 import * as Sentry from "@sentry/nextjs";

@@ -84,5 +84,5 @@ export function resolveFakeGeneration(
 		};
 	}
 
-	return { status: "succeeded" };
+	return { status: "succeeded", generatedImage: null };
 }

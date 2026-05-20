@@ -22,7 +22,6 @@ import {
 import { Route } from "next";
 
 // From /api/auth/bootstrap-profile
-// TODO write a helper that gets this and has a defined function signature
 const bootstrapProfileResponseSchema = z.object({
 	user: userProfileSchema,
 });
@@ -64,7 +63,6 @@ export function AuthWatcher() {
 			try {
 				// Won't compile if the route path drifts
 				const bootStrapAuthRoute: Route = "/api/auth/bootstrap-auth";
-				// TODO write helper for this API call
 				// This gets further profile info from Django
 				const response = await fetch(bootStrapAuthRoute, {
 					method: "POST",

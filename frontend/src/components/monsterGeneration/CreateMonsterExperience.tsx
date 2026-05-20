@@ -62,6 +62,7 @@ export function CreateMonsterExperience() {
 	const [generationState, setGenerationState] = useState<GenerationUIState>({
 		status: "idle",
 	});
+	const previewRef = useRef<HTMLDivElement>(null);
 	const dispatch = useAppDispatch();
 
 	// Check if ongoing form values are stored in localStorage and load them if so. This allows users to refresh or leave and come back without losing their progress.
@@ -177,11 +178,19 @@ export function CreateMonsterExperience() {
 						? parsedError.data.error.message
 						: "Image generation failed. Please try again.";
 					if (!isCancelled) {
-						setGenerationState(
-							generateResponse.status === 422
-								? { status: "blocked", safeErrorMessage: errorMessage }
-								: { status: "failed", safeErrorMessage: errorMessage },
-						);
+						if (generateResponse.status === 422) {
+							setGenerationState({
+								status: "blocked",
+								safeErrorMessage: errorMessage,
+							});
+						} else {
+							// 429, 500, and any other failures all use the `failed` state.
+							// The backend message is user-safe (e.g. rate limit, provider error).
+							setGenerationState({
+								status: "failed",
+								safeErrorMessage: errorMessage,
+							});
+						}
 					}
 					return;
 				}
@@ -198,6 +207,21 @@ export function CreateMonsterExperience() {
 					}
 					return;
 				}
+
+				if (!isCancelled) {
+					dispatch(monsterAdded(monster));
+					setGenerationState({
+						status: "succeeded",
+						generatedImage: {
+							id: crypto.randomUUID(),
+							public_image_url: parsedGenerate.data.public_image_url,
+							image_storage_path: parsedGenerate.data.image_storage_path,
+							provider: "",
+							provider_model: "",
+							created_at: new Date().toISOString(),
+						},
+					});
+				}
 			} catch {
 				if (!isCancelled) {
 					setGenerationState({
@@ -207,11 +231,6 @@ export function CreateMonsterExperience() {
 					});
 				}
 				return;
-			}
-
-			if (!isCancelled) {
-				dispatch(monsterAdded(monster));
-				setGenerationState({ status: "succeeded" });
 			}
 		}
 
@@ -239,8 +258,6 @@ export function CreateMonsterExperience() {
 
 	/**This sends to preview component, doesn't save to db or anything
 	 * Then, handleSave() is what performs db operations and API calls in the preview component
-	 *
-	 * COuld maybe simplify that flow (TODO)
 	 */
 	function handleSubmit(submittedFormValues: MonsterFormValues) {
 		const nextGenerationState = beginGeneration(generationState);
@@ -252,6 +269,16 @@ export function CreateMonsterExperience() {
 		submittedFormValuesRef.current = submittedFormValues;
 		window.localStorage.removeItem(createMonsterFormStorageKey);
 		setGenerationState(nextGenerationState);
+
+		// Snap focus to the preview panel on mobile — lets the user track progress
+		// without scrolling back up. Runs after the state update triggers a re-render
+		// so the panel is visible before scrollIntoView is called.
+		requestAnimationFrame(() => {
+			previewRef.current?.scrollIntoView({
+				behavior: "smooth",
+				block: "start",
+			});
+		});
 	}
 
 	// TODO might be able to delete this
@@ -280,22 +307,24 @@ export function CreateMonsterExperience() {
 				</CardContent>
 			</Card>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Generation Status</CardTitle>
-					<CardDescription>
-						Image generation can take up to 90 seconds.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<GenerationStatusPanel
-						generationState={generationState}
-						onReset={handleResetGeneration}
-						onSave={() => router.push("/gallery")}
-						isSaving={false}
-					/>
-				</CardContent>
-			</Card>
+			{generationState.status !== "idle" && (
+				<Card ref={previewRef}>
+					<CardHeader>
+						<CardTitle>Generation Status</CardTitle>
+						<CardDescription>
+							Image generation can take up to 90 seconds.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<GenerationStatusPanel
+							generationState={generationState}
+							onReset={handleResetGeneration}
+							onSave={() => router.push("/gallery")}
+							isSaving={false}
+						/>
+					</CardContent>
+				</Card>
+			)}
 		</div>
 	);
 }
