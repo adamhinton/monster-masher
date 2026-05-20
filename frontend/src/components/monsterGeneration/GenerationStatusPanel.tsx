@@ -5,8 +5,7 @@ import {
 	CheckCircle2,
 	LoaderCircle,
 	LogIn,
-	RotateCcw,
-	Save,
+	RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -16,20 +15,20 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { GenerationUIState } from "@/lib/monsterGeneration/generationState";
 import { useAppSelector } from "@/lib/store/hooks";
+import type { ImageGensRemaining } from "@/app/api/me/image-gens-remaining/route";
 
 interface GenerationStatusPanelProps {
 	generationState: GenerationUIState;
 	onReset: () => void;
-	onSave: () => void;
-	isSaving: boolean;
+	/**How many image generations the user has left today */
+	imageGensRemaining?: ImageGensRemaining | null;
 }
 
 /**Status showing ongoing monster generation */
 export function GenerationStatusPanel({
 	generationState,
 	onReset,
-	onSave,
-	isSaving,
+	imageGensRemaining,
 }: GenerationStatusPanelProps) {
 	const authState = useAppSelector((state) => state.auth);
 
@@ -68,20 +67,28 @@ export function GenerationStatusPanel({
 						)}
 						{authState.status === "authenticated" ? (
 							<>
-								<span>Save your monster to your gallery.</span>
-								<Button
-									type="button"
-									size="sm"
-									onClick={onSave}
-									disabled={isSaving}
-								>
-									{isSaving ? (
-										<LoaderCircle className="animate-spin" aria-hidden="true" />
-									) : (
-										<Save aria-hidden="true" />
-									)}
-									{isSaving ? "Saving…" : "Save to gallery"}
-								</Button>
+								<span>Your monster has been saved to your gallery.</span>
+								{imageGensRemaining != null && (
+									<span className="text-muted-foreground text-xs">
+										{imageGensRemaining.num_remaining} of{" "}
+										{imageGensRemaining.max_per_day} generations remaining today
+									</span>
+								)}
+								<div className="flex flex-wrap gap-2">
+									<Button variant="outline" size="sm" onClick={onReset}>
+										<RefreshCw aria-hidden="true" />
+										Generate another
+									</Button>
+									<Link
+										href="/gallery"
+										className={buttonVariants({
+											variant: "default",
+											size: "sm",
+										})}
+									>
+										View in gallery →
+									</Link>
+								</div>
 							</>
 						) : authState.status === "anonymous" ? (
 							<>
@@ -95,11 +102,14 @@ export function GenerationStatusPanel({
 								</Link>
 							</>
 						) : (
-							// Auth state still loading — show disabled save button
-							<Button type="button" size="sm" disabled>
-								<LoaderCircle className="animate-spin" aria-hidden="true" />
-								Save to gallery
-							</Button>
+							// Auth state still loading
+							<span className="text-muted-foreground text-sm">
+								<LoaderCircle
+									className="inline animate-spin mr-1"
+									aria-hidden="true"
+								/>
+								Checking session…
+							</span>
 						)}
 					</AlertDescription>
 				</Alert>
@@ -111,28 +121,40 @@ export function GenerationStatusPanel({
 					<AlertTitle>Generation failed</AlertTitle>
 					<AlertDescription className="grid gap-3">
 						<span>{generationState.safeErrorMessage}</span>
-						<Button type="button" variant="outline" size="sm" onClick={onReset}>
-							<RotateCcw aria-hidden="true" />
+						<Link
+							href="#"
+							className={buttonVariants({ variant: "outline", size: "sm" })}
+							onClick={(e) => {
+								e.preventDefault();
+								onReset();
+							}}
+						>
 							Try again
-						</Button>
+						</Link>
 					</AlertDescription>
 				</Alert>
 			);
 		case "blocked":
 			return (
-				<Alert>
+				<Alert variant="destructive">
 					<AlertCircle aria-hidden="true" />
-					<AlertTitle>Prompt needs a softer touch</AlertTitle>
+					<AlertTitle>Prompt blocked by content policy</AlertTitle>
 					<AlertDescription className="grid gap-3">
-						<span>
-							Your prompt was not allowed. Try a friendly monster concept with
-							safe traits and non-graphic details.
-						</span>
-						<span>{generationState.safeErrorMessage}</span>
-						<Button type="button" variant="outline" size="sm" onClick={onReset}>
-							<RotateCcw aria-hidden="true" />
+						<p>
+							Your description was blocked by our content moderation. Try
+							editing it to remove graphic, excessively violent, or otherwise
+							problematic content.
+						</p>
+						<Link
+							href="#"
+							className={buttonVariants({ variant: "outline", size: "sm" })}
+							onClick={(e) => {
+								e.preventDefault();
+								onReset();
+							}}
+						>
 							Edit prompt
-						</Button>
+						</Link>
 					</AlertDescription>
 				</Alert>
 			);

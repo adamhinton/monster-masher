@@ -2,14 +2,18 @@
 Accounts app views.
 """
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.db.models import Prefetch
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from apps.monsters.models import Monster, MonsterImage
+from apps.monsters.models import Monster, MonsterImage, MonsterImageGenerationJob
 
 from .models import UserProfile
 from .serializers import UserProfileSerializer, UserProfileWithMonstersSerializer
@@ -83,3 +87,60 @@ class BootstrapMeView(GenericAPIView):
 
         serializer = self.get_serializer(user)
         return Response(serializer.data)
+
+
+class ImageGensRemainingView(GenericAPIView):
+    """
+    GET /api/me/image-gens-remaining/
+
+    Returns how many image generations the authenticated user has left today.
+
+    Counts all MonsterImageGenerationJob records created in the last 24 hours
+    for this user (regardless of outcome — succeeded, failed, or blocked all
+    consume quota).
+
+    TODO (stretch): Only count jobs where generation_mode == "real" so that
+    fake/dev generations do not tick down the daily limit. This would allow
+    developers to test the UI without burning tokens.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get remaining image generations for today",
+        responses={
+            200: {
+                "type": "object",
+                "required": ["num_remaining", "max_per_day", "used_today"],
+                "properties": {
+                    "num_remaining": {
+                        "type": "integer",
+                        "description": "How many image generations the user can still trigger today.",
+                    },
+                    "max_per_day": {
+                        "type": "integer",
+                        "description": "The daily cap configured for this deployment.",
+                    },
+                    "used_today": {
+                        "type": "integer",
+                        "description": "Jobs created in the last 24 hours.",
+                    },
+                },
+            }
+        },
+    )
+    def get(self, request: Request) -> Response:
+        cutoff = timezone.now() - timedelta(hours=24)
+        used_today = MonsterImageGenerationJob.objects.filter(
+            owner=request.user,
+            created_at__gte=cutoff,
+        ).count()
+        max_per_day: int = getattr(settings, "MAX_GENERATIONS_PER_DAY", 12)
+        remaining = max(0, max_per_day - used_today)
+        return Response(
+            {
+                "num_remaining": remaining,
+                "max_per_day": max_per_day,
+                "used_today": used_today,
+            }
+        )

@@ -121,18 +121,11 @@ describe("MonsterCard — detailed mode (default)", () => {
 });
 
 describe("MonsterCard — actions menu", () => {
-	it("opens the actions menu and calls edit and delete handlers", async () => {
+	it("opens the actions menu and shows delete but no Edit when monster has image", async () => {
 		const user = userEvent.setup();
-		const onEdit = vi.fn();
 		const onDelete = vi.fn();
 
-		render(
-			<MonsterCard
-				monster={validMonsterWithImage}
-				onEdit={onEdit}
-				onDelete={onDelete}
-			/>,
-		);
+		render(<MonsterCard monster={validMonsterWithImage} onDelete={onDelete} />);
 
 		await user.click(
 			screen.getByRole("button", {
@@ -140,32 +133,19 @@ describe("MonsterCard — actions menu", () => {
 			}),
 		);
 
-		await user.click(await screen.findByText("Edit"));
+		// Edit is removed for monsters that already have an image
+		expect(screen.queryByText("Edit")).not.toBeInTheDocument();
 
-		await user.click(
-			screen.getByRole("button", {
-				name: `Actions for ${validMonsterWithImage.display_name}`,
-			}),
-		);
 		await user.click(await screen.findByText("Delete"));
-
-		expect(onEdit).toHaveBeenCalledTimes(1);
 		expect(onDelete).toHaveBeenCalledTimes(1);
 	});
 
-	it("renders a disabled Edit item when no onEdit handler is provided", async () => {
-		const user = userEvent.setup();
+	it("shows Fix image link directly in the card body for imageless monsters", () => {
 		render(<MonsterCard monster={validMonster} />);
-		await user.click(
-			screen.getByRole("button", {
-				name: `Actions for ${validMonster.display_name}`,
-			}),
-		);
-		const editItem = await screen.findByText("Edit");
-		// When no handler the item renders with aria-disabled or disabled
-		expect(editItem).toBeInTheDocument();
-		// No onEdit — clicking it should not call any callback (and not throw)
-		await user.click(editItem);
+		// Fix image is now an inline button in the card body, no need to open the dropdown
+		const fixLinks = screen.getAllByRole("link", { name: /fix image/i });
+		expect(fixLinks.length).toBeGreaterThanOrEqual(1);
+		expect(fixLinks[0]).toHaveAttribute("href", `/gallery/${validMonster.id}`);
 	});
 
 	it("renders a disabled Delete item when no onDelete handler is provided", async () => {

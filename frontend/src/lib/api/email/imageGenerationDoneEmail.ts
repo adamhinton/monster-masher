@@ -38,6 +38,11 @@ export interface NotifyImageGenerationDoneParams {
 	accessToken: string;
 	/** Optional monster display name included in the email body. */
 	monsterName?: Monster["display_name"];
+	/**
+	 * Optional monster id. Used in failure email CTAs to link directly to the
+	 * monster's detail page so the user can retry image generation.
+	 */
+	monsterId?: Monster["id"];
 }
 
 /**
@@ -66,6 +71,7 @@ export async function notifyImageGenerationDone({
 	scenario,
 	accessToken,
 	monsterName,
+	monsterId,
 }: NotifyImageGenerationDoneParams): Promise<SendEmailResponse> {
 	try {
 		console.log("notifyImageGenerationDone called with:", {
@@ -84,6 +90,7 @@ export async function notifyImageGenerationDone({
 				email,
 				scenario,
 				...(monsterName !== undefined ? { monsterName } : {}),
+				...(monsterId !== undefined ? { monsterId } : {}),
 			}),
 		});
 		console.log(

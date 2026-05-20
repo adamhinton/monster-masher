@@ -140,6 +140,135 @@ class AuthErrorResponseShapeTests(APITestCase):
         self.assertIn("message", error)
 
 
+PATCH_JWT = "apps.accounts.authentication.verify_supabase_jwt"
+
+
+def _make_profile(uid=None, email="test@example.com"):
+    uid = uid or uuid.uuid4()
+    return UserProfile.objects.create(supabase_user_id=uid, email=email)
+
+
+class ImageGensRemainingViewTests(APITestCase):
+    """
+    Tests for GET /api/me/image-gens-remaining/.
+
+    No external calls are made; verify_supabase_jwt is patched for all requests.
+    """
+
+    def _make_user_and_claims(self):
+        uid = uuid.uuid4()
+        profile = _make_profile(uid)
+        claims = _make_claims(uid)
+        return profile, claims
+
+    def test_missing_auth_returns_401(self):
+        response = self.client.get(reverse("me-image-gens-remaining"))
+        self.assertEqual(response.status_code, 401)
+
+    def test_returns_200_with_correct_shape(self):
+        _profile, claims = self._make_user_and_claims()
+        with patch(PATCH_JWT, return_value=claims):
+            response = self.client.get(
+                reverse("me-image-gens-remaining"),
+                HTTP_AUTHORIZATION="Bearer valid-token",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("num_remaining", response.data)
+        self.assertIn("max_per_day", response.data)
+        self.assertIn("used_today", response.data)
+
+    def test_fresh_user_has_full_quota(self):
+        _profile, claims = self._make_user_and_claims()
+        with patch(PATCH_JWT, return_value=claims):
+            response = self.client.get(
+                reverse("me-image-gens-remaining"),
+                HTTP_AUTHORIZATION="Bearer valid-token",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["used_today"], 0)
+        self.assertGreater(response.data["num_remaining"], 0)
+        self.assertEqual(response.data["num_remaining"], response.data["max_per_day"])
+
+    def test_remaining_decreases_when_jobs_exist(self):
+        from apps.monsters.models import (
+            Monster,
+            MonsterImageGenerationJob,
+            MonsterImageGenerationMode,
+            MonsterImageGenerationStatus,
+        )
+        from django.utils import timezone
+
+        profile, claims = self._make_user_and_claims()
+        # Create two recent jobs for this user.
+        for _ in range(2):
+            monster = Monster.objects.create(
+                owner=profile,
+                display_name="Test",
+                element="fire",
+                habitat="cave",
+                personality="bold",
+                color_palette="red",
+            )
+            MonsterImageGenerationJob.objects.create(
+                owner=profile,
+                monster=monster,
+                status=MonsterImageGenerationStatus.QUEUED,
+                generation_mode=MonsterImageGenerationMode.FAKE,
+                provider="fake",
+                provider_model="fake-v1",
+            )
+
+        with patch(PATCH_JWT, return_value=claims):
+            response = self.client.get(
+                reverse("me-image-gens-remaining"),
+                HTTP_AUTHORIZATION="Bearer valid-token",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["used_today"], 2)
+        self.assertEqual(
+            response.data["num_remaining"], response.data["max_per_day"] - 2
+        )
+
+    def test_remaining_never_goes_below_zero(self):
+        """When used_today exceeds max_per_day, remaining is clamped to 0."""
+        from apps.monsters.models import (
+            Monster,
+            MonsterImageGenerationJob,
+            MonsterImageGenerationMode,
+            MonsterImageGenerationStatus,
+        )
+
+        profile, claims = self._make_user_and_claims()
+        max_limit = 2
+
+        with self.settings(MAX_GENERATIONS_PER_DAY=max_limit):
+            for _ in range(max_limit + 3):
+                monster = Monster.objects.create(
+                    owner=profile,
+                    display_name="Test",
+                    element="fire",
+                    habitat="cave",
+                    personality="bold",
+                    color_palette="red",
+                )
+                MonsterImageGenerationJob.objects.create(
+                    owner=profile,
+                    monster=monster,
+                    status=MonsterImageGenerationStatus.QUEUED,
+                    generation_mode=MonsterImageGenerationMode.FAKE,
+                    provider="fake",
+                    provider_model="fake-v1",
+                )
+
+            with patch(PATCH_JWT, return_value=claims):
+                response = self.client.get(
+                    reverse("me-image-gens-remaining"),
+                    HTTP_AUTHORIZATION="Bearer valid-token",
+                )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["num_remaining"], 0)
+
+
 class PublicEndpointRegressionTests(APITestCase):
     """
     Regression guard: /health, /api/schema/, and /api/docs/ must always return
@@ -311,4 +440,3 @@ class BootstrapMonstersTests(APITestCase):
         self.assertIn("email", response.data)
         self.assertIn("supabase_user_id", response.data)
         self.assertIn("monsters", response.data)
-

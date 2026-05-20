@@ -44,6 +44,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserProfileWithMonsters'
           description: ''
+  /api/me/image-gens-remaining/:
+    get:
+      operationId: api_me_image_gens_remaining_retrieve
+      description: |-
+        GET /api/me/image-gens-remaining/
+
+        Returns how many image generations the authenticated user has left today.
+
+        Counts all MonsterImageGenerationJob records created in the last 24 hours
+        for this user (regardless of outcome — succeeded, failed, or blocked all
+        consume quota).
+
+        TODO (stretch): Only count jobs where generation_mode == "real" so that
+        fake/dev generations do not tick down the daily limit. This would allow
+        developers to test the UI without burning tokens.
+      summary: Get remaining image generations for today
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - num_remaining
+                - max_per_day
+                - used_today
+                properties:
+                  num_remaining:
+                    type: integer
+                    description: How many image generations the user can still trigger
+                      today.
+                  max_per_day:
+                    type: integer
+                    description: The daily cap configured for this deployment.
+                  used_today:
+                    type: integer
+                    description: Jobs created in the last 24 hours.
+          description: ''
   /api/monsters/:
     get:
       operationId: api_monsters_list
@@ -487,6 +529,40 @@ paths:
         '404':
           description: No response body
         '409':
+          description: No response body
+  /api/monsters/{monster_id}/image/:
+    delete:
+      operationId: api_monsters_image_destroy
+      description: |-
+        DELETE /api/monsters/{monster_id}/image/
+
+        Deletes the current MonsterImage for a monster. The monster record itself
+        is preserved. MonsterImageGenerationJob records linked to the deleted image
+        are also preserved as historical records — they document that a generation
+        attempt was made and are useful for admin visibility and rate-limit counting.
+
+        Design note: this endpoint is called by the Next.js generate-image route
+        before retrying image generation for a monster that already has an image.
+        Keeping old job records means the admin can see retry patterns, and the
+        rate limiter correctly counts retries against the daily quota.
+
+        Returns 204 if the image was deleted, or 404 if the monster has no image.
+      summary: Delete the current image for a monster
+      parameters:
+      - in: path
+        name: monster_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - api
+      security:
+      - SupabaseJWTAuthentication: []
+      responses:
+        '204':
+          description: No response body
+        '404':
           description: No response body
   /health/:
     get:

@@ -13,8 +13,10 @@ import { GalleryHeader } from "@/components/monsterGallery/galleryHelperComponen
 import { EmptyGalleryState } from "@/components/monsterGallery/galleryHelperComponents/EmptyGalleryState";
 import { GalleryGrid } from "@/components/monsterGallery/GalleryGrid";
 import { GalleryPagination } from "@/components/monsterGallery/GalleryPagination";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAppSelector } from "@/lib/store/hooks";
+import { ImageOff } from "lucide-react";
 
 /**Max monsters to show on one page (pagination) */
 const NUM_MONSTERS_PER_PAGE = 20;
@@ -31,6 +33,7 @@ export default function GalleryPage() {
 	const monsters =
 		authState.status === "authenticated" ? authState.user.monsters : [];
 	const hasMonsters = monsters.length > 0;
+	const imagelessCount = monsters.filter((m) => m.image === null).length;
 
 	// Pagination stuff
 	const [currentPage, setCurrentPage] = useState(1);
@@ -53,6 +56,21 @@ export default function GalleryPage() {
 				<section aria-labelledby="gallery-title">
 					{/* ── Header ──────────────────────────────────────────────────── */}
 					<GalleryHeader />
+
+					{/* ── Imageless monsters banner ────────────────────────────────── */}
+					{imagelessCount > 0 && (
+						<Alert className="mt-6">
+							<ImageOff aria-hidden="true" />
+							<AlertTitle>
+								{imagelessCount}{" "}
+								{imagelessCount === 1 ? "monster needs" : "monsters need"} an
+								image
+							</AlertTitle>
+							<AlertDescription>
+								Click &quot;View&quot; on a monster to retry image generation.
+							</AlertDescription>
+						</Alert>
+					)}
 
 					{/* ── Summary strip (visible once the user has monsters) ──────── */}
 					{hasMonsters && (

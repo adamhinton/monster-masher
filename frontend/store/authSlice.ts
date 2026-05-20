@@ -116,6 +116,21 @@ const authSlice = createSlice({
 				monsters: state.user.monsters.filter((m) => m.id !== action.payload),
 			};
 		},
+
+		/**
+		 * Optimistically clear the image on a monster — used when the user starts
+		 * an image generation retry so the UI shows the "imageless" state immediately.
+		 * No-op if not authenticated or monster not found.
+		 */
+		monsterImageCleared(state, action: PayloadAction<Monster["id"]>) {
+			if (state.status !== "authenticated") return;
+			state.user = {
+				...state.user,
+				monsters: state.user.monsters.map((m) =>
+					m.id === action.payload ? { ...m, image: null } : m,
+				),
+			};
+		},
 	},
 });
 
@@ -127,6 +142,7 @@ export const {
 	monsterAdded,
 	monsterUpdated,
 	monsterDeleted,
+	monsterImageCleared,
 } = authSlice.actions;
 
 export const authReducer = authSlice.reducer;

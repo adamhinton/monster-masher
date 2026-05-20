@@ -8,7 +8,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import z from "zod";
 
 import { GenerateMonsterForm } from "@/components/monsterGeneration/GenerateMonsterForm";
@@ -36,23 +35,20 @@ import {
 	type Monster,
 } from "@/lib/api/schemas/monster/MonsterSchema";
 import { nextApiErrorSchema } from "@/lib/api/errors";
-import { useAppDispatch } from "@/lib/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { monsterAdded } from "../../../store/authSlice";
+import {
+	imageGensRemainingSchema,
+	type ImageGensRemaining,
+} from "@/lib/api/schemas/ImageGensRemainingSchema";
+import { generateImageSuccessSchema } from "@/lib/api/schemas/monster/GenerateImageResponseSchema";
 /**Ongoing form values stored in localStorage for convenience */
 const createMonsterFormStorageKey = "monster-masher:create-monster-form";
 
 /** Zod schema for validating the POST /api/monsters/ success response */
 const monsterResponseSchema = z.object({ monster: MonsterSchema });
 
-/** Zod schema for validating the POST /api/monsters/[id]/generate-image success response */
-const generateImageSuccessSchema = z.object({
-	outcome: z.literal("succeeded"),
-	public_image_url: z.string(),
-	image_storage_path: z.string(),
-});
-
 export function CreateMonsterExperience() {
-	const router = useRouter();
 	const [formValues, setFormValues] = useState<MonsterFormValues>(
 		emptyMonsterFormValues,
 	);
@@ -62,8 +58,12 @@ export function CreateMonsterExperience() {
 	const [generationState, setGenerationState] = useState<GenerationUIState>({
 		status: "idle",
 	});
+	// Snap to focus on image generation preview when it's ready
 	const previewRef = useRef<HTMLDivElement>(null);
 	const dispatch = useAppDispatch();
+	const authState = useAppSelector((state) => state.auth);
+	const [imageGensRemaining, setImageGensRemaining] =
+		useState<ImageGensRemaining | null>(null);
 
 	// Check if ongoing form values are stored in localStorage and load them if so. This allows users to refresh or leave and come back without losing their progress.
 	useEffect(() => {
@@ -77,6 +77,39 @@ export function CreateMonsterExperience() {
 
 		return () => window.clearTimeout(timeoutId);
 	}, []);
+
+	// Load image-gens-remaining when the user is authenticated.
+	useEffect(() => {
+		if (authState.status !== "authenticated") return;
+		void (async () => {
+			try {
+				const res = await fetch("/api/me/image-gens-remaining");
+				if (!res.ok) return;
+				const data: unknown = await res.json();
+				const parsed = imageGensRemainingSchema.safeParse(data);
+				if (parsed.success) {
+					setImageGensRemaining(parsed.data);
+				}
+			} catch {
+				// Non-fatal: silently ignore if we can't fetch remaining gens
+			}
+		})();
+	}, [authState.status]);
+
+	// Scroll the preview panel into view when generation starts (running)
+	// or when it succeeds, so the user can see progress / the result without
+	// manually scrolling on mobile.
+	useEffect(() => {
+		if (
+			generationState.status === "running" ||
+			generationState.status === "succeeded"
+		) {
+			previewRef.current?.scrollIntoView({
+				behavior: "smooth",
+				block: "start",
+			});
+		}
+	}, [generationState.status]);
 
 	// When generation is running, POST the monster then call the image-gen pipeline.
 	useEffect(() => {
@@ -269,16 +302,7 @@ export function CreateMonsterExperience() {
 		submittedFormValuesRef.current = submittedFormValues;
 		window.localStorage.removeItem(createMonsterFormStorageKey);
 		setGenerationState(nextGenerationState);
-
-		// Snap focus to the preview panel on mobile — lets the user track progress
-		// without scrolling back up. Runs after the state update triggers a re-render
-		// so the panel is visible before scrollIntoView is called.
-		requestAnimationFrame(() => {
-			previewRef.current?.scrollIntoView({
-				behavior: "smooth",
-				block: "start",
-			});
-		});
+		// Scrolling is handled by the useEffect that watches generationState.status
 	}
 
 	// TODO might be able to delete this
@@ -304,6 +328,12 @@ export function CreateMonsterExperience() {
 						onFormValuesChange={handleFormValuesChange}
 						onSubmit={handleSubmit}
 					/>
+					{imageGensRemaining !== null && (
+						<p className="mt-3 text-sm text-muted-foreground">
+							{imageGensRemaining.num_remaining} of{" "}
+							{imageGensRemaining.max_per_day} image generations remaining today
+						</p>
+					)}
 				</CardContent>
 			</Card>
 
@@ -319,8 +349,7 @@ export function CreateMonsterExperience() {
 						<GenerationStatusPanel
 							generationState={generationState}
 							onReset={handleResetGeneration}
-							onSave={() => router.push("/gallery")}
-							isSaving={false}
+							imageGensRemaining={imageGensRemaining}
 						/>
 					</CardContent>
 				</Card>

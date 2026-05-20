@@ -47,6 +47,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/image-gens-remaining/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get remaining image generations for today
+         * @description GET /api/me/image-gens-remaining/
+         *
+         *     Returns how many image generations the authenticated user has left today.
+         *
+         *     Counts all MonsterImageGenerationJob records created in the last 24 hours
+         *     for this user (regardless of outcome — succeeded, failed, or blocked all
+         *     consume quota).
+         *
+         *     TODO (stretch): Only count jobs where generation_mode == "real" so that
+         *     fake/dev generations do not tick down the daily limit. This would allow
+         *     developers to test the UI without burning tokens.
+         */
+        get: operations["api_me_image_gens_remaining_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/monsters/": {
         parameters: {
             query?: never;
@@ -286,6 +316,38 @@ export interface paths {
          */
         post: operations["api_monsters_generate_image_mark_succeeded_create"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/monsters/{monster_id}/image/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete the current image for a monster
+         * @description DELETE /api/monsters/{monster_id}/image/
+         *
+         *     Deletes the current MonsterImage for a monster. The monster record itself
+         *     is preserved. MonsterImageGenerationJob records linked to the deleted image
+         *     are also preserved as historical records — they document that a generation
+         *     attempt was made and are useful for admin visibility and rate-limit counting.
+         *
+         *     Design note: this endpoint is called by the Next.js generate-image route
+         *     before retrying image generation for a monster that already has an image.
+         *     Keeping old job records means the admin can see retry patterns, and the
+         *     rate limiter correctly counts retries against the daily quota.
+         *
+         *     Returns 204 if the image was deleted, or 404 if the monster has no image.
+         */
+        delete: operations["api_monsters_image_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -666,6 +728,32 @@ export interface operations {
             };
         };
     };
+    api_me_image_gens_remaining_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description How many image generations the user can still trigger today. */
+                        num_remaining: number;
+                        /** @description The daily cap configured for this deployment. */
+                        max_per_day: number;
+                        /** @description Jobs created in the last 24 hours. */
+                        used_today: number;
+                    };
+                };
+            };
+        };
+    };
     api_monsters_list: {
         parameters: {
             query?: never;
@@ -1019,6 +1107,33 @@ export interface operations {
             };
             /** @description No response body */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_monsters_image_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                monster_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No response body */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

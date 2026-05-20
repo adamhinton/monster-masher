@@ -68,6 +68,12 @@ export const imageGenerationDoneRequestSchema = z.object({
 	 * which monster this notification is about.
 	 */
 	monsterName: z.string().max(80).trim().optional(),
+	/**
+	 * Optional ID of the monster this notification concerns.
+	 * Used in failure email CTAs to link directly to the monster's detail page
+	 * (/gallery/{monsterId}) so the user can retry image generation from there.
+	 */
+	monsterId: z.uuid().optional(),
 });
 
 export type ImageGenerationDoneRequest = z.infer<

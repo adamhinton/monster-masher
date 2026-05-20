@@ -98,4 +98,16 @@ export const env = {
 	get sentryLogFullModerationPrompts() {
 		return process.env.SENTRY_LOG_FULL_MODERATION_PROMPTS === "true";
 	},
+	// Maximum number of image generations allowed per day. Currently per user.
+	get maxImageGenerationsPerDay(): number {
+		const value = process.env.MAX_GENERATIONS_PER_DAY;
+		if (!value) return 6;
+		const num = Number(value);
+		if (isNaN(num) || num < 0) {
+			throw new Error(
+				`Invalid MAX_GENERATIONS_PER_DAY: ${value}. Must be a non-negative number.`,
+			);
+		}
+		return num;
+	},
 };

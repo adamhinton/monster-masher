@@ -164,7 +164,7 @@ export async function POST(
 		);
 	}
 
-	const { email, scenario, monsterName } = parsed.data;
+	const { email, scenario, monsterName, monsterId } = parsed.data;
 
 	// ── Step 3: Verify email belongs to the authenticated user ────────────────
 	//
@@ -196,6 +196,7 @@ export async function POST(
 		react: ImageGenerationDoneEmail({
 			scenario,
 			monsterName,
+			monsterId,
 			appUrl: env.appUrl,
 		}),
 	});

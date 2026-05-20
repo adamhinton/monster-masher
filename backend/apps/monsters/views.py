@@ -150,6 +150,40 @@ class MonsterDetailView(GenericAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class MonsterImageDeleteView(GenericAPIView):
+    """
+    DELETE /api/monsters/{monster_id}/image/
+
+    Deletes the current MonsterImage for a monster. The monster record itself
+    is preserved. MonsterImageGenerationJob records linked to the deleted image
+    are also preserved as historical records — they document that a generation
+    attempt was made and are useful for admin visibility and rate-limit counting.
+
+    Design note: this endpoint is called by the Next.js generate-image route
+    before retrying image generation for a monster that already has an image.
+    Keeping old job records means the admin can see retry patterns, and the
+    rate limiter correctly counts retries against the daily quota.
+
+    Returns 204 if the image was deleted, or 404 if the monster has no image.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Delete the current image for a monster",
+        responses={204: None, 404: None},
+    )
+    def delete(self, request: Request, monster_id) -> Response:
+        monster = get_object_or_404(Monster, id=monster_id, owner=request.user)
+        # MonsterImage.Meta ordering = ["-created_at"] so .first() returns the
+        # most recently created image — matching what MonsterSerializer exposes.
+        image = monster.images.first()
+        if image is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        image.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 # ---------------------------------------------------------------------------
 # Image generation job views
 # ---------------------------------------------------------------------------

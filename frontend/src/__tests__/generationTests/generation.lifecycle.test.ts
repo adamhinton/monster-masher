@@ -30,6 +30,7 @@ vi.mock("@/lib/django/fetchFromDjango", () => ({
 
 vi.mock("@sentry/nextjs", () => ({
 	captureEvent: vi.fn(),
+	captureException: vi.fn(),
 	captureMessage: vi.fn(),
 	metrics: {
 		distribution: vi.fn(),
@@ -205,6 +206,7 @@ describe("scenario: succeeded", () => {
 		await POST(makeRequest(), makeParams());
 
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
 			"/api/monsters/{monster_id}/generate-image/mark-succeeded/",
@@ -295,6 +297,7 @@ describe("scenario: blocked by banned terms", () => {
 
 		expect(res.status).toBe(422);
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-blocked/",
 		]);
@@ -344,6 +347,7 @@ describe("scenario: blocked by moderation provider", () => {
 		expect(res.status).toBe(422);
 		const paths = djangoCallPaths();
 		expect(paths).toEqual([
+			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-blocked/",
 		]);
@@ -375,6 +379,7 @@ describe("scenario: provider failed", () => {
 
 		expect(res.status).toBe(500);
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
 			"/api/monsters/{monster_id}/generate-image/mark-failed/",
@@ -433,6 +438,7 @@ describe("scenario: storage failed", () => {
 		expect(res.status).toBe(500);
 		const paths = djangoCallPaths();
 		expect(paths).toEqual([
+			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
 			"/api/monsters/{monster_id}/generate-image/mark-failed/",
@@ -492,6 +498,7 @@ describe("scenario: Django job-create failure", () => {
 		expect(res.status).toBe(500);
 		// Only the create call was attempted; no transitions follow
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 		]);
 	});

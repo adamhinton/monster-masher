@@ -19,6 +19,7 @@ from .views import (
     MonsterGenerateImageMarkFailedView,
     MonsterGenerateImageMarkRunningView,
     MonsterGenerateImageMarkSucceededView,
+    MonsterImageDeleteView,
     MonsterListCreateView,
 )
 
@@ -29,6 +30,11 @@ urlpatterns = [
         "monsters/<uuid:monster_id>/",
         MonsterDetailView.as_view(),
         name="monster-detail",
+    ),
+    path(
+        "monsters/<uuid:monster_id>/image/",
+        MonsterImageDeleteView.as_view(),
+        name="monster-image-delete",
     ),
     # Image generation job lifecycle — all nested under monsters/{monster_id}/generate-image/
     path(

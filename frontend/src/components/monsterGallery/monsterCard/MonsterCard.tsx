@@ -6,7 +6,7 @@
 
 "use client";
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Eye, ImageOff, MoreHorizontal, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Route } from "next";
 import { useId } from "react";
@@ -49,7 +49,7 @@ export interface MonsterCardProps {
 export function MonsterCard({
 	monster,
 	mode = "detailed",
-	onEdit,
+	// onEdit,
 	onDelete,
 }: MonsterCardProps) {
 	const headingId = useId();
@@ -76,6 +76,18 @@ export function MonsterCard({
 					altText={altText}
 					className="rounded-none border-0"
 				/>
+				{/* Always show a hover overlay to navigate to the detail page */}
+				<Link
+					href={`/gallery/${monster.id}`}
+					className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-150 hover:opacity-100"
+					aria-label={`${monster.image === null ? "Fix image for" : "View"} ${monster.display_name}`}
+				>
+					{monster.image === null ? (
+						<ImageOff className="size-6 text-white" aria-hidden="true" />
+					) : (
+						<Eye className="size-6 text-white" aria-hidden="true" />
+					)}
+				</Link>
 				{/* Name overlay — slides up from bottom on hover */}
 				<div className="absolute inset-x-0 bottom-0 translate-y-full bg-linear-to-t from-black/80 to-transparent px-3 pb-3 pt-10 transition-transform duration-200 group-hover/card:translate-y-0">
 					<h3
@@ -133,11 +145,6 @@ export function MonsterCard({
 						</DropdownMenuTrigger>
 
 						<DropdownMenuContent align="end">
-							<DropdownMenuItem onClick={onEdit} disabled={!onEdit}>
-								<Pencil />
-								Edit
-							</DropdownMenuItem>
-
 							<DropdownMenuItem
 								variant="destructive"
 								onClick={onDelete}
@@ -152,6 +159,20 @@ export function MonsterCard({
 
 				{/* Element + habitat trait chips */}
 				<MonsterBadges variant="card" traits={monster.traits} />
+
+				{/* Fix image — shown when monster has no image (placeholder) */}
+				{monster.image === null && (
+					<Link
+						href={`/gallery/${monster.id}`}
+						className={cn(
+							buttonVariants({ variant: "secondary", size: "sm" }),
+							"w-full justify-center gap-1.5",
+						)}
+					>
+						<RefreshCw size={13} aria-hidden="true" />
+						Fix image
+					</Link>
+				)}
 
 				{/* Flavor text — 2-line clamp; muted fallback when absent */}
 				<p

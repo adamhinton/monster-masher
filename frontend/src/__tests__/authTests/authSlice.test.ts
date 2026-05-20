@@ -11,6 +11,7 @@ import {
 	monsterAdded,
 	monsterUpdated,
 	monsterDeleted,
+	monsterImageCleared,
 } from "../../../store/authSlice";
 import {
 	validUserProfile,
@@ -312,6 +313,60 @@ describe("authSlice reducers", () => {
 			if (state.status === "authenticated" && before.status === "authenticated") {
 				expect(state.user.monsters).not.toBe(before.user.monsters);
 			}
+		});
+	});
+
+	describe("monsterImageCleared", () => {
+		it("sets monster.image to null for the given monster id", () => {
+			const state = authReducer(
+				authenticatedWithMonsters,
+				monsterImageCleared(validMonsterWithImage.id),
+			);
+			expect(state.status).toBe("authenticated");
+			if (state.status === "authenticated") {
+				const found = state.user.monsters.find(
+					(m) => m.id === validMonsterWithImage.id,
+				);
+				expect(found?.image).toBeNull();
+			}
+		});
+
+		it("leaves other monsters unchanged", () => {
+			const state = authReducer(
+				authenticatedWithMonsters,
+				monsterImageCleared(validMonsterWithImage.id),
+			);
+			if (state.status === "authenticated") {
+				const other = state.user.monsters.find((m) => m.id === validMonster.id);
+				expect(other?.image).toBeNull(); // validMonster has no image already
+				// List length unchanged
+				expect(state.user.monsters).toHaveLength(2);
+			}
+		});
+
+		it("is a no-op when id is not found", () => {
+			const state = authReducer(
+				authenticatedWithMonsters,
+				monsterImageCleared("00000000-0000-4000-8000-000000000000"),
+			);
+			if (state.status === "authenticated") {
+				expect(state.user.monsters).toHaveLength(2);
+				// Both monsters remain unchanged
+				const withImg = state.user.monsters.find(
+					(m) => m.id === validMonsterWithImage.id,
+				);
+				expect(withImg?.image).not.toBeNull();
+			}
+		});
+
+		it("is a no-op when not authenticated — loading", () => {
+			const state = authReducer(loading, monsterImageCleared(validMonster.id));
+			expect(state.status).toBe("loading");
+		});
+
+		it("is a no-op when not authenticated — anonymous", () => {
+			const state = authReducer(anonymous, monsterImageCleared(validMonster.id));
+			expect(state.status).toBe("anonymous");
 		});
 	});
 });

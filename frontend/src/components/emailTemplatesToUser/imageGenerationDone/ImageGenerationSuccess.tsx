@@ -56,7 +56,7 @@ const SCENARIO_CONTENT: Record<
 		heading: string;
 		body: (monsterName?: string) => string;
 		ctaLabel: string;
-		ctaPath: string;
+		ctaPath: (monsterId?: Monster["id"]) => string;
 	}
 > = {
 	succeeded: {
@@ -68,7 +68,7 @@ const SCENARIO_CONTENT: Record<
 				? `Great news — your monster "${monsterName}" has been generated and is waiting in your gallery.`
 				: "Great news — your monster has been generated and is waiting in your gallery.",
 		ctaLabel: "View your monster",
-		ctaPath: "/gallery",
+		ctaPath: () => "/gallery",
 	},
 	"failed/moderation": {
 		headerBg: brandTokens.dangerRed,
@@ -79,7 +79,8 @@ const SCENARIO_CONTENT: Record<
 				? `Your monster "${monsterName}" was blocked by our content policy. Try adjusting the description and generating again.`
 				: "Your monster was blocked by our content policy. Try adjusting the description and generating again.",
 		ctaLabel: "Try again",
-		ctaPath: "/create",
+		ctaPath: (monsterId?: string) =>
+			monsterId ? `/gallery/${monsterId}` : "/create",
 	},
 	"failed/network-error": {
 		headerBg: brandTokens.dangerRed,
@@ -90,7 +91,8 @@ const SCENARIO_CONTENT: Record<
 				? `We hit a snag while generating "${monsterName}". This is usually temporary — please try again.`
 				: "We hit a temporary snag during generation. Please try again.",
 		ctaLabel: "Try again",
-		ctaPath: "/create",
+		ctaPath: (monsterId?: string) =>
+			monsterId ? `/gallery/${monsterId}` : "/create",
 	},
 	"failed/unspecified": {
 		headerBg: brandTokens.dangerRed,
@@ -101,7 +103,8 @@ const SCENARIO_CONTENT: Record<
 				? `Unfortunately "${monsterName}" couldn't be generated this time. Please try again.`
 				: "Unfortunately your monster couldn't be generated this time. Please try again.",
 		ctaLabel: "Try again",
-		ctaPath: "/create",
+		ctaPath: (monsterId?: Monster["id"]) =>
+			monsterId ? `/gallery/${monsterId}` : "/create",
 	},
 };
 
@@ -111,6 +114,11 @@ export interface ImageGenerationDoneEmailProps {
 	scenario: ImageGenerationDoneScenario;
 	/** When provided, the monster's display name is woven into the email body. */
 	monsterName?: Monster["display_name"];
+	/**
+	 * Optional monster id. When provided, failure email CTAs link to
+	 * /gallery/{monsterId} so the user lands directly on the retry UI.
+	 */
+	monsterId?: Monster["id"];
 	/**
 	 * Base URL of the app (e.g. "https://monstermash.io").
 	 * Used to build the CTA link so the email always points at the right environment.
@@ -129,10 +137,11 @@ export interface ImageGenerationDoneEmailProps {
 export function ImageGenerationDoneEmail({
 	scenario,
 	monsterName,
+	monsterId,
 	appUrl,
 }: ImageGenerationDoneEmailProps) {
 	const content = SCENARIO_CONTENT[scenario];
-	const ctaHref = `${appUrl}${content.ctaPath}`;
+	const ctaHref = `${appUrl}${content.ctaPath(monsterId)}`;
 
 	return (
 		<html lang="en">

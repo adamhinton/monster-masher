@@ -70,6 +70,15 @@ class MonsterImage(models.Model):
     Stored image metadata for a generated monster image.
 
     Image bytes live in object storage, not Postgres.
+
+    Design intent: each Monster is expected to have at most one active image at
+    any given time. When a user retries image generation the old MonsterImage
+    record is deleted first (via DELETE /api/monsters/{id}/image/) before the
+    new one is created. If multiple records do somehow exist (e.g. due to a
+    failed cleanup), MonsterSerializer.get_image always returns the most
+    recently created one (ordered by -created_at), so the UI is consistent.
+    MonsterImageGenerationJob records are intentionally kept even when their
+    linked MonsterImage is deleted — they are historical records.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -128,7 +137,7 @@ class MonsterImageGenerationJob(models.Model):
 
     image = models.OneToOneField(
         MonsterImage,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="generation_job",
@@ -272,14 +281,10 @@ class MonsterImageGenerationJob(models.Model):
                 ),
                 name="job_active_no_image",
             ),
-            # succeeded: must have an attached image
-            models.CheckConstraint(
-                condition=~(
-                    Q(status=MonsterImageGenerationStatus.SUCCEEDED)
-                    & Q(image_id__isnull=True)
-                ),
-                name="job_succeeded_has_image",
-            ),
+            # Note: no constraint requiring succeeded jobs to have an attached image.
+            # Images can be deleted (for retry) while job records are preserved as
+            # historical records. A succeeded job may therefore have image=null after
+            # the user retries image generation.
             # failed and blocked: no image (job did not produce one)
             models.CheckConstraint(
                 condition=~(

@@ -25,6 +25,7 @@ vi.mock("@/lib/django/fetchFromDjango", () => ({
 
 vi.mock("@sentry/nextjs", () => ({
 	captureEvent: vi.fn(),
+	captureException: vi.fn(),
 	captureMessage: vi.fn(),
 	metrics: {
 		distribution: vi.fn(),

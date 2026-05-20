@@ -130,9 +130,10 @@ describe("CreatePage", () => {
 			await screen.findByText(/monster ready/i, {}, { timeout: 3000 }),
 		).toBeInTheDocument();
 		expect(
-			screen.getByRole("button", { name: /save to gallery/i }),
+			screen.getByRole("link", { name: /view in gallery/i }),
 		).toBeInTheDocument();
-		expect(mockFetch).toHaveBeenCalledTimes(2);
+		// 3 fetch calls: image-gens-remaining (on mount), create monster, generate image
+		expect(mockFetch).toHaveBeenCalledTimes(3);
 	});
 
 	it("shows the failed state and returns to idle when retrying", async () => {
@@ -172,7 +173,7 @@ describe("CreatePage", () => {
 			screen.getByText(/image generation failed\. please try again/i),
 		).toBeInTheDocument();
 
-		await user.click(screen.getByRole("button", { name: /try again/i }));
+		await user.click(screen.getByRole("link", { name: /try again/i }));
 	});
 
 	it("shows the blocked state and returns to idle when editing the prompt", async () => {
@@ -207,16 +208,15 @@ describe("CreatePage", () => {
 		await user.click(screen.getByRole("button", { name: /generate monster/i }));
 
 		expect(
-			await screen.findByText(
-				/prompt needs a softer touch/i,
+			await screen.findByText(/prompt blocked by content policy/i,
 				{},
 				{ timeout: 3000 },
 			),
 		).toBeInTheDocument();
 		expect(
-			screen.getByText(/your prompt was not allowed/i),
+			screen.getByText(/your description was blocked/i),
 		).toBeInTheDocument();
 
-		await user.click(screen.getByRole("button", { name: /edit prompt/i }));
+		await user.click(screen.getByRole("link", { name: /edit prompt/i }));
 	});
 });

@@ -7,6 +7,7 @@
 // intentionally coupled here so the job record is always the source of truth.
 //
 // Pipeline order:
+//   0. Delete any existing MonsterImage for this monster (delete-before-retry).
 //   1. Authenticate the user via Supabase session. user_profile_id always comes
 //      from the verified JWT sub — never from the request body.
 //   2. Validate the request body against monsterFormSchema (server-side re-validation).
@@ -185,6 +186,38 @@ async function callTransitionEndpoint(
 	}
 }
 
+/**
+ * Deletes the current MonsterImage for a monster before starting a retry.
+ * Handles 204 (deleted), 404 (no image, fine), and logs other errors to Sentry
+ * without failing the overall pipeline — the generation should still be
+ * attempted even if the delete call fails.
+ */
+async function deleteMonsterImageIfExists(
+	monsterId: Monster["id"],
+	accessToken: string,
+): Promise<void> {
+	try {
+		const res = await fetchFromDjango(
+			"/api/monsters/{monster_id}/image/",
+			{ monster_id: monsterId },
+			{
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+		if (res.status !== 204 && res.status !== 404) {
+			Sentry.captureMessage("generate_image.delete_existing_image_failed", {
+				level: "warning",
+				extra: { monsterId, status: res.status },
+			});
+		}
+	} catch (err) {
+		Sentry.captureException(err, {
+			extra: { context: "deleteMonsterImageIfExists", monsterId },
+		});
+	}
+}
+
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 /**
@@ -307,8 +340,16 @@ export async function POST(
 			scenario,
 			accessToken,
 			monsterName: formValues.display_name,
+			monsterId,
 		});
 	};
+
+	// ── Step 0: Delete any existing image for this monster ───────────────────
+	//
+	// Enforces the one-image-per-monster design — old image is wiped before the
+	// new pipeline starts. Failures are logged to Sentry but do not abort the
+	// pipeline; the user should still get a new image even if cleanup failed.
+	await deleteMonsterImageIfExists(monsterId, accessToken);
 
 	// ── Step 3: Create MonsterImageGenerationJob in Django (QUEUED) ──────────
 	let jobId: string;

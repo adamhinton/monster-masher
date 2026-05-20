@@ -65,6 +65,10 @@ class MonsterSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(MonsterImageSerializer(allow_null=True))
     def get_image(self, obj: Monster):
+        # MonsterImage.Meta has ordering = ["-created_at"] so .first() reliably
+        # returns the most recently created image. This is the correct behaviour
+        # even in the (unexpected) case where a monster has multiple images —
+        # see the MonsterImage docstring for the one-image-per-monster intent.
         latest = obj.images.first()
         if latest is None:
             return None

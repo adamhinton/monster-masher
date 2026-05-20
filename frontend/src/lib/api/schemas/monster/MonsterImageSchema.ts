@@ -10,6 +10,13 @@
 //   2. Run `python manage.py spectacular --file openapi.yaml`
 //   3. Run `npm run generate:api`
 //   4. Fix this Zod schema if tsc now fails on the Assert line
+//
+// One-image-per-monster design:
+//   Each Monster has at most one MonsterImage at any time. Before a new image is
+//   generated for a monster that already has one, the old MonsterImage row is
+//   deleted via DELETE /api/monsters/{id}/image/. MonsterImageGenerationJob
+//   records are preserved as historical records even after their associated image
+//   is deleted. See backend/apps/monsters/models.py for the authoritative comment.
 // ___________________________
 
 import z from "zod";

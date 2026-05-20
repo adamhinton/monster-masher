@@ -152,11 +152,11 @@ describe("MonsterDetailView — traits card and meta", () => {
 });
 
 describe("MonsterDetailView — action buttons", () => {
-	it("renders the Edit details button in a disabled state", () => {
+	it("does not render an Edit details button (editing disabled)", () => {
 		renderView(validMonster);
 		expect(
-			screen.getByRole("button", { name: /edit details/i }),
-		).toBeDisabled();
+			screen.queryByRole("button", { name: /edit details/i }),
+		).not.toBeInTheDocument();
 	});
 
 	it("renders the Download Picture button in a disabled state", () => {
@@ -219,5 +219,40 @@ describe("MonsterDetailView — delete flow integration", () => {
 				name: new RegExp(`delete ${validMonster.display_name}`, "i"),
 			}),
 		).toBeInTheDocument();
+	});
+});
+
+describe("MonsterDetailView — Regenerate image button", () => {
+	it("renders a Regenerate image button in the Actions section for imageless monsters", () => {
+		renderView(validMonster);
+		expect(
+			screen.getByRole("button", { name: /regenerate image/i }),
+		).toBeInTheDocument();
+	});
+
+	it("renders a Regenerate image button in the Actions section for monsters with images", () => {
+		renderView(validMonsterWithImage);
+		expect(
+			screen.getByRole("button", { name: /regenerate image/i }),
+		).toBeInTheDocument();
+	});
+
+	it("Regenerate image button is enabled in idle state", () => {
+		renderView(validMonster);
+		expect(
+			screen.getByRole("button", { name: /regenerate image/i }),
+		).not.toBeDisabled();
+	});
+});
+
+describe("MonsterDetailView — retry section visibility", () => {
+	it("shows the Image not generated alert for imageless monsters (idle state)", () => {
+		renderView(validMonster);
+		expect(screen.getByText(/image not generated/i)).toBeInTheDocument();
+	});
+
+	it("does NOT show the Image not generated alert for monsters with images (idle state)", () => {
+		renderView(validMonsterWithImage);
+		expect(screen.queryByText(/image not generated/i)).not.toBeInTheDocument();
 	});
 });
