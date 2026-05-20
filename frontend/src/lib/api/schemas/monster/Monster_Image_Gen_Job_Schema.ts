@@ -52,7 +52,6 @@ const _Monster_Image_Gen_Job_Schema = z.object({
 		prompt_hash: z.string().max(64).trim(),
 	}),
 
-	// TODO STRETCH notify_when_done can be two different structures based on whether should_email_when_done is true or false. Can make this a discriminated union schema but I'm too lazy right now
 	notify_when_done: z.object({
 		should_email_when_done: z.boolean(),
 		// This is a date

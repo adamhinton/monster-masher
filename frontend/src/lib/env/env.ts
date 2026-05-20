@@ -86,6 +86,10 @@ export const env = {
 		const value = assertDefined(process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
 		return value;
 	},
+	/** Resend API key for sending transactional emails. Server-only */
+	get resendApiKey() {
+		return assertDefined(process.env.RESEND_API_KEY, "RESEND_API_KEY");
+	},
 	/**
 	 * When `true`, the full sanitised prompt is included in Sentry moderation
 	 * context. Defaults to `false`. Must remain server-only — never expose this

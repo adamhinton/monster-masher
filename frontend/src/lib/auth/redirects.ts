@@ -1,5 +1,6 @@
 // _____________
-// TODO make sure this is in any future routes
+// Ensures users are redirected to safe path after login etc.
+// Prevents malicious outside redirect links like /login?next=https://evil.com
 // _____________
 
 /**Path we send user to after they're logged in */

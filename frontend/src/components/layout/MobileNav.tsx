@@ -39,7 +39,7 @@ export function MobileNav() {
 		if (isLoggingOut) return;
 		setIsLoggingOut(true);
 		try {
-			const logOutRoute: Route = "/api/auth/logout"; // Won't compile if the route drifts
+			const logOutRoute: Route = "/api/auth/logout";
 			await fetch(logOutRoute, { method: "POST" });
 			router.push("/");
 			router.refresh();

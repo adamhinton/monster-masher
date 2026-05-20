@@ -46,7 +46,6 @@ export function GenerationStatusPanel({
 							aria-hidden="true"
 						/>
 						<p>
-							{/* TODO(image-gen-durable-jobs): Say something about emailing them when done. */}
 							You can leave this page and come back later; we will save your
 							monster for you. The image should be ready in about 90 seconds.
 						</p>

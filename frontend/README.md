@@ -94,6 +94,36 @@ Next.js route handlers that proxy to Django after verifying the Supabase session
 | `DELETE` | `/api/monsters/[monsterId]`                | Deletes a monster. Forwards to Django `DELETE /api/monsters/{monster_id}/`. Returns `{ ok: true }` on success or a `NextApiError` on failure.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `POST`   | `/api/monsters/[monsterId]/generate-image` | **The only way to create a `MonsterImage`.** Runs the full generation pipeline: validates the request, verifies auth, creates a `MonsterImageGenerationJob` in Django, runs the banned-terms guard and moderation provider, generates the image via the image provider, uploads it to Supabase Storage, and calls Django mark-succeeded. Returns `{ outcome: "succeeded", public_image_url, image_storage_path }` on success. Returns 400 for invalid input, 401 for unauthenticated requests, 422 for blocked content, and 500 for provider/storage failures. There is no separate `/api/monster-images/` endpoint — this route is the entry point for all image creation. |
 
+### Email notification endpoint
+
+| Method | Path                               | Description                                                                                                                                                                                                                                                                                                       |
+| ------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/api/email/image-generation-done` | Sends a transactional notification email to the authenticated user when their image generation has completed. Requires `Authorization: Bearer <access_token>`. The email address in the body must match the JWT owner's email — cross-user sends are rejected with 403. Delivery failures trigger a Sentry alert. |
+
+#### How it works
+
+1. `POST /api/monsters/[monsterId]/generate-image` reaches a terminal outcome (succeeded or any failure).
+2. If the user opted in (`should_email_when_done: true` in the form), the route calls `notifyImageGenerationDone()` from `src/lib/api/email/imageGenerationDoneEmail.ts` — **fire and forget** (`void`), so email delivery never delays the generation response.
+3. The helper makes a server-to-server POST to `/api/email/image-generation-done`, forwarding the user's Supabase access token.
+4. The email route verifies the token, confirms the email matches the user, and sends via Resend.
+
+#### Scenarios
+
+| Scenario               | When sent                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `succeeded`            | Image generated and stored successfully                                          |
+| `failed/moderation`    | Prompt blocked by the content policy (banned-terms guard or moderation provider) |
+| `failed/network-error` | Image provider or Supabase Storage call failed                                   |
+| `failed/unspecified`   | Moderation check failure, job-transition failure, or other internal error        |
+
+All scenario types and shared request/response types live in `src/lib/api/email/imageGenerationDoneTypes.ts` — import from there; do not redeclare them. Email template components are in `src/components/emailTemplatesToUser/imageGenerationDone/ImageGenerationSuccess.tsx`.
+
+#### Required env vars
+
+| Variable         | Notes                                                             |
+| ---------------- | ----------------------------------------------------------------- |
+| `RESEND_API_KEY` | Resend API key. Server-only — do not use a `NEXT_PUBLIC_` prefix. |
+
 #### Image generation pipeline details
 
 `POST /api/monsters/[monsterId]/generate-image` orchestrates these steps in order:

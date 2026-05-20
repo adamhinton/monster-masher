@@ -55,6 +55,8 @@ import {
 } from "@/lib/api/schemas/monster/Monster_Image_Gen_Job_Schema";
 import { type paths } from "@/lib/api/__generated__/types";
 import { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
+import { notifyImageGenerationDone } from "@/lib/api/email/imageGenerationDoneEmail";
+import type { ImageGenerationDoneScenario } from "@/lib/api/email/imageGenerationDoneTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -245,6 +247,9 @@ export async function POST(
 	// it corresponds to UserProfile.supabase_user_id in Django.
 	const userProfileId = claimsData.claims.sub;
 
+	// User's email to notify when monster image generation is finished (success OR failure) — used only when should_email_when_done is true.
+	const userEmail = sessionData.session?.user?.email ?? null;
+
 	// ── Step 2: Parse and validate request body ───────────────────────────────
 	//
 	// Re-validating server-side with the same schema the form uses. Should rarely
@@ -281,6 +286,29 @@ export async function POST(
 		});
 	}
 	const prompt = promptResult.prompt;
+
+	// ── Email notification helper ────────────────────────────────────────────
+	//
+	// Defined after formValues (step 2) and accessToken (step 1) are resolved.
+	// Fire-and-forget: callers use `void` so email delivery never delays the
+	// main response. Sends only when the user opted in via should_email_when_done.
+	const maybeSendEmailNotification = async (
+		scenario: ImageGenerationDoneScenario,
+	) => {
+		console.log("maybeSendEmailNotification called with scenario:", scenario);
+		if (!formValues.should_email_when_done || !userEmail) {
+			console.log(
+				"Email notification skipped: should_email_when_done is false or userEmail is missing",
+			);
+			return;
+		}
+		await notifyImageGenerationDone({
+			email: userEmail,
+			scenario,
+			accessToken,
+			monsterName: formValues.display_name,
+		});
+	};
 
 	// ── Step 3: Create MonsterImageGenerationJob in Django (QUEUED) ──────────
 	let jobId: string;
@@ -383,6 +411,7 @@ export async function POST(
 				error_message: "Prompt contains banned terms.",
 			},
 		);
+		await maybeSendEmailNotification("failed/moderation");
 		return jsonError({
 			status: 422,
 			code: "content_blocked",
@@ -424,6 +453,7 @@ export async function POST(
 				error_message: moderationResult.safeReason,
 			},
 		);
+		await maybeSendEmailNotification("failed/moderation");
 		return jsonError({
 			status: 422,
 			code: "PROMPT_BLOCKED",
@@ -444,6 +474,7 @@ export async function POST(
 		);
 		// Do NOT Sentry.captureEvent here — OpenAIModerationProvider already
 		// logs one scoped event per evaluation (Step 19f).
+		await maybeSendEmailNotification("failed/unspecified");
 		return jsonError({
 			status: 500,
 			code: "GENERATION_FAILED",
@@ -476,6 +507,7 @@ export async function POST(
 			},
 		});
 
+		await maybeSendEmailNotification("failed/unspecified");
 		return jsonError({
 			status: 500,
 			code: "job_transition_failed",
@@ -523,6 +555,7 @@ export async function POST(
 			level: "error",
 			tags: { generation_mode: generationMode, error_code: "provider_failed" },
 		});
+		await maybeSendEmailNotification("failed/network-error");
 		return jsonError({
 			status: 500,
 			code: "provider_failed",
@@ -560,6 +593,7 @@ export async function POST(
 			level: "error",
 			tags: { generation_mode: generationMode, error_code: "storage_failed" },
 		});
+		await maybeSendEmailNotification("failed/network-error");
 		return jsonError({
 			status: 500,
 			code: "storage_failed",
@@ -600,6 +634,7 @@ export async function POST(
 			},
 		});
 
+		await maybeSendEmailNotification("failed/unspecified");
 		return jsonError({
 			status: 500,
 			code: "job_finalize_failed",
@@ -616,6 +651,7 @@ export async function POST(
 		Math.round(performance.now() - pipelineStart),
 		{ unit: "millisecond" },
 	);
+	await maybeSendEmailNotification("succeeded");
 	return NextResponse.json(
 		{
 			outcome: "succeeded",

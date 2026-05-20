@@ -41,12 +41,6 @@ export const MonsterSchema = z.object({
 });
 export type Monster = z.output<typeof MonsterSchema>;
 
-// 		const payload = {
-// 			display_name,
-// 			traits: { element, habitat, personality, color_palette },
-// 			flavor_text: flavor_text ?? "",
-// 		};
-
 /**The Monster type built in the user generation form that we will send to Django
  *
  * Use this to validate monsters before sending to the API.
