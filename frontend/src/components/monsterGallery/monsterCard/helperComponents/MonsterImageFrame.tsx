@@ -1,13 +1,22 @@
 // _______________
 // Reusable image frame for a monster — used by MonsterCard, detail view, and
 // anywhere else a monster image needs to be displayed.
+// This image is expandable into a full-browser preview when the isExpandable prop is true.
 // _______________
 
 "use client";
 
-import { Ghost } from "lucide-react";
+import { Ghost, Maximize2 } from "lucide-react";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import type { MonsterImage } from "@/lib/api/schemas/monster/MonsterImageSchema";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +39,8 @@ export interface MonsterImageFrameProps {
 	variant: Variant;
 	/** Accessible alt text for the image. Pass an empty string only for truly decorative images. */
 	altText: string;
+	/** Enables a full-browser preview dialog for generated monster images. */
+	isExpandable?: boolean;
 	/** Extra Tailwind classes applied to the outer figure element. */
 	className?: string;
 }
@@ -106,6 +117,7 @@ export function MonsterImageFrame({
 	image,
 	variant,
 	altText: alt,
+	isExpandable = false,
 	className,
 }: MonsterImageFrameProps) {
 	const [hasError, setHasError] = useState(false);
@@ -120,44 +132,84 @@ export function MonsterImageFrame({
 	/** True only once a real URL is present, the img has fired onLoad, and no error occurred. */
 	const imageVisible = imageUrl !== null && !hasError && isLoaded;
 
+	/** Expansion is offered only for images that can be opened in the preview dialog. */
+	const canExpand = isExpandable && imageUrl !== null && !hasError;
+
 	return (
-		<figure
-			className={cn(
-				"relative shrink-0 overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm",
-				className,
-			)}
-			style={{
-				width: side,
-				height: side,
-				boxShadow:
-					"0 0 48px var(--brand-primary-glow), 0 2px 16px oklch(0 0 0 / 0.06)",
-			}}
-		>
-			<ImagePlaceholder variant={variant} aria-hidden={imageVisible} />
+		<Dialog>
+			<figure
+				className={cn(
+					"relative shrink-0 overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm",
+					className,
+				)}
+				style={{
+					width: side,
+					height: side,
+					boxShadow:
+						"0 0 48px var(--brand-primary-glow), 0 2px 16px oklch(0 0 0 / 0.06)",
+				}}
+			>
+				<ImagePlaceholder variant={variant} aria-hidden={imageVisible} />
 
-			{/* TODO: switch to next/image once remotePatterns is configured in next.config.ts */}
-			{imageUrl !== null && !hasError && (
-				// eslint-disable-next-line @next/next/no-img-element
-				<img
-					src={imageUrl}
-					alt={alt}
-					decoding="async"
-					className={cn(
-						"absolute inset-0 h-full w-full object-contain transition-opacity duration-500",
-						imageVisible ? "opacity-100" : "opacity-0",
-					)}
-					onLoad={() => setIsLoaded(true)}
-					onError={() => setHasError(true)}
+				{/* TODO: switch to next/image once remotePatterns is configured in next.config.ts */}
+				{imageUrl !== null && !hasError && (
+					// eslint-disable-next-line @next/next/no-img-element
+					<img
+						src={imageUrl}
+						alt={alt}
+						decoding="async"
+						className={cn(
+							"absolute inset-0 h-full w-full object-contain transition-opacity duration-500",
+							imageVisible ? "opacity-100" : "opacity-0",
+						)}
+						onLoad={() => setIsLoaded(true)}
+						onError={() => setHasError(true)}
+					/>
+				)}
+
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-0 rounded-3xl"
+					style={{ boxShadow: "inset 0 0 40px var(--brand-accent-glow)" }}
 				/>
+
+				{variant !== "compact" && <CornerMarkers />}
+
+				{canExpand && (
+					<DialogTrigger
+						render={
+							<Button
+								type="button"
+								variant="secondary"
+								size="icon-sm"
+								className="absolute top-2 right-2 z-20 bg-background/85 text-foreground shadow-sm backdrop-blur-sm hover:bg-background"
+								aria-label={`Expand image: ${alt}`}
+							/>
+						}
+					>
+						<Maximize2 size={14} aria-hidden="true" />
+					</DialogTrigger>
+				)}
+			</figure>
+
+			{canExpand && (
+				<DialogContent className="h-[calc(100svh-1rem)] w-[calc(100vw-1rem)] max-w-none gap-3 overflow-hidden bg-background/95 p-3 sm:max-w-none">
+					<DialogTitle className="sr-only">Expanded monster image</DialogTitle>
+					<DialogDescription className="sr-only">
+						Large preview of {alt}. Press Escape or the close button to close.
+					</DialogDescription>
+					<div className="flex min-h-0 flex-1 items-center justify-center">
+						{/* TODO: switch to next/image once remotePatterns is configured in next.config.ts */}
+						{/* eslint-disable-next-line @next/next/no-img-element */}
+						<img
+							src={imageUrl}
+							alt={alt}
+							decoding="async"
+							className="max-h-full max-w-full object-contain"
+						/>
+					</div>
+				</DialogContent>
 			)}
-
-			<div
-				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 rounded-3xl"
-				style={{ boxShadow: "inset 0 0 40px var(--brand-accent-glow)" }}
-			/>
-
-			{variant !== "compact" && <CornerMarkers />}
-		</figure>
+		</Dialog>
 	);
 }

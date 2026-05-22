@@ -13,12 +13,14 @@ vi.mock("next/link", () => ({
 		href,
 		children,
 		className,
+		"aria-label": ariaLabel,
 	}: {
 		href: string;
 		children: ReactNode;
 		className?: string;
+		"aria-label"?: string;
 	}) => (
-		<a href={href} className={className}>
+		<a href={href} className={className} aria-label={ariaLabel}>
 			{children}
 		</a>
 	),
@@ -176,6 +178,23 @@ describe("MonsterCard — actions menu", () => {
 			}),
 		).toBeInTheDocument();
 	});
+
+	it("enables image expansion for monsters with generated images", () => {
+		render(<MonsterCard monster={validMonsterWithImage} />);
+		const expectedAlt = `${validMonsterWithImage.traits.element} monster named ${validMonsterWithImage.display_name}`;
+		expect(
+			screen.getByRole("button", {
+				name: new RegExp(`expand image: ${expectedAlt}`, "i"),
+			}),
+		).toBeInTheDocument();
+	});
+
+	it("does NOT show image expansion for imageless monsters", () => {
+		render(<MonsterCard monster={validMonster} />);
+		expect(
+			screen.queryByRole("button", { name: /expand image/i }),
+		).not.toBeInTheDocument();
+	});
 });
 
 describe("MonsterCard — image-only mode", () => {
@@ -221,5 +240,20 @@ describe("MonsterCard — image-only mode", () => {
 		expect(
 			screen.getByRole("img", { name: /monster image — not yet available/i }),
 		).toBeInTheDocument();
+	});
+
+	it("keeps the expand image button available above the image-only detail overlay", () => {
+		render(<MonsterCard monster={validMonsterWithImage} mode="image-only" />);
+		const expectedAlt = `${validMonsterWithImage.traits.element} monster named ${validMonsterWithImage.display_name}`;
+		expect(
+			screen.getByRole("button", {
+				name: new RegExp(`expand image: ${expectedAlt}`, "i"),
+			}),
+		).toHaveClass("z-20");
+		expect(
+			screen.getByRole("link", {
+				name: `Details for ${validMonsterWithImage.display_name}`,
+			}),
+		).toHaveClass("z-10");
 	});
 });

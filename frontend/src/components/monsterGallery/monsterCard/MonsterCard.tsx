@@ -74,12 +74,13 @@ export function MonsterCard({
 					image={monster.image}
 					variant="card"
 					altText={altText}
+					isExpandable
 					className="rounded-none border-0"
 				/>
-				{/* Always show a hover overlay to navigate to the detail page */}
+				{/* Keep detail navigation separate from the image expand button. */}
 				<Link
 					href={`/gallery/${monster.id}`}
-					className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-150 hover:opacity-100"
+					className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-150 hover:opacity-100"
 					aria-label={`Details for ${monster.display_name}`}
 				>
 					{monster.image === null ? (
@@ -113,11 +114,12 @@ export function MonsterCard({
 					"0 0 32px var(--brand-primary-glow), 0 1px 6px oklch(0 0 0 / 0.05)",
 			}}
 		>
-			{/* Monster image — full-bleed at the top; card provides outer shape */}
+			{/* Monster image — full-bleed at the top, expandable when generated. */}
 			<MonsterImageFrame
 				image={monster.image}
 				variant="card"
 				altText={altText}
+				isExpandable
 				className="rounded-none border-0"
 			/>
 

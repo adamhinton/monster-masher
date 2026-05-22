@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { MonsterImageFrame } from "@/components/monsterGallery/monsterCard/helperComponents/MonsterImageFrame";
 import { validMonsterWithImage } from "@/__tests__/__testUtils__/fixtures";
@@ -78,6 +79,88 @@ describe("MonsterImageFrame — with image URL, before load", () => {
 		expect(
 			screen.getByRole("img", { name: /monster image — not yet available/i }),
 		).toBeInTheDocument();
+	});
+});
+
+describe("MonsterImageFrame — expandable preview", () => {
+	const image = validMonsterWithImage.image!;
+
+	it("does NOT render an expand button unless expansion is enabled", () => {
+		render(
+			<MonsterImageFrame image={image} variant="card" altText={altText} />,
+		);
+		expect(
+			screen.queryByRole("button", {
+				name: new RegExp(`expand image: ${altText}`, "i"),
+			}),
+		).not.toBeInTheDocument();
+	});
+
+	it("does NOT render an expand button when expansion is enabled but image is null", () => {
+		render(
+			<MonsterImageFrame
+				image={null}
+				variant="card"
+				altText={nullAlt}
+				isExpandable
+			/>,
+		);
+		expect(
+			screen.queryByRole("button", { name: /expand image/i }),
+		).not.toBeInTheDocument();
+	});
+
+	it("opens a large accessible dialog preview for generated images", async () => {
+		const user = userEvent.setup();
+
+		render(
+			<MonsterImageFrame
+				image={image}
+				variant="card"
+				altText={altText}
+				isExpandable
+			/>,
+		);
+
+		await user.click(
+			screen.getByRole("button", {
+				name: new RegExp(`expand image: ${altText}`, "i"),
+			}),
+		);
+
+		const dialog = await screen.findByRole("dialog", {
+			name: /expanded monster image/i,
+		});
+		expect(dialog).toBeInTheDocument();
+		expect(within(dialog).getByRole("img", { name: altText })).toHaveAttribute(
+			"src",
+			image.public_image_url,
+		);
+		expect(within(dialog).getByText(/press escape/i)).toHaveClass("sr-only");
+	});
+
+	it("removes the expand button after the source image errors", () => {
+		const { container } = render(
+			<MonsterImageFrame
+				image={image}
+				variant="card"
+				altText={altText}
+				isExpandable
+			/>,
+		);
+
+		expect(
+			screen.getByRole("button", {
+				name: new RegExp(`expand image: ${altText}`, "i"),
+			}),
+		).toBeInTheDocument();
+
+		const img = container.querySelector("img")!;
+		fireEvent.error(img);
+
+		expect(
+			screen.queryByRole("button", { name: /expand image/i }),
+		).not.toBeInTheDocument();
 	});
 });
 
