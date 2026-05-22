@@ -10,6 +10,7 @@ import type { ImageProvider, ImageProviderResult } from "./providersType";
  * Vercel AI SDK image generation can take a while; abort after this duration.
  */
 const IMAGE_GENERATION_TIMEOUT_MS = 90_000;
+const MONSTER_IMAGE_SIZE = "1024x1024";
 
 /**
  * Vercel AI Gateway image provider.
@@ -39,6 +40,7 @@ export class VercelAIGatewayImageProvider implements ImageProvider {
 			const { image } = await generateImage({
 				model: gateway.image(env.vercelAIImageModel),
 				prompt,
+				size: MONSTER_IMAGE_SIZE,
 				abortSignal: abortController.signal,
 			});
 

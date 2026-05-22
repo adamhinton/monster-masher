@@ -25,7 +25,7 @@ vi.mock("next/link", () => ({
 }));
 
 describe("MonsterCard — detailed mode (default)", () => {
-	it("renders monster name, placeholder state, and view action", () => {
+	it("renders monster name, placeholder state, and details action", () => {
 		render(<MonsterCard monster={validMonster} />);
 
 		expect(
@@ -34,7 +34,7 @@ describe("MonsterCard — detailed mode (default)", () => {
 		expect(
 			screen.getByRole("img", { name: /not yet available/i }),
 		).toBeInTheDocument();
-		expect(screen.getByRole("link", { name: /view/i })).toHaveAttribute(
+		expect(screen.getByRole("link", { name: /details/i })).toHaveAttribute(
 			"href",
 			`/gallery/${validMonster.id}`,
 		);
@@ -62,9 +62,9 @@ describe("MonsterCard — detailed mode (default)", () => {
 		expect(screen.getByText(validMonster.traits.habitat)).toBeInTheDocument();
 	});
 
-	it("view link has the correct href to /gallery/:id", () => {
+	it("details link has the correct href to /gallery/:id", () => {
 		render(<MonsterCard monster={validMonster} />);
-		expect(screen.getByRole("link", { name: /view/i })).toHaveAttribute(
+		expect(screen.getByRole("link", { name: /details/i })).toHaveAttribute(
 			"href",
 			`/gallery/${validMonster.id}`,
 		);
@@ -140,12 +140,16 @@ describe("MonsterCard — actions menu", () => {
 		expect(onDelete).toHaveBeenCalledTimes(1);
 	});
 
-	it("shows Fix image link directly in the card body for imageless monsters", () => {
+	it("shows Regenerate image link directly in the card body for imageless monsters", () => {
 		render(<MonsterCard monster={validMonster} />);
-		// Fix image is now an inline button in the card body, no need to open the dropdown
-		const fixLinks = screen.getAllByRole("link", { name: /fix image/i });
-		expect(fixLinks.length).toBeGreaterThanOrEqual(1);
-		expect(fixLinks[0]).toHaveAttribute("href", `/gallery/${validMonster.id}`);
+		const regenerateLinks = screen.getAllByRole("link", {
+			name: /regenerate image/i,
+		});
+		expect(regenerateLinks.length).toBeGreaterThanOrEqual(1);
+		expect(regenerateLinks[0]).toHaveAttribute(
+			"href",
+			`/gallery/${validMonster.id}`,
+		);
 	});
 
 	it("renders a disabled Delete item when no onDelete handler is provided", async () => {
@@ -189,10 +193,10 @@ describe("MonsterCard — image-only mode", () => {
 		).not.toBeInTheDocument();
 	});
 
-	it("does NOT render the View link in image-only mode", () => {
+	it("does NOT render the Details text link in image-only mode", () => {
 		render(<MonsterCard monster={validMonster} mode="image-only" />);
 		expect(
-			screen.queryByRole("link", { name: /view/i }),
+			screen.queryByRole("link", { name: /^details$/i }),
 		).not.toBeInTheDocument();
 	});
 

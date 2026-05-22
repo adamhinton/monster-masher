@@ -90,19 +90,14 @@ describe("GalleryPage", () => {
 		).toHaveAttribute("href", "/create");
 	});
 
-	it("shows the saved monsters grid and summary strip for authenticated users", () => {
+	it("shows the saved monsters grid and pagination info for authenticated users", () => {
 		renderGalleryPageWithAuthState({
 			status: "authenticated",
 			user: authenticatedUser,
 		});
 
-		const summaryStrip = screen
-			.getByText(/showing page 1 of 1/i)
-			.closest('[data-slot="card-content"]');
-
-		expect(summaryStrip).not.toBeNull();
-		expect(summaryStrip).toHaveTextContent(/1 monster saved/i);
-		expect(screen.getByText(/showing page 1 of 1/i)).toBeInTheDocument();
+		expect(screen.getAllByText(/1 monster saved/i)).toHaveLength(2);
+		expect(screen.getAllByText(/page 1 of 1/i)).toHaveLength(2);
 		expect(
 			screen.getByRole("heading", { name: /flamox/i }),
 		).toBeInTheDocument();
@@ -140,7 +135,7 @@ describe("GalleryPage", () => {
 
 		await user.click(topNextButton);
 
-		expect(screen.getByText(/showing page 2 of 2/i)).toBeInTheDocument();
+		expect(screen.getAllByText(/page 2 of 2/i)).toHaveLength(2);
 		expect(bottomPreviousButton).toBeEnabled();
 		expect(bottomNextButton).toBeDisabled();
 		expect(
@@ -152,7 +147,7 @@ describe("GalleryPage", () => {
 
 		await user.click(bottomPreviousButton);
 
-		expect(screen.getByText(/showing page 1 of 2/i)).toBeInTheDocument();
+		expect(screen.getAllByText(/page 1 of 2/i)).toHaveLength(2);
 		expect(topPreviousButton).toBeDisabled();
 	});
 });

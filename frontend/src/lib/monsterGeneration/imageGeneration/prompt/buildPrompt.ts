@@ -188,9 +188,11 @@ Overarching principles:
   - Multiple monsters, either of the same or multiple species
   - Specific art styles
 
-Do your best to grant appropriate and specific user requests.
+Do your best to grant appropriate and specific user requests. They will already have passed moderation and sanitization, so the user is unlikely to request anything I wouldn't be OK with.
 
-Monster attributes:`;
+These are monsters, so combat/violence is fine (but only if they request it) - again, it will already have passed through moderation and filters. They might also request cute, friendly, cool, non-threatening etc, and that's fine too. Just do your best to match the user's request.
+
+Monster attributes requested by user:`;
 
 // ─── Build function ───────────────────────────────────────────────────────────
 

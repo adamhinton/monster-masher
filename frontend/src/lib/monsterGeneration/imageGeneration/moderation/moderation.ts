@@ -17,6 +17,8 @@ import {
 import { MonsterImageGenJob } from "@/lib/api/schemas/monster/Monster_Image_Gen_Job_Schema";
 import { UserProfile } from "@/lib/api/schemas/UserProfileSchema";
 import { ReduxAuthState } from "../../../../../store/authSlice";
+import type { MonsterFormValues } from "@/components/monsterGeneration/monsterFormSchema";
+import { buildPrompt } from "@/lib/monsterGeneration/imageGeneration/prompt/buildPrompt";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,6 +82,26 @@ export interface ModerationProvider {
 	 * Callers must strip any HTML from `input.text` before passing here.
 	 */
 	moderate(input: ModerationInput): Promise<ModerationResult>;
+}
+
+export type MonsterPromptModerationResult =
+	| { outcome: "allowed"; prompt: string }
+	| {
+			outcome: "blocked";
+			code: "content_blocked" | "PROMPT_BLOCKED";
+			message: string;
+	  }
+	| { outcome: "failed"; code: "moderation_failed"; message: string }
+	| {
+			outcome: "invalid_prompt";
+			code: "prompt_sanitization_failed";
+			message: string;
+	  };
+
+interface ModerateMonsterPromptInput {
+	formValues: MonsterFormValues;
+	userId?: ModerationInput["userId"];
+	authState: ModerationInput["authState"];
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +185,70 @@ const BANNED_TERMS = [
 export function containsBannedTerms(text: string): boolean {
 	const lowerText = text.toLowerCase();
 	return BANNED_TERMS.some((term) => lowerText.includes(term));
+}
+
+/**
+ * Creation-time moderation gate for Monster form values.
+ */
+export async function moderateMonsterPrompt({
+	formValues,
+	userId,
+	authState,
+}: ModerateMonsterPromptInput): Promise<MonsterPromptModerationResult> {
+	const promptResult = buildPrompt(formValues);
+
+	if (!promptResult.ok) {
+		return {
+			outcome: "invalid_prompt",
+			code: "prompt_sanitization_failed",
+			message:
+				"Prompt content could not be processed. Please revise and try again.",
+		};
+	}
+
+	const prompt = promptResult.prompt;
+
+	if (containsBannedTerms(prompt)) {
+		return {
+			outcome: "blocked",
+			code: "content_blocked",
+			message:
+				"Prompt contains prohibited content. Please revise and try again.",
+		};
+	}
+
+	const moderationStart = performance.now();
+	const moderationResult = await getModerationProvider().moderate({
+		promptText: prompt,
+		imageGenerationJobId: crypto.randomUUID(),
+		userId,
+		authState,
+		generationMode: env.imageGenerationMode,
+	});
+
+	Sentry.metrics.distribution(
+		"monster_create.moderation_duration_ms",
+		Math.round(performance.now() - moderationStart),
+		{ unit: "millisecond" },
+	);
+
+	if (moderationResult.outcome === "blocked") {
+		return {
+			outcome: "blocked",
+			code: "PROMPT_BLOCKED",
+			message: moderationResult.safeReason,
+		};
+	}
+
+	if (moderationResult.outcome === "failed") {
+		return {
+			outcome: "failed",
+			code: "moderation_failed",
+			message: "Content moderation check failed. Please try again.",
+		};
+	}
+
+	return { outcome: "allowed", prompt };
 }
 
 // ---------------------------------------------------------------------------

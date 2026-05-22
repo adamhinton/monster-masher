@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MonsterDetailView } from "@/components/monsterGallery/SingleMonsterDetailPageComponents/MonsterDetailView";
 import { TestStoreProvider } from "@/__tests__/__testUtils__/store";
 import {
@@ -41,6 +41,10 @@ vi.mock("sonner", () => ({
 		error: vi.fn(),
 	},
 }));
+
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
 
 function renderView(monster: Monster) {
 	return render(
@@ -242,6 +246,34 @@ describe("MonsterDetailView — Regenerate image button", () => {
 		expect(
 			screen.getByRole("button", { name: /regenerate image/i }),
 		).not.toBeDisabled();
+	});
+
+	it("shows moderation-blocked feedback when regeneration returns 422", async () => {
+		const user = userEvent.setup();
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue({
+				ok: false,
+				status: 422,
+				json: async () => ({
+					error: {
+						code: "PROMPT_BLOCKED",
+						message: "Prompt was blocked by moderation.",
+					},
+				}),
+			}),
+		);
+
+		renderView(validMonster);
+
+		await user.click(screen.getByRole("button", { name: /regenerate image/i }));
+
+		expect(
+			await screen.findByText(/prompt blocked by content policy/i),
+		).toBeInTheDocument();
+		expect(
+			screen.getByText(/prompt was blocked by moderation/i),
+		).toBeInTheDocument();
 	});
 });
 

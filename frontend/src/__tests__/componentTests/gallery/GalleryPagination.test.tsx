@@ -13,15 +13,21 @@ describe("GalleryPagination — visibility", () => {
 			/>,
 		);
 	});
-	it("does not render when only one page exists", () => {
-		const { container } = render(
+	it("renders saved-count info when only one page exists", () => {
+		render(
 			<GalleryPagination
 				currentPage={1}
 				totalPages={1}
+				totalMonsters={1}
 				onPageChange={vi.fn()}
 			/>,
 		);
-		expect(container).toBeEmptyDOMElement();
+		expect(screen.getByText(/1 monster saved/i)).toBeInTheDocument();
+		expect(screen.getByText(/page 1 of 1/i)).toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: /previous/i }),
+		).not.toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
 	});
 
 	it("renders when there are two or more pages", () => {

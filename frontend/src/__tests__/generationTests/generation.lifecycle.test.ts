@@ -91,6 +91,21 @@ const VALID_FORM: MonsterFormValues = {
 	should_email_when_done: false,
 };
 
+const MOCK_MONSTER = {
+	id: MONSTER_ID,
+	display_name: "Blobsworth",
+	traits: {
+		element: "water",
+		habitat: "swamp",
+		personality: "grumpy",
+		color_palette: "green and brown",
+	},
+	flavor_text: "Lurks in the shallows.",
+	created_at: "2026-01-01T00:00:00.000Z",
+	updated_at: "2026-01-01T00:00:00.000Z",
+	image: null,
+};
+
 const MOCK_QUEUED_JOB = {
 	id: JOB_ID,
 	monster: MONSTER_ID,
@@ -158,6 +173,14 @@ function mockDjango() {
 	return vi.mocked(fetchFromDjango).mockImplementation((async (
 		path: string,
 	) => {
+		if (path === "/api/monsters/{monster_id}/") {
+			return {
+				ok: true,
+				status: 200,
+				json: vi.fn().mockResolvedValue(MOCK_MONSTER),
+			};
+		}
+
 		if (path === "/api/monsters/{monster_id}/generate-image/jobs/") {
 			return {
 				ok: true,
@@ -206,6 +229,7 @@ describe("scenario: succeeded", () => {
 		await POST(makeRequest(), makeParams());
 
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/",
 			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
@@ -297,6 +321,7 @@ describe("scenario: blocked by banned terms", () => {
 
 		expect(res.status).toBe(422);
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/",
 			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-blocked/",
@@ -347,6 +372,7 @@ describe("scenario: blocked by moderation provider", () => {
 		expect(res.status).toBe(422);
 		const paths = djangoCallPaths();
 		expect(paths).toEqual([
+			"/api/monsters/{monster_id}/",
 			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-blocked/",
@@ -379,6 +405,7 @@ describe("scenario: provider failed", () => {
 
 		expect(res.status).toBe(500);
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/",
 			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
@@ -438,6 +465,7 @@ describe("scenario: storage failed", () => {
 		expect(res.status).toBe(500);
 		const paths = djangoCallPaths();
 		expect(paths).toEqual([
+			"/api/monsters/{monster_id}/",
 			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
@@ -481,11 +509,21 @@ describe("scenario: storage failed", () => {
 describe("scenario: Django job-create failure", () => {
 	it("returns 500 and never calls any transition endpoint", async () => {
 		mockSupabase();
-		vi.mocked(fetchFromDjango).mockResolvedValue({
-			ok: false,
-			status: 503,
-			json: vi.fn().mockResolvedValue({}),
-		} as unknown as Response);
+		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/") {
+				return {
+					ok: true,
+					status: 200,
+					json: vi.fn().mockResolvedValue(MOCK_MONSTER),
+				};
+			}
+
+			return {
+				ok: false,
+				status: 503,
+				json: vi.fn().mockResolvedValue({}),
+			};
+		}) as Mock);
 		vi.mocked(containsBannedTerms).mockReturnValue(false);
 		vi.mocked(getModerationProvider).mockReturnValue({
 			moderate: vi.fn(),
@@ -498,6 +536,7 @@ describe("scenario: Django job-create failure", () => {
 		expect(res.status).toBe(500);
 		// Only the create call was attempted; no transitions follow
 		expect(djangoCallPaths()).toEqual([
+			"/api/monsters/{monster_id}/",
 			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 		]);

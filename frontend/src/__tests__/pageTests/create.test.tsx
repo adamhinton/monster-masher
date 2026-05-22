@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CreatePage from "@/app/create/page";
 import { TestStoreProvider } from "../__testUtils__/store";
 import { validMonster, validUserProfile } from "../__testUtils__/fixtures";
+import { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
 
 vi.mock("next/navigation", () => ({
 	useRouter: () => ({ push: vi.fn() }),
@@ -95,9 +96,27 @@ describe("CreatePage", () => {
 
 	it("submits the create flow through running to succeeded for authenticated users", async () => {
 		const user = userEvent.setup();
+		const updatedMonster: Monster = {
+			...validMonster,
+			image: {
+				id: "cccccccc-cccc-4ccc-9ccc-cccccccccccc",
+				public_image_url: "https://example.com/img.png",
+				image_storage_path: "monster-images/test/img.png",
+				provider: "fake",
+				provider_model: "fake",
+				created_at: "2026-01-01T00:00:00.000Z",
+			},
+		};
 
 		mockFetch.mockImplementation(async (input) => {
 			const url = String(input);
+			if (url === "/api/me/image-gens-remaining") {
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({ num_remaining: 5, max_per_day: 6 }),
+				} as Response;
+			}
 			if (url === "/api/monsters/") {
 				return {
 					ok: true,
@@ -105,14 +124,29 @@ describe("CreatePage", () => {
 					json: async () => ({ monster: validMonster }),
 				} as Response;
 			}
-			// /api/monsters/[id]/generate-image
+			if (url === `/api/monsters/${validMonster.id}/generate-image`) {
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({
+						outcome: "succeeded",
+						public_image_url: "https://example.com/img.png",
+						image_storage_path: "monster-images/test/img.png",
+					}),
+				} as Response;
+			}
+			if (url === `/api/monsters/${validMonster.id}`) {
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({ monster: updatedMonster }),
+				} as Response;
+			}
 			return {
-				ok: true,
-				status: 200,
+				ok: false,
+				status: 404,
 				json: async () => ({
-					outcome: "succeeded",
-					public_image_url: "https://example.com/img.png",
-					image_storage_path: "monster-images/test/img.png",
+					error: { code: "not_found", message: "Not found." },
 				}),
 			} as Response;
 		});
@@ -132,8 +166,9 @@ describe("CreatePage", () => {
 		expect(
 			screen.getByRole("link", { name: /view in gallery/i }),
 		).toBeInTheDocument();
-		// 3 fetch calls: image-gens-remaining (on mount), create monster, generate image
-		expect(mockFetch).toHaveBeenCalledTimes(3);
+		expect(mockFetch).toHaveBeenCalledWith(`/api/monsters/${validMonster.id}`);
+		// 4 fetch calls: image-gens-remaining, create monster, generate image, refetch monster
+		expect(mockFetch).toHaveBeenCalledTimes(4);
 	});
 
 	it("shows the failed state and returns to idle when retrying", async () => {
@@ -183,21 +218,22 @@ describe("CreatePage", () => {
 			const url = String(input);
 			if (url === "/api/monsters/") {
 				return {
-					ok: true,
-					status: 201,
-					json: async () => ({ monster: validMonster }),
+					ok: false,
+					status: 422,
+					json: async () => ({
+						error: {
+							code: "blocked",
+							message:
+								"Please revise the prompt and keep the monster cute, original, and non-graphic.",
+						},
+					}),
 				} as Response;
 			}
-			// generate-image returns 422 blocked
 			return {
 				ok: false,
-				status: 422,
+				status: 404,
 				json: async () => ({
-					error: {
-						code: "blocked",
-						message:
-							"Please revise the prompt and keep the monster cute, original, and non-graphic.",
-					},
+					error: { code: "not_found", message: "Not found." },
 				}),
 			} as Response;
 		});
@@ -208,7 +244,8 @@ describe("CreatePage", () => {
 		await user.click(screen.getByRole("button", { name: /generate monster/i }));
 
 		expect(
-			await screen.findByText(/prompt blocked by content policy/i,
+			await screen.findByText(
+				/prompt blocked by content policy/i,
 				{},
 				{ timeout: 3000 },
 			),

@@ -77,7 +77,7 @@ export function GenerationStatusPanel({
 								<div className="flex flex-wrap gap-2">
 									<Button variant="outline" size="sm" onClick={onReset}>
 										<RefreshCw aria-hidden="true" />
-										Generate another
+										Regenerate
 									</Button>
 									<Link
 										href="/gallery"
@@ -140,6 +140,7 @@ export function GenerationStatusPanel({
 					<AlertCircle aria-hidden="true" />
 					<AlertTitle>Prompt blocked by content policy</AlertTitle>
 					<AlertDescription className="grid gap-3">
+						<span>{generationState.safeErrorMessage}</span>
 						<p>
 							Your description was blocked by our content moderation. Try
 							editing it to remove graphic, excessively violent, or otherwise

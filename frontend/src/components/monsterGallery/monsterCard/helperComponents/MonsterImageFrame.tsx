@@ -143,7 +143,7 @@ export function MonsterImageFrame({
 					alt={alt}
 					decoding="async"
 					className={cn(
-						"absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
+						"absolute inset-0 h-full w-full object-contain transition-opacity duration-500",
 						imageVisible ? "opacity-100" : "opacity-0",
 					)}
 					onLoad={() => setIsLoaded(true)}

@@ -18,12 +18,17 @@ vi.mock("@/lib/django/fetchFromDjango", () => ({
 	fetchFromDjango: vi.fn(),
 }));
 
+vi.mock("@/lib/monsterGeneration/imageGeneration/moderation/moderation", () => ({
+	moderateMonsterPrompt: vi.fn(),
+}));
+
 vi.mock("@sentry/nextjs", () => ({
 	captureException: vi.fn(),
 	captureMessage: vi.fn(),
 }));
 
 import { POST } from "@/app/api/monsters/route";
+import { moderateMonsterPrompt } from "@/lib/monsterGeneration/imageGeneration/moderation/moderation";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -114,6 +119,10 @@ describe("POST /api/monsters/", () => {
 		vi.mocked(fetchFromDjango).mockResolvedValue(
 			makeDjangoResponse(validMonsterResponse),
 		);
+		vi.mocked(moderateMonsterPrompt).mockResolvedValue({
+			outcome: "allowed",
+			prompt: "moderated prompt",
+		});
 	});
 
 	// ── Auth checks ────────────────────────────────────────────────────────────
@@ -225,6 +234,60 @@ describe("POST /api/monsters/", () => {
 		expect(res.status).toBe(400);
 		const body = await res.json();
 		expect(body.error.code).toBe("invalid_monster_data");
+	});
+
+	// ── Moderation ────────────────────────────────────────────────────────────
+
+	it("moderates the prompt before creating the monster in Django", async () => {
+		await POST(makeRequest(validMonsterPayload));
+
+		expect(moderateMonsterPrompt).toHaveBeenCalledWith({
+			formValues: {
+				display_name: "Blobsworth",
+				element: "water",
+				habitat: "swamp",
+				personality: "grumpy",
+				color_palette: "green and brown",
+				flavor_text: "Lurks in the shallows.",
+				should_email_when_done: false,
+			},
+			userId: "some-supabase-user-id",
+			authState: "authenticated",
+		});
+		expect(fetchFromDjango).toHaveBeenCalledWith(
+			"/api/monsters/",
+			expect.anything(),
+		);
+	});
+
+	it("returns 422 and does not call Django when moderation blocks the prompt", async () => {
+		vi.mocked(moderateMonsterPrompt).mockResolvedValueOnce({
+			outcome: "blocked",
+			code: "PROMPT_BLOCKED",
+			message: "Prompt was blocked by moderation.",
+		});
+
+		const res = await POST(makeRequest(validMonsterPayload));
+
+		expect(res.status).toBe(422);
+		const body = await res.json();
+		expect(body.error.code).toBe("PROMPT_BLOCKED");
+		expect(fetchFromDjango).not.toHaveBeenCalled();
+	});
+
+	it("returns 500 and does not call Django when moderation fails closed", async () => {
+		vi.mocked(moderateMonsterPrompt).mockResolvedValueOnce({
+			outcome: "failed",
+			code: "moderation_failed",
+			message: "Content moderation check failed. Please try again.",
+		});
+
+		const res = await POST(makeRequest(validMonsterPayload));
+
+		expect(res.status).toBe(500);
+		const body = await res.json();
+		expect(body.error.code).toBe("moderation_failed");
+		expect(fetchFromDjango).not.toHaveBeenCalled();
 	});
 
 	// ── Upstream / Django errors ───────────────────────────────────────────────

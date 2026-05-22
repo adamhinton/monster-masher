@@ -1,5 +1,7 @@
 // ______________
 // POST /api/monsters/[monsterId]/generate-image/
+
+// This whole process can take about 90 seconds.
 //
 // Server-side route that orchestrates the full image-generation pipeline for an
 // existing Monster. This is the only way to create a MonsterImage — there is no
@@ -10,11 +12,10 @@
 //   0. Delete any existing MonsterImage for this monster (delete-before-retry).
 //   1. Authenticate the user via Supabase session. user_profile_id always comes
 //      from the verified JWT sub — never from the request body.
-//   2. Validate the request body against monsterFormSchema (server-side re-validation).
-//   3. Create a MonsterImageGenerationJob in Django (status: QUEUED).
-//   4. Run a banned-terms guard; if blocked → mark job blocked → 422.
-//   5. Run the moderation provider; if blocked → mark job blocked → 422.
-//      If moderation fails → mark job failed → 500.
+//   2. Validate request options, then load the existing Monster from Django.
+//   3. Build the prompt from that persisted Monster data.
+//   4. Create a MonsterImageGenerationJob in Django (status: QUEUED).
+//   5. Run the banned-terms guard and moderation provider.
 //   6. Mark the job as RUNNING.
 //   7. Generate the image via the image provider; if failed → mark job failed → 500.
 //   8. Upload the image bytes to Supabase Storage; if failed → mark job failed → 500.
@@ -22,8 +23,11 @@
 //      MonsterImage row and transitions the job to SUCCEEDED).
 //  10. Return the public image URL and storage path to the client.
 //
-// NOTE: Sentry is NOT called for blocked prompts (expected content policy signal).
-// Sentry IS called for all failure paths (provider errors, storage errors, etc.).
+// NOTE: Prompt moderation also runs before monster creation in /api/monsters/.
+// This route repeats the check because image generation can be retried for
+// pre-existing monsters. That is slightly inefficient, but moderation is fast
+// and free for this use case, and the extra gate keeps direct retries safe.
+// Sentry is called for failure paths (provider errors, storage errors, etc.).
 //
 // Trust boundary: Next.js forwards the user's Supabase access
 // token to Django for all transition endpoints. Django verifies ownership of both
@@ -34,6 +38,7 @@ import "server-only";
 
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 
 import { monsterFormSchema } from "@/components/monsterGeneration/monsterFormSchema";
 import { type NextApiError, nextApiErrorSchema } from "@/lib/api/errors";
@@ -55,7 +60,10 @@ import {
 	Queued_Monster_Image_Gen_Job_Schema,
 } from "@/lib/api/schemas/monster/Monster_Image_Gen_Job_Schema";
 import { type paths } from "@/lib/api/__generated__/types";
-import { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
+import {
+	MonsterSchema,
+	type Monster,
+} from "@/lib/api/schemas/monster/MonsterSchema";
 import { notifyImageGenerationDone } from "@/lib/api/email/imageGenerationDoneEmail";
 import type { ImageGenerationDoneScenario } from "@/lib/api/email/imageGenerationDoneTypes";
 
@@ -76,6 +84,10 @@ export type GenerateImageSuccessResponse = {
 	/** Typed storage path from the storage abstraction. */
 	image_storage_path: MonsterImageStoragePath;
 };
+
+const generateImageRequestSchema = z.object({
+	should_email_when_done: z.boolean().default(false),
+});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -283,11 +295,11 @@ export async function POST(
 	// User's email to notify when monster image generation is finished (success OR failure) — used only when should_email_when_done is true.
 	const userEmail = sessionData.session?.user?.email ?? null;
 
-	// ── Step 2: Parse and validate request body ───────────────────────────────
+	// ── Step 2: Parse request options and load the stored Monster ─────────────
 	//
-	// Re-validating server-side with the same schema the form uses. Should rarely
-	// fail in practice (the form validates too), but closes the gap for direct API
-	// calls and provides a clear 400 if the contract drifts.
+	// The prompt must come from persisted Monster data, not arbitrary request
+	// body fields. Monster creation is moderated in /api/monsters/ before Django
+	// stores the record; retrying generation here reuses that moderated data.
 	let body: unknown;
 	try {
 		body = await request.json();
@@ -299,7 +311,7 @@ export async function POST(
 		});
 	}
 
-	const parsedBody = monsterFormSchema.safeParse(body);
+	const parsedBody = generateImageRequestSchema.safeParse(body);
 	if (!parsedBody.success) {
 		return jsonError({
 			status: 400,
@@ -308,8 +320,94 @@ export async function POST(
 		});
 	}
 
-	const formValues = parsedBody.data;
-	const promptResult = buildPrompt(formValues);
+	const requestOptions = parsedBody.data;
+
+	let monster: Monster;
+	try {
+		const monsterResponse = await fetchFromDjango(
+			"/api/monsters/{monster_id}/",
+			{ monster_id: monsterId },
+			{
+				method: "GET",
+				headers: { Authorization: `Bearer ${accessToken}` },
+			},
+		);
+
+		if (monsterResponse.status === 404) {
+			return jsonError({
+				status: 404,
+				code: "not_found",
+				message: "Monster not found.",
+			});
+		}
+
+		if (!monsterResponse.ok) {
+			Sentry.captureMessage("generate_image.fetch_monster_failed", {
+				level: "error",
+				extra: { monsterId, status: monsterResponse.status },
+			});
+			return jsonError({
+				status: 502,
+				code: "fetch_monster_failed",
+				message: "Failed to fetch monster.",
+			});
+		}
+
+		const monsterRaw: unknown = await monsterResponse.json();
+		const monsterParsed = MonsterSchema.safeParse(monsterRaw);
+		if (!monsterParsed.success) {
+			Sentry.captureMessage("generate_image.fetch_monster_schema_mismatch", {
+				level: "error",
+				extra: { monsterId, error: monsterParsed.error.message },
+			});
+			return jsonError({
+				status: 502,
+				code: "schema_mismatch",
+				message: "Unexpected response shape from backend.",
+			});
+		}
+
+		monster = monsterParsed.data;
+	} catch (err) {
+		Sentry.captureException(err, {
+			extra: { context: "fetchMonsterForImageGeneration", monsterId },
+		});
+		return jsonError({
+			status: 502,
+			code: "upstream_error",
+			message: "Could not reach the backend. Please try again.",
+		});
+	}
+
+	const formValuesForPrompt = monsterFormSchema.safeParse({
+		display_name: monster.display_name,
+		element: monster.traits.element,
+		habitat: monster.traits.habitat,
+		personality: monster.traits.personality,
+		color_palette: monster.traits.color_palette,
+		flavor_text: monster.flavor_text ?? "",
+		should_email_when_done: requestOptions.should_email_when_done,
+	});
+
+	if (!formValuesForPrompt.success) {
+		Sentry.captureMessage("generate_image.stored_monster_prompt_invalid", {
+			level: "error",
+			extra: { monsterId, error: formValuesForPrompt.error.message },
+		});
+		return jsonError({
+			status: 500,
+			code: "schema_mismatch",
+			message: "Stored monster data could not be used for image generation.",
+		});
+	}
+
+	// ── Step 3: Build the image prompt ────────────────────────────────────────
+	//
+	// This prompt may already have passed moderation during monster creation in
+	// /api/monsters/. We intentionally check again below because this endpoint
+	// can be called for older/pre-existing monsters and direct retries. OpenAI's moderation endpoint is quick and free; this
+	// duplicate pass is cheap, fast, and safer than trusting all historical data.
+	const promptResult = buildPrompt(formValuesForPrompt.data);
 	if (!promptResult.ok) {
 		return jsonError({
 			status: 422,
@@ -322,14 +420,14 @@ export async function POST(
 
 	// ── Email notification helper ────────────────────────────────────────────
 	//
-	// Defined after formValues (step 2) and accessToken (step 1) are resolved.
+	// Defined after the stored Monster (step 2) and accessToken (step 1) are resolved.
 	// Fire-and-forget: callers use `void` so email delivery never delays the
 	// main response. Sends only when the user opted in via should_email_when_done.
 	const maybeSendEmailNotification = async (
 		scenario: ImageGenerationDoneScenario,
 	) => {
 		console.log("maybeSendEmailNotification called with scenario:", scenario);
-		if (!formValues.should_email_when_done || !userEmail) {
+		if (!requestOptions.should_email_when_done || !userEmail) {
 			console.log(
 				"Email notification skipped: should_email_when_done is false or userEmail is missing",
 			);
@@ -339,7 +437,7 @@ export async function POST(
 			email: userEmail,
 			scenario,
 			accessToken,
-			monsterName: formValues.display_name,
+			monsterName: monster.display_name,
 			monsterId,
 		});
 	};
@@ -351,7 +449,7 @@ export async function POST(
 	// pipeline; the user should still get a new image even if cleanup failed.
 	await deleteMonsterImageIfExists(monsterId, accessToken);
 
-	// ── Step 3: Create MonsterImageGenerationJob in Django (QUEUED) ──────────
+	// ── Step 4: Create MonsterImageGenerationJob in Django (QUEUED) ──────────
 	let jobId: string;
 	try {
 		const jobResponse = await fetchFromDjango(
@@ -364,7 +462,7 @@ export async function POST(
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					should_email_when_done: formValues.should_email_when_done,
+					should_email_when_done: requestOptions.should_email_when_done,
 				}),
 			},
 		);
@@ -434,13 +532,12 @@ export async function POST(
 		});
 	}
 
-	// ── Step 4: Banned-terms guard ───────────────────────────────────────────
+	// ── Step 5: Banned-terms guard and moderation provider ────────────────────
 	//
-	// ORDER: Must run BEFORE the moderation provider.
-	//   - Free and synchronous — no API round-trip.
-	//   - If this blocks, we short-circuit here and MUST NOT call the moderation
-	//     provider or the image provider.
-
+	// ORDER: Must run BEFORE the image provider.
+	//   - If this blocks, mark the job blocked and return.
+	//   - If moderation fails, mark the job failed and return. Moderation
+	//     failures always fail closed.
 	if (containsBannedTerms(prompt)) {
 		await callTransitionEndpoint(
 			"/api/monsters/{monster_id}/generate-image/mark-blocked/",
@@ -461,14 +558,6 @@ export async function POST(
 		});
 	}
 
-	// ── Step 5: Moderation provider ──────────────────────────────────────────
-	//
-	// ORDER: Must run AFTER the banned-terms guard and BEFORE the image provider.
-	//   - If the result is `blocked`, mark the job blocked and return — do NOT
-	//     call the image provider.
-	//   - If the result is `failed`, mark the job failed and return — do NOT
-	//     call the image provider. Moderation failures always fail closed.
-	//   - Only a `allowed` result proceeds to Step 6.
 	const moderationStart = performance.now();
 	const moderationResult = await getModerationProvider().moderate({
 		promptText: prompt,
@@ -514,7 +603,7 @@ export async function POST(
 			},
 		);
 		// Do NOT Sentry.captureEvent here — OpenAIModerationProvider already
-		// logs one scoped event per evaluation (Step 19f).
+		// logs one scoped event per evaluation.
 		await maybeSendEmailNotification("failed/unspecified");
 		return jsonError({
 			status: 500,
@@ -525,8 +614,7 @@ export async function POST(
 
 	// ── Step 6: Mark job as RUNNING ───────────────────────────────────────────
 	//
-	// Job transitions to RUNNING only after moderation passes, meaning a job in
-	// RUNNING state always has a clean prompt.
+	// Job transitions to RUNNING only after the second moderation pass succeeds.
 	const markRunningResult = await callTransitionEndpoint(
 		"/api/monsters/{monster_id}/generate-image/mark-running/",
 		{ monster_id: monsterId },

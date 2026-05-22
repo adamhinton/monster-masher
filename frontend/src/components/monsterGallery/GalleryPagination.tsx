@@ -13,6 +13,7 @@ import {
 interface GalleryPaginationProps {
 	currentPage: number;
 	totalPages: number;
+	totalMonsters?: number;
 	onPageChange: (page: number) => void;
 }
 
@@ -20,41 +21,45 @@ interface GalleryPaginationProps {
 export function GalleryPagination({
 	currentPage,
 	totalPages,
+	totalMonsters = 0,
 	onPageChange,
 }: GalleryPaginationProps) {
-	if (totalPages <= 1) {
-		return null;
-	}
+	const monsterLabel = totalMonsters === 1 ? "monster" : "monsters";
 
 	return (
 		<Pagination aria-label="Gallery pagination" className="m-8">
 			<PaginationContent className="flex-wrap justify-center gap-2">
-				<PaginationItem>
-					<Button
-						variant="outline"
-						onClick={() => onPageChange(currentPage - 1)}
-						disabled={currentPage === 1}
-					>
-						Previous
-					</Button>
-				</PaginationItem>
+				{totalPages > 1 && (
+					<PaginationItem>
+						<Button
+							variant="outline"
+							onClick={() => onPageChange(currentPage - 1)}
+							disabled={currentPage === 1}
+						>
+							Previous
+						</Button>
+					</PaginationItem>
+				)}
 				<PaginationItem>
 					<p
 						aria-live="polite"
 						className="min-w-28 px-2 text-center text-sm text-muted-foreground"
 					>
-						Page {currentPage} of {totalPages}
+						{totalMonsters} {monsterLabel} saved · Page {currentPage} of{" "}
+						{totalPages}
 					</p>
 				</PaginationItem>
-				<PaginationItem>
-					<Button
-						variant="outline"
-						onClick={() => onPageChange(currentPage + 1)}
-						disabled={currentPage === totalPages}
-					>
-						Next
-					</Button>
-				</PaginationItem>
+				{totalPages > 1 && (
+					<PaginationItem>
+						<Button
+							variant="outline"
+							onClick={() => onPageChange(currentPage + 1)}
+							disabled={currentPage === totalPages}
+						>
+							Next
+						</Button>
+					</PaginationItem>
+				)}
 			</PaginationContent>
 		</Pagination>
 	);

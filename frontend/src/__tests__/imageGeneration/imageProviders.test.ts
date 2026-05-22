@@ -103,6 +103,9 @@ describe("VercelAIGatewayImageProvider", () => {
 		expect(Buffer.isBuffer(result.imageBytes)).toBe(true);
 		expect(result.imageBytes).toEqual(Buffer.from(fakeUint8Array));
 		expect(result.mimeType).toBe("image/png");
+		expect(generateImage).toHaveBeenCalledWith(
+			expect.objectContaining({ size: "1024x1024" }),
+		);
 	});
 
 	it("returns failed when the API call throws an error", async () => {

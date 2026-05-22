@@ -164,7 +164,11 @@ export function CreateMonsterExperience() {
 						? parsedError.data.error.message
 						: "Failed to create monster. Please try again.";
 					if (!isCancelled) {
-						setGenerationState({ status: "failed", safeErrorMessage: message });
+						setGenerationState(
+							monsterResponse.status === 422
+								? { status: "blocked", safeErrorMessage: message }
+								: { status: "failed", safeErrorMessage: message },
+						);
 					}
 					return;
 				}
@@ -193,8 +197,9 @@ export function CreateMonsterExperience() {
 			}
 
 			// Step 2: Generate the image.
+			// This part can take 90 seconds or so
 			try {
-				const generateResponse = await fetch(
+				const generateImageResponse = await fetch(
 					`/api/monsters/${monster.id}/generate-image`,
 					{
 						method: "POST",
@@ -203,15 +208,15 @@ export function CreateMonsterExperience() {
 					},
 				);
 
-				const generateRaw: unknown = await generateResponse.json();
+				const generateRaw: unknown = await generateImageResponse.json();
 
-				if (!generateResponse.ok) {
+				if (!generateImageResponse.ok) {
 					const parsedError = nextApiErrorSchema.safeParse(generateRaw);
 					const errorMessage = parsedError.success
 						? parsedError.data.error.message
 						: "Image generation failed. Please try again.";
 					if (!isCancelled) {
-						if (generateResponse.status === 422) {
+						if (generateImageResponse.status === 422) {
 							setGenerationState({
 								status: "blocked",
 								safeErrorMessage: errorMessage,
@@ -242,17 +247,43 @@ export function CreateMonsterExperience() {
 				}
 
 				if (!isCancelled) {
-					dispatch(monsterAdded(monster));
+					const generatedImage = {
+						id: crypto.randomUUID(),
+						public_image_url: parsedGenerate.data.public_image_url,
+						image_storage_path: parsedGenerate.data.image_storage_path,
+						provider: "",
+						provider_model: "",
+						created_at: new Date().toISOString(),
+					};
+					let monsterForStore: Monster = { ...monster, image: generatedImage };
+
+					try {
+						const updatedMonsterResponse = await fetch(
+							`/api/monsters/${monster.id}`,
+						);
+
+						if (updatedMonsterResponse.ok) {
+							const updatedMonsterRaw: unknown =
+								await updatedMonsterResponse.json();
+							const parsedUpdatedMonster =
+								monsterResponseSchema.safeParse(updatedMonsterRaw);
+
+							if (parsedUpdatedMonster.success) {
+								monsterForStore = parsedUpdatedMonster.data.monster;
+							}
+						}
+					} catch {
+						// Non-fatal: the generated image response has enough data for the gallery.
+					}
+
+					if (isCancelled) {
+						return;
+					}
+
+					dispatch(monsterAdded(monsterForStore));
 					setGenerationState({
 						status: "succeeded",
-						generatedImage: {
-							id: crypto.randomUUID(),
-							public_image_url: parsedGenerate.data.public_image_url,
-							image_storage_path: parsedGenerate.data.image_storage_path,
-							provider: "",
-							provider_model: "",
-							created_at: new Date().toISOString(),
-						},
+						generatedImage: monsterForStore.image ?? generatedImage,
 					});
 				}
 			} catch {
@@ -358,6 +389,7 @@ export function CreateMonsterExperience() {
 	);
 }
 
+/**Get localStorage saved formValues */
 function readStoredFormValues() {
 	const storedFormValuesJson = window.localStorage.getItem(
 		createMonsterFormStorageKey,

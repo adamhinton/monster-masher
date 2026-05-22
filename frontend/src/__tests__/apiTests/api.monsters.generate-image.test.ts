@@ -87,6 +87,21 @@ const validFormBody = {
 	should_email_when_done: false,
 };
 
+const mockMonsterResponse = {
+	id: MONSTER_ID,
+	display_name: "Blobsworth",
+	traits: {
+		element: "water",
+		habitat: "swamp",
+		personality: "grumpy",
+		color_palette: "green and brown",
+	},
+	flavor_text: "Lurks in the shallows.",
+	created_at: "2026-01-01T00:00:00.000Z",
+	updated_at: "2026-01-01T00:00:00.000Z",
+	image: null,
+};
+
 const mockQueuedJob = {
 	id: JOB_ID,
 	monster: MONSTER_ID,
@@ -168,6 +183,13 @@ function makeSupabaseClient({
 /** Default Django mock: job create returns 201, mark-* transition endpoints return 200. */
 function makeDefaultFetchFromDjango(jobOverride?: Record<string, unknown>) {
 	return vi.fn().mockImplementation(async (path: string) => {
+		if (path === "/api/monsters/{monster_id}/") {
+			return {
+				ok: true,
+				status: 200,
+				json: vi.fn().mockResolvedValue(mockMonsterResponse),
+			};
+		}
 		if (path === "/api/monsters/{monster_id}/generate-image/jobs/") {
 			return {
 				ok: true,
@@ -302,9 +324,9 @@ describe("input validation", () => {
 		expect(body.error.code).toBe("invalid_json");
 	});
 
-	it("returns 400 when body does not match monsterFormSchema", async () => {
+	it("returns 400 when request options have the wrong shape", async () => {
 		const res = await POST(
-			makeRequest({ display_name: "" }), // missing required fields
+			makeRequest({ should_email_when_done: "yes" }),
 			makeParams(),
 		);
 		expect(res.status).toBe(400);
@@ -325,11 +347,20 @@ describe("job creation failures", () => {
 	});
 
 	it("returns 500 when Django job create returns non-ok", async () => {
-		vi.mocked(fetchFromDjango).mockResolvedValue({
-			ok: false,
-			status: 503,
-			json: vi.fn().mockResolvedValue({}),
-		} as unknown as Response);
+		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/") {
+				return {
+					ok: true,
+					status: 200,
+					json: vi.fn().mockResolvedValue(mockMonsterResponse),
+				};
+			}
+			return {
+				ok: false,
+				status: 503,
+				json: vi.fn().mockResolvedValue({}),
+			};
+		}) as Mock);
 
 		const res = await POST(makeRequest(validFormBody), makeParams());
 		expect(res.status).toBe(500);
@@ -339,11 +370,20 @@ describe("job creation failures", () => {
 	});
 
 	it("returns 500 when Django job create response fails schema parse", async () => {
-		vi.mocked(fetchFromDjango).mockResolvedValue({
-			ok: true,
-			status: 201,
-			json: vi.fn().mockResolvedValue({ invalid: "shape" }),
-		} as unknown as Response);
+		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/") {
+				return {
+					ok: true,
+					status: 200,
+					json: vi.fn().mockResolvedValue(mockMonsterResponse),
+				};
+			}
+			return {
+				ok: true,
+				status: 201,
+				json: vi.fn().mockResolvedValue({ invalid: "shape" }),
+			};
+		}) as Mock);
 
 		const res = await POST(makeRequest(validFormBody), makeParams());
 		expect(res.status).toBe(500);
@@ -351,11 +391,11 @@ describe("job creation failures", () => {
 		expect(body.error.code).toBe("schema_mismatch");
 	});
 
-	it("returns 500 when fetchFromDjango throws (network error)", async () => {
+	it("returns 502 when fetching the stored monster throws", async () => {
 		vi.mocked(fetchFromDjango).mockRejectedValue(new Error("Network error"));
 
 		const res = await POST(makeRequest(validFormBody), makeParams());
-		expect(res.status).toBe(500);
+		expect(res.status).toBe(502);
 		const body = await res.json();
 		expect(body.error.code).toBe("upstream_error");
 	});
@@ -648,6 +688,14 @@ describe("transition endpoint failures", () => {
 
 	it("returns 500 when mark-running returns non-ok", async () => {
 		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/") {
+				return {
+					ok: true,
+					status: 200,
+					json: vi.fn().mockResolvedValue(mockMonsterResponse),
+				};
+			}
+
 			if (path === "/api/monsters/{monster_id}/generate-image/jobs/") {
 				return {
 					ok: true,
@@ -680,6 +728,14 @@ describe("transition endpoint failures", () => {
 
 	it("returns 500 when mark-succeeded returns non-ok", async () => {
 		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/") {
+				return {
+					ok: true,
+					status: 200,
+					json: vi.fn().mockResolvedValue(mockMonsterResponse),
+				};
+			}
+
 			if (path === "/api/monsters/{monster_id}/generate-image/jobs/") {
 				return {
 					ok: true,

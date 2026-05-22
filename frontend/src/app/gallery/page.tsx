@@ -13,8 +13,7 @@ import { GalleryHeader } from "@/components/monsterGallery/galleryHelperComponen
 import { EmptyGalleryState } from "@/components/monsterGallery/galleryHelperComponents/EmptyGalleryState";
 import { GalleryGrid } from "@/components/monsterGallery/GalleryGrid";
 import { GalleryPagination } from "@/components/monsterGallery/GalleryPagination";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import { useAppSelector } from "@/lib/store/hooks";
 import { ImageOff } from "lucide-react";
 
@@ -66,25 +65,7 @@ export default function GalleryPage() {
 								{imagelessCount === 1 ? "monster needs" : "monsters need"} an
 								image
 							</AlertTitle>
-							<AlertDescription>
-								Click &quot;View&quot; on a monster to retry image generation.
-							</AlertDescription>
 						</Alert>
-					)}
-
-					{/* ── Summary strip (visible once the user has monsters) ──────── */}
-					{hasMonsters && (
-						<Card className="mt-6">
-							<CardContent className="flex flex-wrap gap-x-6 gap-y-1 py-3 text-sm text-muted-foreground">
-								<span>
-									<strong className="text-foreground">{monsters.length}</strong>{" "}
-									{monsters.length === 1 ? "monster" : "monsters"} saved
-								</span>
-								<span>
-									Showing page {currentlyVisiblePage} of {totalNumPages}
-								</span>
-							</CardContent>
-						</Card>
 					)}
 
 					{/* ── Grid / empty state ──────────────────────────────────────── */}
@@ -95,6 +76,7 @@ export default function GalleryPage() {
 								<GalleryPagination
 									currentPage={currentlyVisiblePage}
 									totalPages={totalNumPages}
+									totalMonsters={monsters.length}
 									onPageChange={handlePageChange}
 								/>
 								<GalleryGrid monsters={paginatedMonsters} />
@@ -102,6 +84,7 @@ export default function GalleryPage() {
 								<GalleryPagination
 									currentPage={currentlyVisiblePage}
 									totalPages={totalNumPages}
+									totalMonsters={monsters.length}
 									onPageChange={handlePageChange}
 								/>
 							</>

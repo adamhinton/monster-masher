@@ -1,7 +1,7 @@
 // _______________
 // Individual monster card — used in the /gallery grid.
 // Image-first layout: full-bleed image at top, name + badges + flavor text below,
-// date and "View" link in the footer. Secondary actions live in a DropdownMenu.
+// date and "Details" link in the footer. Secondary actions live in a DropdownMenu.
 // _______________
 
 "use client";
@@ -80,7 +80,7 @@ export function MonsterCard({
 				<Link
 					href={`/gallery/${monster.id}`}
 					className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity duration-150 hover:opacity-100"
-					aria-label={`${monster.image === null ? "Fix image for" : "View"} ${monster.display_name}`}
+					aria-label={`Details for ${monster.display_name}`}
 				>
 					{monster.image === null ? (
 						<ImageOff className="size-6 text-white" aria-hidden="true" />
@@ -160,7 +160,7 @@ export function MonsterCard({
 				{/* Element + habitat trait chips */}
 				<MonsterBadges variant="card" traits={monster.traits} />
 
-				{/* Fix image — shown when monster has no image (placeholder) */}
+				{/* Regenerate image — shown when monster has no image (placeholder) */}
 				{monster.image === null && (
 					<Link
 						href={`/gallery/${monster.id}`}
@@ -170,7 +170,7 @@ export function MonsterCard({
 						)}
 					>
 						<RefreshCw size={13} aria-hidden="true" />
-						Fix image
+						Regenerate image
 					</Link>
 				)}
 
@@ -186,7 +186,7 @@ export function MonsterCard({
 					{monster.flavor_text ?? "No lore recorded yet."}
 				</p>
 
-				{/* Footer: creation date + action icons + view link */}
+				{/* Footer: creation date + action icons + details link */}
 				<footer className="mt-auto flex items-center justify-between gap-2 pt-0.5">
 					<time
 						dateTime={monster.created_at}
@@ -204,7 +204,7 @@ export function MonsterCard({
 							)}
 						>
 							<Eye size={14} />
-							View
+							Details
 						</Link>
 					</div>
 				</footer>

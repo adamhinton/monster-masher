@@ -70,14 +70,14 @@ describe("gallery interactions — pagination", () => {
 
 		await user.click(screen.getAllByRole("button", { name: /next/i })[0]);
 
-		expect(screen.getByText(/showing page 2 of 2/i)).toBeInTheDocument();
+		expect(screen.getAllByText(/page 2 of 2/i)).toHaveLength(2);
 		expect(
 			screen.getByRole("heading", { name: "Monster 21" }),
 		).toBeInTheDocument();
 
 		await user.click(screen.getAllByRole("button", { name: /previous/i })[1]);
 
-		expect(screen.getByText(/showing page 1 of 2/i)).toBeInTheDocument();
+		expect(screen.getAllByText(/page 1 of 2/i)).toHaveLength(2);
 		expect(
 			screen.getByRole("heading", { name: "Monster 1" }),
 		).toBeInTheDocument();

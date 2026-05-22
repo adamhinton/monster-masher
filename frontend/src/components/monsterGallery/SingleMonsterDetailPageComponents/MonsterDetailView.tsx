@@ -58,6 +58,7 @@ type RetryState =
 	| { status: "idle" }
 	| { status: "running" }
 	| { status: "succeeded" }
+	| { status: "blocked"; message: string }
 	| { status: "failed"; message: string };
 
 /**
@@ -105,7 +106,11 @@ export function MonsterDetailView({ monster }: MonsterDetailViewProps) {
 				const message = parsedError.success
 					? parsedError.data.error.message
 					: "Image generation failed. Please try again.";
-				setRetryState({ status: "failed", message });
+				setRetryState(
+					res.status === 422
+						? { status: "blocked", message }
+						: { status: "failed", message },
+				);
 				return;
 			}
 
@@ -225,6 +230,24 @@ export function MonsterDetailView({ monster }: MonsterDetailViewProps) {
 										<Alert variant="destructive">
 											<AlertCircle aria-hidden="true" />
 											<AlertTitle>Generation failed</AlertTitle>
+											<AlertDescription className="grid gap-3">
+												<p>{retryState.message}</p>
+												<Button
+													size="sm"
+													variant="outline"
+													type="button"
+													onClick={() => setRetryState({ status: "idle" })}
+												>
+													<RefreshCw aria-hidden="true" />
+													Try again
+												</Button>
+											</AlertDescription>
+										</Alert>
+									)}
+									{retryState.status === "blocked" && (
+										<Alert variant="destructive">
+											<AlertCircle aria-hidden="true" />
+											<AlertTitle>Prompt blocked by content policy</AlertTitle>
 											<AlertDescription className="grid gap-3">
 												<p>{retryState.message}</p>
 												<Button

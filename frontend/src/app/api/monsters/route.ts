@@ -15,9 +15,11 @@ import {
 	MonsterSchema,
 	type Monster,
 } from "@/lib/api/schemas/monster/MonsterSchema";
+import { monsterFormSchema } from "@/components/monsterGeneration/monsterFormSchema";
 import { type NextApiError } from "@/lib/api/errors";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
+import { moderateMonsterPrompt } from "@/lib/monsterGeneration/imageGeneration/moderation/moderation";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +86,41 @@ export async function POST(
 			message:
 				"Request body does not match expected monster data structure." +
 				isValidMonster.error.message,
+		});
+	}
+
+	const monsterData = isValidMonster.data;
+	const formValuesForModeration = monsterFormSchema.safeParse({
+		display_name: monsterData.display_name,
+		element: monsterData.traits.element,
+		habitat: monsterData.traits.habitat,
+		personality: monsterData.traits.personality,
+		color_palette: monsterData.traits.color_palette,
+		flavor_text: monsterData.flavor_text ?? "",
+		should_email_when_done: false,
+	});
+
+	if (!formValuesForModeration.success) {
+		return jsonError({
+			status: 400,
+			code: "invalid_monster_data",
+			message:
+				"Request body does not match expected monster data structure." +
+				formValuesForModeration.error.message,
+		});
+	}
+
+	const moderationResult = await moderateMonsterPrompt({
+		formValues: formValuesForModeration.data,
+		userId: claimsData.claims.sub,
+		authState: "authenticated",
+	});
+
+	if (moderationResult.outcome !== "allowed") {
+		return jsonError({
+			status: moderationResult.outcome === "failed" ? 500 : 422,
+			code: moderationResult.code,
+			message: moderationResult.message,
 		});
 	}
 
