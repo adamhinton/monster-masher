@@ -6,17 +6,36 @@
 // __________
 
 import * as Sentry from "@sentry/nextjs";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { NextApiError } from "@/lib/api/errors";
+import { rejectCrossSiteMutatingRequest } from "@/lib/security/requestGuards";
+import {
+	checkRateLimit,
+	clientIpFromRequest,
+	rateLimitExceededResponse,
+} from "@/lib/security/rateLimit";
 
 type LogoutResponse = { ok: true } | NextApiError;
 
 /**Logs the user out via supabase auth
  * Don't need to call redux logout action; AuthWatcher will (should) handle that for us and propagate the change to global state
  */
-export async function POST(): Promise<NextResponse<LogoutResponse>> {
+export async function POST(
+	request: NextRequest,
+): Promise<NextResponse<LogoutResponse>> {
+	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
+	if (crossSiteResponse) return crossSiteResponse;
+
+	const rateLimit = checkRateLimit({
+		scope: "auth-logout",
+		identifier: clientIpFromRequest(request),
+		limit: 60,
+		windowMs: 60 * 60 * 1000,
+	});
+	if (!rateLimit.allowed) return rateLimitExceededResponse(rateLimit);
+
 	const supabase = await createClientSSROnly();
 
 	// Log out user from supabase auth

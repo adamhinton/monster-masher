@@ -25,9 +25,14 @@ Supabase Storage involved. verify_supabase_jwt is patched so any Bearer token
 resolves to the fixture user's claims.
 """
 
+import hashlib
+import hmac
+import json
+import time
 import uuid
 from unittest.mock import patch
 
+from django.conf import settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
@@ -45,6 +50,30 @@ PATCH_JWT = "apps.accounts.authentication.verify_supabase_jwt"
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
+
+def _signed_internal_headers(method: str, path: str, body: str) -> dict:
+    """Build HMAC auth headers for transition endpoints, mirroring Next.js signing."""
+    timestamp = str(int(time.time()))
+    payload = "\n".join([method.upper(), path, timestamp, body]).encode("utf-8")
+    digest = hmac.new(
+        settings.INTERNAL_TRANSITION_SECRET.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+    return {
+        "HTTP_X_MONSTER_MASHER_INTERNAL_TIMESTAMP": timestamp,
+        "HTTP_X_MONSTER_MASHER_INTERNAL_SIGNATURE": f"sha256={digest}",
+    }
+
+
+def _signed_auth_post(client, uid, url: str, data: dict):
+    """POST to a transition endpoint with both JWT auth and HMAC signing."""
+    body = json.dumps(data, separators=(",", ":"))
+    headers = _signed_internal_headers("POST", url, body)
+    headers["HTTP_AUTHORIZATION"] = "Bearer token"
+    with patch(PATCH_JWT, return_value=_make_claims(uid)):
+        return client.post(url, data=body, content_type="application/json", **headers)
 
 
 def _make_claims(uid, email="lifecycle@example.com"):
@@ -120,7 +149,9 @@ class LifecycleSucceededTests(APITestCase):
             "monster-generate-image-mark-running",
             kwargs={"monster_id": monster.id},
         )
-        running_resp = self._auth_post(running_url, {"job_id": job_id})
+        running_resp = _signed_auth_post(
+            self.client, self.uid, running_url, {"job_id": job_id}
+        )
         self.assertEqual(running_resp.status_code, 200)
         self.assertEqual(running_resp.data["status"], "running")
 
@@ -130,7 +161,9 @@ class LifecycleSucceededTests(APITestCase):
             "monster-generate-image-mark-succeeded",
             kwargs={"monster_id": monster.id},
         )
-        succeeded_resp = self._auth_post(
+        succeeded_resp = _signed_auth_post(
+            self.client,
+            self.uid,
             succeeded_url,
             {
                 "job_id": job_id,
@@ -217,21 +250,24 @@ class LifecycleFailedTests(APITestCase):
         job_id = job_resp.data["id"]
 
         # Mark running
-        running_resp = self._auth_post(
-            reverse(
-                "monster-generate-image-mark-running",
-                kwargs={"monster_id": monster.id},
-            ),
-            {"job_id": job_id},
+        running_url = reverse(
+            "monster-generate-image-mark-running",
+            kwargs={"monster_id": monster.id},
+        )
+        running_resp = _signed_auth_post(
+            self.client, self.uid, running_url, {"job_id": job_id}
         )
         self.assertEqual(running_resp.status_code, 200)
 
         # Mark failed
-        failed_resp = self._auth_post(
-            reverse(
-                "monster-generate-image-mark-failed",
-                kwargs={"monster_id": monster.id},
-            ),
+        failed_url = reverse(
+            "monster-generate-image-mark-failed",
+            kwargs={"monster_id": monster.id},
+        )
+        failed_resp = _signed_auth_post(
+            self.client,
+            self.uid,
+            failed_url,
             {
                 "job_id": job_id,
                 "error_code": "provider_failed",
@@ -306,11 +342,14 @@ class LifecycleBlockedFromQueuedTests(APITestCase):
         self.assertEqual(job_resp.data["status"], "queued")
 
         # Mark blocked (banned-terms pre-flight catches it before mark-running)
-        blocked_resp = self._auth_post(
-            reverse(
-                "monster-generate-image-mark-blocked",
-                kwargs={"monster_id": monster.id},
-            ),
+        blocked_url = reverse(
+            "monster-generate-image-mark-blocked",
+            kwargs={"monster_id": monster.id},
+        )
+        blocked_resp = _signed_auth_post(
+            self.client,
+            self.uid,
+            blocked_url,
             {
                 "job_id": job_id,
                 "error_code": "banned_terms",
@@ -385,22 +424,25 @@ class LifecycleBlockedFromRunningTests(APITestCase):
         job_id = job_resp.data["id"]
 
         # Mark running
-        running_resp = self._auth_post(
-            reverse(
-                "monster-generate-image-mark-running",
-                kwargs={"monster_id": monster.id},
-            ),
-            {"job_id": job_id},
+        running_url = reverse(
+            "monster-generate-image-mark-running",
+            kwargs={"monster_id": monster.id},
+        )
+        running_resp = _signed_auth_post(
+            self.client, self.uid, running_url, {"job_id": job_id}
         )
         self.assertEqual(running_resp.status_code, 200)
         self.assertEqual(running_resp.data["status"], "running")
 
         # Mid-run moderation blocks it
-        blocked_resp = self._auth_post(
-            reverse(
-                "monster-generate-image-mark-blocked",
-                kwargs={"monster_id": monster.id},
-            ),
+        blocked_url = reverse(
+            "monster-generate-image-mark-blocked",
+            kwargs={"monster_id": monster.id},
+        )
+        blocked_resp = _signed_auth_post(
+            self.client,
+            self.uid,
+            blocked_url,
             {
                 "job_id": job_id,
                 "error_code": "moderation_blocked",
@@ -461,19 +503,20 @@ class LifecycleTwoJobsSameMonsterTests(APITestCase):
         job1_resp = self._auth_post(jobs_url, {})
         job1_id = job1_resp.data["id"]
 
-        self._auth_post(
-            reverse(
-                "monster-generate-image-mark-running",
-                kwargs={"monster_id": monster.id},
-            ),
-            {"job_id": job1_id},
+        running_url = reverse(
+            "monster-generate-image-mark-running",
+            kwargs={"monster_id": monster.id},
         )
+        _signed_auth_post(self.client, self.uid, running_url, {"job_id": job1_id})
         image1_id = str(uuid.uuid4())
-        self._auth_post(
-            reverse(
-                "monster-generate-image-mark-succeeded",
-                kwargs={"monster_id": monster.id},
-            ),
+        succeeded_url = reverse(
+            "monster-generate-image-mark-succeeded",
+            kwargs={"monster_id": monster.id},
+        )
+        _signed_auth_post(
+            self.client,
+            self.uid,
+            succeeded_url,
             {
                 "job_id": job1_id,
                 "monster_image_id": image1_id,

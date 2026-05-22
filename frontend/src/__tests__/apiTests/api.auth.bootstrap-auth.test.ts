@@ -2,9 +2,11 @@
 // Tests for src/app/api/auth/bootstrap-auth/route.ts  (POST /api/auth/bootstrap-auth)
 // ________
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchLoggedInDjangoUserProfile } from "@/lib/django/fetchFromDjango";
 import * as Sentry from "@sentry/nextjs";
+import { resetRateLimitForTests } from "@/lib/security/rateLimit";
 
 vi.mock("server-only", () => ({}));
 
@@ -25,6 +27,13 @@ import {
 	validUserProfile,
 	validUserProfileWithMonsters,
 } from "../__testUtils__/fixtures";
+
+function makeRequest(headers: Record<string, string> = {}) {
+	return new NextRequest("http://localhost:3000/api/auth/bootstrap-auth", {
+		method: "POST",
+		headers,
+	});
+}
 
 function makeSupabaseClient({
 	claimsError = null as Error | null,
@@ -49,6 +58,8 @@ function makeSupabaseClient({
 
 describe("POST /api/auth/bootstrap-auth", () => {
 	beforeEach(() => {
+		resetRateLimitForTests();
+		vi.clearAllMocks();
 		vi.mocked(createClientSSROnly).mockResolvedValue(
 			makeSupabaseClient() as unknown as Awaited<
 				ReturnType<typeof createClientSSROnly>
@@ -60,14 +71,14 @@ describe("POST /api/auth/bootstrap-auth", () => {
 	});
 
 	it("returns 200 { user } on full success", async () => {
-		const res = await POST();
+		const res = await POST(makeRequest());
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.user.email).toBe("test@example.com");
 	});
 
 	it("returns user with monsters array in body", async () => {
-		const res = await POST();
+		const res = await POST(makeRequest());
 		const body = await res.json();
 		expect(Array.isArray(body.user.monsters)).toBe(true);
 	});
@@ -76,7 +87,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
 			validUserProfileWithMonsters,
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		expect(res.status).toBe(200);
 		const body = await res.json();
 		expect(body.user.monsters).toHaveLength(2);
@@ -87,7 +98,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
 			validUserProfileWithMonsters,
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		const body = await res.json();
 		const monster = body.user.monsters[0];
 		expect(monster).toHaveProperty("id");
@@ -100,7 +111,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
 			validUserProfileWithMonsters,
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		const body = await res.json();
 		// validMonster (second in the list) has image: null
 		const monsterWithoutImage = body.user.monsters[1];
@@ -111,7 +122,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 		vi.mocked(fetchLoggedInDjangoUserProfile).mockResolvedValueOnce(
 			validUserProfileWithMonsters,
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		const body = await res.json();
 		// validMonsterWithImage (first in the list) has an image
 		const image = body.user.monsters[0].image;
@@ -127,7 +138,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 				claimsError: new Error("bad"),
 			}) as unknown as Awaited<ReturnType<typeof createClientSSROnly>>,
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		expect(res.status).toBe(401);
 		const body = await res.json();
 		expect(body.error.code).toBe("not_authenticated");
@@ -139,7 +150,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 				ReturnType<typeof createClientSSROnly>
 			>,
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		expect(res.status).toBe(401);
 		const body = await res.json();
 		expect(body.error.code).toBe("not_authenticated");
@@ -151,7 +162,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 				ReturnType<typeof createClientSSROnly>
 			>,
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		expect(res.status).toBe(401);
 		const body = await res.json();
 		expect(body.error.code).toBe("missing_access_token");
@@ -161,7 +172,7 @@ describe("POST /api/auth/bootstrap-auth", () => {
 		vi.mocked(fetchLoggedInDjangoUserProfile).mockRejectedValueOnce(
 			new Error("Django down"),
 		);
-		const res = await POST();
+		const res = await POST(makeRequest());
 		expect(res.status).toBe(500);
 		const body = await res.json();
 		expect(body.error.code).toBe("django_fetch_failed");
@@ -171,7 +182,21 @@ describe("POST /api/auth/bootstrap-auth", () => {
 		vi.mocked(fetchLoggedInDjangoUserProfile).mockRejectedValueOnce(
 			new Error("Django down"),
 		);
-		await POST();
+		await POST(makeRequest());
 		expect(Sentry.captureException).toHaveBeenCalled();
+	});
+
+	it("returns 403 for cross-site browser requests", async () => {
+		const res = await POST(
+			makeRequest({
+				Origin: "https://evil.example",
+				"Sec-Fetch-Site": "cross-site",
+			}),
+		);
+
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error.code).toBe("cross_site_request");
+		expect(fetchLoggedInDjangoUserProfile).not.toHaveBeenCalled();
 	});
 });

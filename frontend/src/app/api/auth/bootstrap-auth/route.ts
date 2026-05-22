@@ -9,12 +9,17 @@
 // ____________
 
 import * as Sentry from "@sentry/nextjs";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { UserProfile } from "@/lib/api/schemas/UserProfileSchema";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { NextApiError } from "@/lib/api/errors";
 import { fetchLoggedInDjangoUserProfile } from "@/lib/django/fetchFromDjango";
+import { rejectCrossSiteMutatingRequest } from "@/lib/security/requestGuards";
+import {
+	checkRateLimit,
+	rateLimitExceededResponse,
+} from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -48,9 +53,14 @@ function jsonError({
  * The response is parsed through userProfileSchema for runtime validation before
  * being returned, so malformed Django responses are caught at this boundary.
  */
-export async function POST(): Promise<
+export async function POST(
+	request: NextRequest,
+): Promise<
 	NextResponse<{ user: UserProfile } | NextApiError>
 > {
+	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
+	if (crossSiteResponse) return crossSiteResponse;
+
 	const supabase = await createClientSSROnly();
 
 	// User should already be logged in, this just verifies it
@@ -64,6 +74,14 @@ export async function POST(): Promise<
 			message: "User is not authenticated.",
 		});
 	}
+
+	const rateLimit = checkRateLimit({
+		scope: "auth-bootstrap",
+		identifier: claimsData.claims.sub,
+		limit: 30,
+		windowMs: 60 * 60 * 1000,
+	});
+	if (!rateLimit.allowed) return rateLimitExceededResponse(rateLimit);
 
 	// After verification, use the session only to get the access token to forward to Django.
 	const { data: sessionData, error: sessionError } =

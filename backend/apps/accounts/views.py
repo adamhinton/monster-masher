@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from apps.common.throttles import ScopedMethodThrottleMixin
 from apps.monsters.models import Monster, MonsterImage, MonsterImageGenerationJob
 
 from .models import UserProfile
@@ -39,7 +40,7 @@ class MeView(GenericAPIView):
         return Response(serializer.data)
 
 
-class BootstrapMeView(GenericAPIView):
+class BootstrapMeView(ScopedMethodThrottleMixin, GenericAPIView):
     """
     POST /api/me/bootstrap/ — create or fetch the current user's profile with monsters.
 
@@ -56,6 +57,7 @@ class BootstrapMeView(GenericAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = UserProfileWithMonstersSerializer
+    throttle_scope_by_method = {"POST": "auth_bootstrap"}
 
     @extend_schema(
         summary="Create or fetch UserProfile (with monsters) for the current Supabase user",

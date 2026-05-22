@@ -33,6 +33,11 @@ import {
 	type SendEmailResponse,
 } from "@/lib/api/email/imageGenerationDoneTypes";
 import { ImageGenerationDoneEmail } from "@/components/emailTemplatesToUser/imageGenerationDone/ImageGenerationSuccess";
+import { rejectCrossSiteMutatingRequest } from "@/lib/security/requestGuards";
+import {
+	checkRateLimit,
+	rateLimitExceededResponse,
+} from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +88,9 @@ const SUBJECT_BY_SCENARIO: Record<
 export async function POST(
 	request: NextRequest,
 ): Promise<NextResponse<SendEmailResponse | NextApiError>> {
+	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
+	if (crossSiteResponse) return crossSiteResponse;
+
 	console.log(
 		"Received request to /api/email/image-generation-done",
 		// accessToken,
@@ -184,6 +192,14 @@ export async function POST(
 			{ status: 403 },
 		);
 	}
+
+	const rateLimit = checkRateLimit({
+		scope: "email-image-generation-done",
+		identifier: authenticatedEmail,
+		limit: 20,
+		windowMs: 60 * 60 * 1000,
+	});
+	if (!rateLimit.allowed) return rateLimitExceededResponse(rateLimit);
 
 	// ── Step 4: Send email via Resend ─────────────────────────────────────────
 

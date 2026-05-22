@@ -4,6 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { createClientSSROnly } from "@/lib/supabase/server";
+import { resetRateLimitForTests } from "@/lib/security/rateLimit";
+
+vi.mock("server-only", () => ({}));
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClientSSROnly: vi.fn(),
@@ -31,8 +34,21 @@ function makeRequest(body: unknown, contentType = "application/json") {
 	});
 }
 
+function makeCrossSiteRequest(body: unknown) {
+	return new NextRequest("http://localhost:3000/api/auth/sign-in", {
+		method: "POST",
+		body: JSON.stringify(body),
+		headers: {
+			"Content-Type": "application/json",
+			Origin: "https://evil.example",
+			"Sec-Fetch-Site": "cross-site",
+		},
+	});
+}
+
 describe("POST /api/auth/sign-in", () => {
 	beforeEach(() => {
+		resetRateLimitForTests();
 		mockSignInWithOtp.mockReset();
 		vi.mocked(createClientSSROnly).mockResolvedValue(
 			makeSupabaseClient() as unknown as Awaited<
@@ -46,6 +62,14 @@ describe("POST /api/auth/sign-in", () => {
 		expect(res.status).toBe(400);
 		const body = await res.json();
 		expect(body.error.code).toBe("invalid_json");
+	});
+
+	it("returns 403 for cross-site browser requests", async () => {
+		const res = await POST(makeCrossSiteRequest({ email: "user@example.com" }));
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error.code).toBe("cross_site_request");
+		expect(mockSignInWithOtp).not.toHaveBeenCalled();
 	});
 
 	it("returns 400 invalid_request for an invalid email", async () => {
@@ -107,5 +131,19 @@ describe("POST /api/auth/sign-in", () => {
 		expect(res.status).toBe(400);
 		const body = await res.json();
 		expect(body.error.code).toBe("sign_in_failed");
+	});
+
+	it("returns 429 when the same email exceeds the sign-in limit", async () => {
+		for (let requestIndex = 0; requestIndex < 10; requestIndex += 1) {
+			const response = await POST(makeRequest({ email: "user@example.com" }));
+			expect(response.status).toBe(200);
+		}
+
+		const limitedResponse = await POST(
+			makeRequest({ email: "user@example.com" }),
+		);
+		expect(limitedResponse.status).toBe(429);
+		const body = await limitedResponse.json();
+		expect(body.error.code).toBe("rate_limited");
 	});
 });

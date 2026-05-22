@@ -56,7 +56,10 @@ vi.mock("@/lib/monsterGeneration/imageGeneration/storage/storage", () => ({
 }));
 
 vi.mock("@/lib/env/env", () => ({
-	env: { imageGenerationMode: "fake" },
+	env: {
+		imageGenerationMode: "fake",
+		serverTransitionSecret: "test-transition-secret",
+	},
 }));
 
 // ─── Imports under test (after mocks) ────────────────────────────────────────
@@ -71,6 +74,7 @@ import {
 import { getImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/providers";
 import { getImageStorage } from "@/lib/monsterGeneration/imageGeneration/storage/storage";
 import type { MonsterFormValues } from "@/components/monsterGeneration/monsterFormSchema";
+import { resetRateLimitForTests } from "@/lib/security/rateLimit";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -198,6 +202,7 @@ function djangoCallPaths(): string[] {
 }
 
 beforeEach(() => {
+	resetRateLimitForTests();
 	vi.clearAllMocks();
 });
 
@@ -230,7 +235,6 @@ describe("scenario: succeeded", () => {
 
 		expect(djangoCallPaths()).toEqual([
 			"/api/monsters/{monster_id}/",
-			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
 			"/api/monsters/{monster_id}/generate-image/mark-succeeded/",
@@ -322,7 +326,6 @@ describe("scenario: blocked by banned terms", () => {
 		expect(res.status).toBe(422);
 		expect(djangoCallPaths()).toEqual([
 			"/api/monsters/{monster_id}/",
-			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-blocked/",
 		]);
@@ -373,7 +376,6 @@ describe("scenario: blocked by moderation provider", () => {
 		const paths = djangoCallPaths();
 		expect(paths).toEqual([
 			"/api/monsters/{monster_id}/",
-			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-blocked/",
 		]);
@@ -406,7 +408,6 @@ describe("scenario: provider failed", () => {
 		expect(res.status).toBe(500);
 		expect(djangoCallPaths()).toEqual([
 			"/api/monsters/{monster_id}/",
-			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
 			"/api/monsters/{monster_id}/generate-image/mark-failed/",
@@ -466,7 +467,6 @@ describe("scenario: storage failed", () => {
 		const paths = djangoCallPaths();
 		expect(paths).toEqual([
 			"/api/monsters/{monster_id}/",
-			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 			"/api/monsters/{monster_id}/generate-image/mark-running/",
 			"/api/monsters/{monster_id}/generate-image/mark-failed/",
@@ -537,7 +537,6 @@ describe("scenario: Django job-create failure", () => {
 		// Only the create call was attempted; no transitions follow
 		expect(djangoCallPaths()).toEqual([
 			"/api/monsters/{monster_id}/",
-			"/api/monsters/{monster_id}/image/",
 			"/api/monsters/{monster_id}/generate-image/jobs/",
 		]);
 	});

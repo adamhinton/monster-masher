@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
+import { resetRateLimitForTests } from "@/lib/security/rateLimit";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ function makeRequest(
 	headers: Record<string, string> = {},
 ): NextRequest {
 	return {
+		nextUrl: new URL("http://localhost:3000/api/email/image-generation-done"),
 		headers: {
 			get: (name: string) => headers[name.toLowerCase()] ?? null,
 		},
@@ -89,6 +91,8 @@ function makeSupabaseClient(
 
 describe("POST /api/email/image-generation-done", () => {
 	beforeEach(() => {
+		resetRateLimitForTests();
+		mockEmailsSend.mockClear();
 		vi.mocked(createClientSSROnly).mockResolvedValue(
 			makeSupabaseClient() as unknown as Awaited<
 				ReturnType<typeof createClientSSROnly>
@@ -106,6 +110,23 @@ describe("POST /api/email/image-generation-done", () => {
 		expect(res.status).toBe(401);
 		const body = await res.json();
 		expect(body.error.code).toBe("not_authenticated");
+	});
+
+	it("returns 403 for cross-site browser requests", async () => {
+		const res = await POST(
+			makeRequest(
+				{ email: USER_EMAIL, scenario: "succeeded" },
+				{
+					authorization: `Bearer ${ACCESS_TOKEN}`,
+					origin: "https://evil.example",
+					"sec-fetch-site": "cross-site",
+				},
+			),
+		);
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error.code).toBe("cross_site_request");
+		expect(mockEmailsSend).not.toHaveBeenCalled();
 	});
 
 	it("returns 401 when the JWT is invalid", async () => {
@@ -126,7 +147,13 @@ describe("POST /api/email/image-generation-done", () => {
 
 	it("returns 400 for invalid JSON", async () => {
 		const badRequest = {
-			headers: { get: () => `Bearer ${ACCESS_TOKEN}` },
+			nextUrl: new URL("http://localhost:3000/api/email/image-generation-done"),
+			headers: {
+				get: (name: string) =>
+					name.toLowerCase() === "authorization"
+						? `Bearer ${ACCESS_TOKEN}`
+						: null,
+			},
 			json: () => Promise.reject(new SyntaxError("bad json")),
 		} as unknown as NextRequest;
 

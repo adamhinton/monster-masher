@@ -15,6 +15,7 @@ from pathlib import Path
 import sentry_sdk
 import os
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -72,6 +73,20 @@ DEBUG = (
     == "true"
 )
 
+if not DEBUG and SECRET_KEY == "dev-only-insecure-secret-key":
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set when DEBUG is false.")
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+    X_FRAME_OPTIONS = "DENY"
+
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 if render_hostname := os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
@@ -117,6 +132,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "apps.common.middleware.AdminLoginRateLimitMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -255,6 +271,20 @@ REST_FRAMEWORK = {
     ],
     "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.environ.get("DRF_ANON_THROTTLE_RATE", "100/hour"),
+        "user": os.environ.get("DRF_USER_THROTTLE_RATE", "1000/hour"),
+        "auth_bootstrap": os.environ.get("AUTH_BOOTSTRAP_THROTTLE_RATE", "30/hour"),
+        "monster_create": os.environ.get("MONSTER_CREATE_THROTTLE_RATE", "60/hour"),
+        "monster_delete": os.environ.get("MONSTER_DELETE_THROTTLE_RATE", "30/hour"),
+        "image_job_create": os.environ.get("IMAGE_JOB_CREATE_THROTTLE_RATE", "30/hour"),
+        "job_notification": os.environ.get("JOB_NOTIFICATION_THROTTLE_RATE", "60/hour"),
+        "internal_transition": os.environ.get("INTERNAL_TRANSITION_THROTTLE_RATE", "180/hour"),
+    },
 }
 
 if DEBUG:
@@ -279,6 +309,26 @@ if "test" in sys.argv:
 # 24-hour window. Defaults to 6. Set MAX_GENERATIONS_PER_DAY in the environment
 # to override (e.g. higher in staging, lower in production if needed).
 MAX_GENERATIONS_PER_DAY = int(os.environ.get("MAX_GENERATIONS_PER_DAY", "24"))
+
+# ── Internal API trust boundary ───────────────────────────────────────────────
+# Next.js signs image-generation state-transition calls with this server-only
+# secret. SUPABASE_SECRET_KEY is already required by the image-storage pipeline
+# and is a practical fallback for deployments that have not added a dedicated
+# NEXT_SERVER_SECRET yet.
+INTERNAL_TRANSITION_SECRET = (
+    os.environ.get("NEXT_SERVER_SECRET")
+    or os.environ.get("SUPABASE_SECRET_KEY")
+    or ("dev-only-internal-transition-secret" if DEBUG else "")
+)
+INTERNAL_TRANSITION_MAX_CLOCK_SKEW_SECONDS = int(
+    os.environ.get("INTERNAL_TRANSITION_MAX_CLOCK_SKEW_SECONDS", "300")
+)
+
+# ── Admin login rate limit ───────────────────────────────────────────────────
+ADMIN_LOGIN_THROTTLE_LIMIT = int(os.environ.get("ADMIN_LOGIN_THROTTLE_LIMIT", "5"))
+ADMIN_LOGIN_THROTTLE_WINDOW_SECONDS = int(
+    os.environ.get("ADMIN_LOGIN_THROTTLE_WINDOW_SECONDS", "300")
+)
 
 # ── Development / admin tooling guard ────────────────────────────────────────
 # Enables seeding and admin actions that create fake data for development and

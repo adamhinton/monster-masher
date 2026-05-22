@@ -9,7 +9,6 @@
 // intentionally coupled here so the job record is always the source of truth.
 //
 // Pipeline order:
-//   0. Delete any existing MonsterImage for this monster (delete-before-retry).
 //   1. Authenticate the user via Supabase session. user_profile_id always comes
 //      from the verified JWT sub — never from the request body.
 //   2. Validate request options, then load the existing Monster from Django.
@@ -20,7 +19,8 @@
 //   7. Generate the image via the image provider; if failed → mark job failed → 500.
 //   8. Upload the image bytes to Supabase Storage; if failed → mark job failed → 500.
 //   9. Call Django mark-succeeded with the image metadata (Django creates the
-//      MonsterImage row and transitions the job to SUCCEEDED).
+//      MonsterImage row, transitions the job to SUCCEEDED, then removes any
+//      older image rows for this monster).
 //  10. Return the public image URL and storage path to the client.
 //
 // NOTE: Prompt moderation also runs before monster creation in /api/monsters/.
@@ -29,9 +29,9 @@
 // and free for this use case, and the extra gate keeps direct retries safe.
 // Sentry is called for failure paths (provider errors, storage errors, etc.).
 //
-// Trust boundary: Next.js forwards the user's Supabase access
-// token to Django for all transition endpoints. Django verifies ownership of both
-// the monster and the job before allowing any state mutation.
+// Trust boundary: Next.js forwards the user's Supabase access token and signs
+// transition calls with a server-only HMAC secret. Django verifies ownership
+// and the internal signature before allowing state mutation.
 // ______________
 
 import "server-only";
@@ -44,6 +44,7 @@ import { monsterFormSchema } from "@/components/monsterGeneration/monsterFormSch
 import { type NextApiError, nextApiErrorSchema } from "@/lib/api/errors";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
+import { createInternalTransitionHeaders } from "@/lib/django/internalTransitionAuth";
 import { env } from "@/lib/env/env";
 import {
 	containsBannedTerms,
@@ -66,6 +67,11 @@ import {
 } from "@/lib/api/schemas/monster/MonsterSchema";
 import { notifyImageGenerationDone } from "@/lib/api/email/imageGenerationDoneEmail";
 import type { ImageGenerationDoneScenario } from "@/lib/api/email/imageGenerationDoneTypes";
+import { rejectCrossSiteMutatingRequest } from "@/lib/security/requestGuards";
+import {
+	checkRateLimit,
+	rateLimitExceededResponse,
+} from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -156,13 +162,20 @@ async function callTransitionEndpoint(
 	additionalBody?: Record<string, unknown>,
 ): Promise<TransitionEndpointResult> {
 	try {
+		const body = JSON.stringify({ job_id: jobId, ...additionalBody });
+		const resolvedPath = path.replace("{monster_id}", pathParams.monster_id);
 		const res = await fetchFromDjango(path, pathParams, {
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${accessToken}`,
 				"Content-Type": "application/json",
+				...createInternalTransitionHeaders({
+					method: "POST",
+					path: resolvedPath,
+					body,
+				}),
 			},
-			body: JSON.stringify({ job_id: jobId, ...additionalBody }),
+			body,
 		});
 
 		if (!res.ok) {
@@ -198,38 +211,6 @@ async function callTransitionEndpoint(
 	}
 }
 
-/**
- * Deletes the current MonsterImage for a monster before starting a retry.
- * Handles 204 (deleted), 404 (no image, fine), and logs other errors to Sentry
- * without failing the overall pipeline — the generation should still be
- * attempted even if the delete call fails.
- */
-async function deleteMonsterImageIfExists(
-	monsterId: Monster["id"],
-	accessToken: string,
-): Promise<void> {
-	try {
-		const res = await fetchFromDjango(
-			"/api/monsters/{monster_id}/image/",
-			{ monster_id: monsterId },
-			{
-				method: "DELETE",
-				headers: { Authorization: `Bearer ${accessToken}` },
-			},
-		);
-		if (res.status !== 204 && res.status !== 404) {
-			Sentry.captureMessage("generate_image.delete_existing_image_failed", {
-				level: "warning",
-				extra: { monsterId, status: res.status },
-			});
-		}
-	} catch (err) {
-		Sentry.captureException(err, {
-			extra: { context: "deleteMonsterImageIfExists", monsterId },
-		});
-	}
-}
-
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 /**
@@ -248,6 +229,9 @@ export async function POST(
 	request: NextRequest,
 	{ params }: { params: Promise<{ monsterId: string }> },
 ): Promise<NextResponse<GenerateImageSuccessResponse | NextApiError>> {
+	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
+	if (crossSiteResponse) return crossSiteResponse;
+
 	const { monsterId } = await params;
 	const generationMode = env.imageGenerationMode;
 
@@ -272,6 +256,16 @@ export async function POST(
 			code: "not_authenticated",
 			message: "User is not authenticated.",
 		});
+	}
+
+	const routeRateLimit = checkRateLimit({
+		scope: "image-generate",
+		identifier: claimsData.claims.sub,
+		limit: 30,
+		windowMs: 60 * 60 * 1000,
+	});
+	if (!routeRateLimit.allowed) {
+		return rateLimitExceededResponse(routeRateLimit);
 	}
 
 	const { data: sessionData, error: sessionError } =
@@ -441,13 +435,6 @@ export async function POST(
 			monsterId,
 		});
 	};
-
-	// ── Step 0: Delete any existing image for this monster ───────────────────
-	//
-	// Enforces the one-image-per-monster design — old image is wiped before the
-	// new pipeline starts. Failures are logged to Sentry but do not abort the
-	// pipeline; the user should still get a new image even if cleanup failed.
-	await deleteMonsterImageIfExists(monsterId, accessToken);
 
 	// ── Step 4: Create MonsterImageGenerationJob in Django (QUEUED) ──────────
 	let jobId: string;

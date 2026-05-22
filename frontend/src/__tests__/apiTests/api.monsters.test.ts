@@ -7,6 +7,7 @@ import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
 import * as Sentry from "@sentry/nextjs";
 import type { Monster } from "@/lib/api/schemas/monster/MonsterSchema";
+import { resetRateLimitForTests } from "@/lib/security/rateLimit";
 
 vi.mock("server-only", () => ({}));
 
@@ -77,6 +78,18 @@ function makeMalformedRequest() {
 	});
 }
 
+function makeCrossSiteRequest(body: unknown) {
+	return new NextRequest("http://localhost:3000/api/monsters/", {
+		method: "POST",
+		body: JSON.stringify(body),
+		headers: {
+			"Content-Type": "application/json",
+			Origin: "https://evil.example",
+			"Sec-Fetch-Site": "cross-site",
+		},
+	});
+}
+
 function makeSupabaseClient({
 	claimsError = null as Error | null,
 	sub = "some-supabase-user-id" as string | null,
@@ -110,6 +123,7 @@ function makeDjangoResponse(body: unknown, status = 201) {
 
 describe("POST /api/monsters/", () => {
 	beforeEach(() => {
+		resetRateLimitForTests();
 		vi.clearAllMocks();
 		vi.mocked(createClientSSROnly).mockResolvedValue(
 			makeSupabaseClient() as unknown as Awaited<
@@ -137,6 +151,14 @@ describe("POST /api/monsters/", () => {
 		expect(res.status).toBe(401);
 		const body = await res.json();
 		expect(body.error.code).toBe("not_authenticated");
+	});
+
+	it("returns 403 for cross-site browser requests", async () => {
+		const res = await POST(makeCrossSiteRequest(validMonsterPayload));
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error.code).toBe("cross_site_request");
+		expect(fetchFromDjango).not.toHaveBeenCalled();
 	});
 
 	it("returns 401 not_authenticated when claims has no sub", async () => {

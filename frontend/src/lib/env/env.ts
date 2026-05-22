@@ -82,6 +82,12 @@ export const env = {
 			"SUPABASE_SECRET_KEY",
 		);
 	},
+	get serverTransitionSecret() {
+		return assertDefined(
+			process.env.NEXT_SERVER_SECRET ?? process.env.SUPABASE_SECRET_KEY,
+			"NEXT_SERVER_SECRET or SUPABASE_SECRET_KEY",
+		);
+	},
 	get OpenAIApiKey() {
 		const value = assertDefined(process.env.OPENAI_API_KEY, "OPENAI_API_KEY");
 		return value;

@@ -19,9 +19,14 @@ Tests verify:
   - mark-succeeded rolls back the MonsterImage if the transition fails.
 """
 
+import hashlib
+import hmac
+import json
+import time
 import uuid
 from unittest.mock import patch
 
+from django.conf import settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
@@ -89,6 +94,33 @@ def _image_id():
     return str(uuid.uuid4())
 
 
+def _signed_internal_headers(method: str, path: str, body: str) -> dict[str, str]:
+    timestamp = str(int(time.time()))
+    payload = "\n".join([method.upper(), path, timestamp, body]).encode("utf-8")
+    digest = hmac.new(
+        settings.INTERNAL_TRANSITION_SECRET.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+    return {
+        "HTTP_X_MONSTER_MASHER_INTERNAL_TIMESTAMP": timestamp,
+        "HTTP_X_MONSTER_MASHER_INTERNAL_SIGNATURE": f"sha256={digest}",
+    }
+
+
+def _signed_post(client, url: str, data: dict, auth_header: str | None = "Bearer token"):
+    body = json.dumps(data, separators=(",", ":"))
+    headers = _signed_internal_headers("POST", url, body)
+    if auth_header:
+        headers["HTTP_AUTHORIZATION"] = auth_header
+    return client.post(
+        url,
+        data=body,
+        content_type="application/json",
+        **headers,
+    )
+
+
 # ---------------------------------------------------------------------------
 # mark-running
 # ---------------------------------------------------------------------------
@@ -107,12 +139,7 @@ class MarkRunningViewTests(APITestCase):
 
     def _post(self, uid, email, url, data):
         with patch(PATCH_JWT, return_value=_make_claims(uid, email)):
-            return self.client.post(
-                url,
-                data=data,
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
-            )
+            return _signed_post(self.client, url, data)
 
     def _post_as_owner(self, data=None):
         payload = {"job_id": str(self.job.id)} if data is None else data
@@ -191,13 +218,22 @@ class MarkRunningViewTests(APITestCase):
             kwargs={"monster_id": uuid.uuid4()},
         )
         with patch(PATCH_JWT, return_value=_make_claims(self.uid)):
-            response = self.client.post(
+            response = _signed_post(
+                self.client,
                 url,
+                {"job_id": str(self.job.id)},
+            )
+        self.assertEqual(response.status_code, 404)
+
+    def test_valid_user_token_without_internal_signature_returns_403(self):
+        with patch(PATCH_JWT, return_value=_make_claims(self.uid)):
+            response = self.client.post(
+                self.url,
                 {"job_id": str(self.job.id)},
                 content_type="application/json",
                 HTTP_AUTHORIZATION="Bearer token",
             )
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 403)
 
 
 # ---------------------------------------------------------------------------
@@ -229,11 +265,10 @@ class MarkSucceededViewTests(APITestCase):
 
     def _post_as_owner(self, data=None):
         with patch(PATCH_JWT, return_value=_make_claims(self.uid)):
-            return self.client.post(
+            return _signed_post(
+                self.client,
                 self.url,
                 data=data if data is not None else self._valid_body(),
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
 
     def test_unauthenticated_returns_401(self):
@@ -262,6 +297,21 @@ class MarkSucceededViewTests(APITestCase):
         img = MonsterImage.objects.get(id=self.image_id)
         self.assertEqual(img.monster, self.monster)
 
+    def test_valid_transition_deletes_older_monster_images_after_new_image_ready(self):
+        old_image = MonsterImage.objects.create(
+            monster=self.monster,
+            public_image_url="https://storage.example.com/old.png",
+            image_storage_path="users/uid/monsters/mid/images/old.png",
+            provider="fake",
+            provider_model="fake-fixture-v1",
+        )
+
+        response = self._post_as_owner()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(MonsterImage.objects.filter(id=old_image.id).exists())
+        self.assertTrue(MonsterImage.objects.filter(id=self.image_id).exists())
+
     def test_response_includes_image(self):
         response = self._post_as_owner()
         self.assertIsNotNone(response.data.get("image"))
@@ -273,11 +323,10 @@ class MarkSucceededViewTests(APITestCase):
     def test_other_users_monster_returns_404(self):
         uid_b = uuid.uuid4()
         with patch(PATCH_JWT, return_value=_make_claims(uid_b, "b@test.com")):
-            response = self.client.post(
+            response = _signed_post(
+                self.client,
                 self.url,
                 self._valid_body(),
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
         self.assertEqual(response.status_code, 404)
 
@@ -342,11 +391,10 @@ class MarkFailedViewTests(APITestCase):
         if extra:
             data.update(extra)
         with patch(PATCH_JWT, return_value=_make_claims(self.uid)):
-            return self.client.post(
+            return _signed_post(
+                self.client,
                 self.url,
                 data=data,
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
 
     def test_unauthenticated_returns_401(self):
@@ -387,11 +435,10 @@ class MarkFailedViewTests(APITestCase):
         uid_b = uuid.uuid4()
         job = _make_queued_job(self.profile, self.monster)
         with patch(PATCH_JWT, return_value=_make_claims(uid_b, "b@test.com")):
-            response = self.client.post(
+            response = _signed_post(
+                self.client,
                 self.url,
                 {"job_id": str(job.id), "error_code": "x", "error_message": "y"},
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
         self.assertEqual(response.status_code, 404)
 
@@ -410,11 +457,10 @@ class MarkFailedViewTests(APITestCase):
             "error_message": "Something went wrong.",
         }
         with patch(PATCH_JWT, return_value=_make_claims(self.uid)):
-            response = self.client.post(
+            response = _signed_post(
+                self.client,
                 self.url,
                 data=data,
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
         self.assertEqual(response.status_code, 400)
 
@@ -443,11 +489,10 @@ class MarkBlockedViewTests(APITestCase):
         if data_override:
             data.update(data_override)
         with patch(PATCH_JWT, return_value=_make_claims(self.uid)):
-            return self.client.post(
+            return _signed_post(
+                self.client,
                 self.url,
                 data=data,
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
 
     def test_unauthenticated_returns_401(self):
@@ -498,11 +543,10 @@ class MarkBlockedViewTests(APITestCase):
         uid_b = uuid.uuid4()
         job = _make_queued_job(self.profile, self.monster)
         with patch(PATCH_JWT, return_value=_make_claims(uid_b, "b@test.com")):
-            response = self.client.post(
+            response = _signed_post(
+                self.client,
                 self.url,
                 {"job_id": str(job.id), "error_code": "x", "error_message": "y"},
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
         self.assertEqual(response.status_code, 404)
 
@@ -524,11 +568,10 @@ class MarkBlockedViewTests(APITestCase):
     def test_missing_error_code_returns_400(self):
         job = _make_queued_job(self.profile, self.monster)
         with patch(PATCH_JWT, return_value=_make_claims(self.uid)):
-            response = self.client.post(
+            response = _signed_post(
+                self.client,
                 self.url,
                 {"job_id": str(job.id), "error_message": "Something."},
-                content_type="application/json",
-                HTTP_AUTHORIZATION="Bearer token",
             )
         self.assertEqual(response.status_code, 400)
 

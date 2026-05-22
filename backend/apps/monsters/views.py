@@ -7,14 +7,10 @@ on owner=request.user, which causes non-owner access to return 404, not 403
 client; ownership always comes from the verified request.user.
 
 Trust boundary for image-generation transition endpoints:
-    Next.js forwards the user's Supabase access token to Django.
-    Django verifies the JWT (IsAuthenticated), confirms that the monster
-    belongs to the authenticated user, and confirms that the job belongs to
-    the same user and is attached to that monster.
-    This keeps the implementation simple and avoids a shared server secret.
-    Because the user's own token is used, the client could in principle call
-    these endpoints directly; the views are designed to be safe at the user
-    level (correct ownership checks, valid state transitions).
+    Next.js forwards the user's Supabase access token to Django and signs the
+    request with a server-only HMAC secret.
+    Django verifies both the JWT (ownership) and the HMAC signature (internal
+    caller proof), then confirms that the job belongs to the user and monster.
 """
 
 import hashlib
@@ -22,6 +18,7 @@ from datetime import timedelta
 
 import sentry_sdk
 from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -32,6 +29,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.permissions import HasValidInternalTransitionSignature
+from apps.common.throttles import ScopedMethodThrottleMixin
 from apps.monsters.models import (
     Monster,
     MonsterImage,
@@ -74,13 +73,14 @@ _TERMINAL_STATUSES = frozenset(
 # ---------------------------------------------------------------------------
 
 
-class MonsterListCreateView(GenericAPIView):
+class MonsterListCreateView(ScopedMethodThrottleMixin, GenericAPIView):
     """
     GET  /api/monsters/   — list the authenticated user's monsters.
     POST /api/monsters/   — create a monster owned by the authenticated user.
     """
 
     permission_classes = [IsAuthenticated]
+    throttle_scope_by_method = {"POST": "monster_create"}
 
     @extend_schema(
         summary="List current user's monsters",
@@ -105,7 +105,7 @@ class MonsterListCreateView(GenericAPIView):
         return Response(MonsterSerializer(monster).data, status=status.HTTP_201_CREATED)
 
 
-class MonsterDetailView(GenericAPIView):
+class MonsterDetailView(ScopedMethodThrottleMixin, GenericAPIView):
     """
     GET    /api/monsters/{monster_id}/ — retrieve a monster.
     PATCH  /api/monsters/{monster_id}/ — partial-update a monster.
@@ -116,6 +116,7 @@ class MonsterDetailView(GenericAPIView):
     """
 
     permission_classes = [IsAuthenticated]
+    throttle_scope_by_method = {"DELETE": "monster_delete"}
 
     def _get_monster(self, request: Request, monster_id) -> Monster:
         return get_object_or_404(Monster, id=monster_id, owner=request.user)
@@ -150,7 +151,7 @@ class MonsterDetailView(GenericAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class MonsterImageDeleteView(GenericAPIView):
+class MonsterImageDeleteView(ScopedMethodThrottleMixin, GenericAPIView):
     """
     DELETE /api/monsters/{monster_id}/image/
 
@@ -168,6 +169,7 @@ class MonsterImageDeleteView(GenericAPIView):
     """
 
     permission_classes = [IsAuthenticated]
+    throttle_scope_by_method = {"DELETE": "monster_delete"}
 
     @extend_schema(
         summary="Delete the current image for a monster",
@@ -189,7 +191,7 @@ class MonsterImageDeleteView(GenericAPIView):
 # ---------------------------------------------------------------------------
 
 
-class ImageGenerationJobCreateView(GenericAPIView):
+class ImageGenerationJobCreateView(ScopedMethodThrottleMixin, GenericAPIView):
     """
     POST /api/monsters/{monster_id}/generate-image/jobs/
 
@@ -199,6 +201,7 @@ class ImageGenerationJobCreateView(GenericAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = MonsterImageGenerationJobCreateSerializer
+    throttle_scope_by_method = {"POST": "image_job_create"}
 
     @extend_schema(
         summary="Create an image generation job",
@@ -281,7 +284,7 @@ class ImageGenerationJobDetailView(GenericAPIView):
         return Response(MonsterImageGenerationJobSerializer(job).data)
 
 
-class ImageGenerationJobNotificationView(GenericAPIView):
+class ImageGenerationJobNotificationView(ScopedMethodThrottleMixin, GenericAPIView):
     """
     PATCH /api/monsters/{monster_id}/generate-image/jobs/{job_id}/notification/
 
@@ -292,6 +295,7 @@ class ImageGenerationJobNotificationView(GenericAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = MonsterImageGenerationJobNotificationUpdateSerializer
+    throttle_scope_by_method = {"PATCH": "job_notification"}
 
     @extend_schema(
         summary="Toggle email notification preference for a job",
@@ -322,8 +326,8 @@ class ImageGenerationJobNotificationView(GenericAPIView):
 # ---------------------------------------------------------------------------
 # Trusted-server transition endpoints
 #
-# Trust boundary: Next.js forwards the user's Supabase access token.
-# See module docstring for rationale.
+# Trust boundary: Next.js forwards the user's Supabase access token and signs
+# the request body with a server-only HMAC secret.
 #
 # All four views follow the same pattern:
 #   1. Verify the monster exists and belongs to the authenticated user (404 if not).
@@ -355,7 +359,7 @@ def _get_job_for_transition(
         return None
 
 
-class MonsterGenerateImageMarkRunningView(APIView):
+class MonsterGenerateImageMarkRunningView(ScopedMethodThrottleMixin, APIView):
     """
     POST /api/monsters/{monster_id}/generate-image/mark-running/
 
@@ -366,7 +370,8 @@ class MonsterGenerateImageMarkRunningView(APIView):
     Returns: the updated MonsterImageGenerationJob.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasValidInternalTransitionSignature]
+    throttle_scope_by_method = {"POST": "internal_transition"}
 
     @extend_schema(
         summary="Mark image generation job as running",
@@ -404,7 +409,7 @@ class MonsterGenerateImageMarkRunningView(APIView):
         return Response(MonsterImageGenerationJobSerializer(updated_job).data)
 
 
-class MonsterGenerateImageMarkSucceededView(APIView):
+class MonsterGenerateImageMarkSucceededView(ScopedMethodThrottleMixin, APIView):
     """
     POST /api/monsters/{monster_id}/generate-image/mark-succeeded/
 
@@ -416,7 +421,8 @@ class MonsterGenerateImageMarkSucceededView(APIView):
     Returns: the updated MonsterImageGenerationJob (including the linked image).
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasValidInternalTransitionSignature]
+    throttle_scope_by_method = {"POST": "internal_transition"}
 
     @extend_schema(
         summary="Mark image generation job as succeeded and create MonsterImage",
@@ -437,20 +443,21 @@ class MonsterGenerateImageMarkSucceededView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        monster_image = MonsterImage.objects.create(
-            id=vd["monster_image_id"],
-            monster=monster,
-            public_image_url=vd["public_image_url"],
-            image_storage_path=vd["image_storage_path"],
-            provider=vd["provider"],
-            provider_model=vd["provider_model"],
-        )
-
         try:
-            updated_job = mark_job_succeeded(job, monster_image)
+            with transaction.atomic():
+                monster_image = MonsterImage.objects.create(
+                    id=vd["monster_image_id"],
+                    monster=monster,
+                    public_image_url=vd["public_image_url"],
+                    image_storage_path=vd["image_storage_path"],
+                    provider=vd["provider"],
+                    provider_model=vd["provider_model"],
+                )
+                updated_job = mark_job_succeeded(job, monster_image)
+                MonsterImage.objects.filter(monster=monster).exclude(
+                    id=monster_image.id
+                ).delete()
         except InvalidJobTransition as exc:
-            # Roll back the image we just created since the transition failed.
-            monster_image.delete()
             return Response(
                 {
                     "error": {
@@ -464,7 +471,7 @@ class MonsterGenerateImageMarkSucceededView(APIView):
         return Response(MonsterImageGenerationJobSerializer(updated_job).data)
 
 
-class MonsterGenerateImageMarkFailedView(APIView):
+class MonsterGenerateImageMarkFailedView(ScopedMethodThrottleMixin, APIView):
     """
     POST /api/monsters/{monster_id}/generate-image/mark-failed/
 
@@ -475,7 +482,8 @@ class MonsterGenerateImageMarkFailedView(APIView):
     Returns: the updated MonsterImageGenerationJob.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasValidInternalTransitionSignature]
+    throttle_scope_by_method = {"POST": "internal_transition"}
 
     @extend_schema(
         summary="Mark image generation job as failed",
@@ -516,7 +524,7 @@ class MonsterGenerateImageMarkFailedView(APIView):
         return Response(MonsterImageGenerationJobSerializer(updated_job).data)
 
 
-class MonsterGenerateImageMarkBlockedView(APIView):
+class MonsterGenerateImageMarkBlockedView(ScopedMethodThrottleMixin, APIView):
     """
     POST /api/monsters/{monster_id}/generate-image/mark-blocked/
 
@@ -527,7 +535,8 @@ class MonsterGenerateImageMarkBlockedView(APIView):
     Returns: the updated MonsterImageGenerationJob.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasValidInternalTransitionSignature]
+    throttle_scope_by_method = {"POST": "internal_transition"}
 
     @extend_schema(
         summary="Mark image generation job as blocked (content policy)",

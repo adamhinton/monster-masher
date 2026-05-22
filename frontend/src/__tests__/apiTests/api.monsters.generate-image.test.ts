@@ -51,7 +51,10 @@ vi.mock("@/lib/monsterGeneration/imageGeneration/storage/storage", () => ({
 }));
 
 vi.mock("@/lib/env/env", () => ({
-	env: { imageGenerationMode: "fake" },
+	env: {
+		imageGenerationMode: "fake",
+		serverTransitionSecret: "test-transition-secret",
+	},
 }));
 
 // ─── Import under test (after mocks) ─────────────────────────────────────────
@@ -66,6 +69,7 @@ import {
 } from "@/lib/monsterGeneration/imageGeneration/moderation/moderation";
 import { getImageProvider } from "@/lib/monsterGeneration/imageGeneration/providers/providers";
 import { getImageStorage } from "@/lib/monsterGeneration/imageGeneration/storage/storage";
+import { resetRateLimitForTests } from "@/lib/security/rateLimit";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -151,6 +155,21 @@ function makeMalformedRequest() {
 			method: "POST",
 			body: "not json {{{{",
 			headers: { "Content-Type": "application/json" },
+		},
+	);
+}
+
+function makeCrossSiteRequest() {
+	return new NextRequest(
+		`http://localhost:3000/api/monsters/${MONSTER_ID}/generate-image`,
+		{
+			method: "POST",
+			body: JSON.stringify(validFormBody),
+			headers: {
+				"Content-Type": "application/json",
+				Origin: "https://evil.example",
+				"Sec-Fetch-Site": "cross-site",
+			},
 		},
 	);
 }
@@ -265,12 +284,21 @@ function wireHappyPath() {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
+	resetRateLimitForTests();
 	vi.clearAllMocks();
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 describe("auth checks", () => {
+	it("returns 403 for cross-site browser requests", async () => {
+		const res = await POST(makeCrossSiteRequest(), makeParams());
+		expect(res.status).toBe(403);
+		const body = await res.json();
+		expect(body.error.code).toBe("cross_site_request");
+		expect(createClientSSROnly).not.toHaveBeenCalled();
+	});
+
 	it("returns 401 when getClaims returns no sub", async () => {
 		vi.mocked(createClientSSROnly).mockResolvedValue(
 			makeSupabaseClient({ sub: null }) as unknown as Awaited<
@@ -398,6 +426,36 @@ describe("job creation failures", () => {
 		expect(res.status).toBe(502);
 		const body = await res.json();
 		expect(body.error.code).toBe("upstream_error");
+	});
+
+	it("does not delete the existing image before a quota 429 response", async () => {
+		vi.mocked(fetchFromDjango).mockImplementation((async (path: string) => {
+			if (path === "/api/monsters/{monster_id}/") {
+				return {
+					ok: true,
+					status: 200,
+					json: vi.fn().mockResolvedValue(mockMonsterResponse),
+				};
+			}
+			return {
+				ok: false,
+				status: 429,
+				json: vi.fn().mockResolvedValue({
+					error: {
+						code: "RATE_LIMITED",
+						message: "Daily limit reached.",
+					},
+				}),
+			};
+		}) as Mock);
+
+		const res = await POST(makeRequest(validFormBody), makeParams());
+
+		expect(res.status).toBe(429);
+		const calls = vi
+			.mocked(fetchFromDjango)
+			.mock.calls.map(([path]) => path as string);
+		expect(calls).not.toContain("/api/monsters/{monster_id}/image/");
 	});
 });
 
@@ -642,6 +700,26 @@ describe("happy path", () => {
 			.mock.calls.map(([path]) => path as string);
 		expect(calls.some((p) => p.includes("mark-running"))).toBe(true);
 		expect(calls.some((p) => p.includes("mark-succeeded"))).toBe(true);
+	});
+
+	it("signs transition endpoint calls with internal HMAC headers", async () => {
+		wireHappyPath();
+
+		await POST(makeRequest(validFormBody), makeParams());
+
+		const markRunningCall = vi
+			.mocked(fetchFromDjango)
+			.mock.calls.find(([path]) => String(path).includes("mark-running"));
+		expect(markRunningCall).toBeDefined();
+		const requestInit = markRunningCall![2] as RequestInit;
+		expect(requestInit.headers).toEqual(
+			expect.objectContaining({
+				"X-Monster-Masher-Internal-Timestamp": expect.any(String),
+				"X-Monster-Masher-Internal-Signature": expect.stringMatching(
+					/^sha256=/,
+				),
+			}),
+		);
 	});
 
 	it("creates the job with the monsterId from the route params", async () => {

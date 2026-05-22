@@ -1,7 +1,5 @@
 // _______________
 // /api/monsters/
-
-// TODO right now, a monster can get made with no image if the image gen job fails. Need a way to handle that gracefully
 //
 // Proxies monster creation to Django. Reads the Supabase session server-side
 // to get the access token, then forwards the JSON body to Django.
@@ -20,6 +18,11 @@ import { type NextApiError } from "@/lib/api/errors";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
 import { moderateMonsterPrompt } from "@/lib/monsterGeneration/imageGeneration/moderation/moderation";
+import { rejectCrossSiteMutatingRequest } from "@/lib/security/requestGuards";
+import {
+	checkRateLimit,
+	rateLimitExceededResponse,
+} from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +42,9 @@ function jsonError({
 export async function POST(
 	request: NextRequest,
 ): Promise<NextResponse<{ monster: Monster } | NextApiError>> {
+	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
+	if (crossSiteResponse) return crossSiteResponse;
+
 	const supabase = await createClientSSROnly();
 
 	const { data: claimsData, error: claimsError } =
@@ -51,6 +57,14 @@ export async function POST(
 			message: "User is not authenticated.",
 		});
 	}
+
+	const rateLimit = checkRateLimit({
+		scope: "monster-create",
+		identifier: claimsData.claims.sub,
+		limit: 60,
+		windowMs: 60 * 60 * 1000,
+	});
+	if (!rateLimit.allowed) return rateLimitExceededResponse(rateLimit);
 
 	const { data: sessionData, error: sessionError } =
 		await supabase.auth.getSession();

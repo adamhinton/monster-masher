@@ -18,6 +18,11 @@ import {
 } from "@/lib/api/schemas/monster/MonsterSchema";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { fetchFromDjango } from "@/lib/django/fetchFromDjango";
+import { rejectCrossSiteMutatingRequest } from "@/lib/security/requestGuards";
+import {
+	checkRateLimit,
+	rateLimitExceededResponse,
+} from "@/lib/security/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -136,9 +141,12 @@ export async function GET(
 
 /** DELETE /api/monsters/[monsterId] — delete a monster via Django */
 export async function DELETE(
-	_request: NextRequest,
+	request: NextRequest,
 	{ params }: { params: Promise<{ monsterId: string }> },
 ): Promise<NextResponse<{ ok: true } | NextApiError>> {
+	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
+	if (crossSiteResponse) return crossSiteResponse;
+
 	const { monsterId } = await params;
 
 	const supabase = await createClientSSROnly();
@@ -153,6 +161,14 @@ export async function DELETE(
 			message: "User is not authenticated.",
 		});
 	}
+
+	const rateLimit = checkRateLimit({
+		scope: "monster-delete",
+		identifier: claimsData.claims.sub,
+		limit: 30,
+		windowMs: 60 * 60 * 1000,
+	});
+	if (!rateLimit.allowed) return rateLimitExceededResponse(rateLimit);
 
 	const { data: sessionData, error: sessionError } =
 		await supabase.auth.getSession();

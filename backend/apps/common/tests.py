@@ -5,7 +5,9 @@ Errors bubble up to /common, particularly for API routes that don't exist
 
 import json
 
-from django.test import TestCase
+from django.conf import settings
+from django.core.cache import cache
+from django.test import TestCase, override_settings
 
 
 class ErrorShapeTests(TestCase):
@@ -100,3 +102,35 @@ class OpenAPISchemaTests(TestCase):
         paths = data.get("paths", {})
         for path in paths:
             self.assertNotIn(".*", path)
+
+
+class ThrottleConfigurationTests(TestCase):
+    def test_drf_default_throttles_are_configured(self):
+        throttle_classes = settings.REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"]
+        self.assertIn("rest_framework.throttling.AnonRateThrottle", throttle_classes)
+        self.assertIn("rest_framework.throttling.UserRateThrottle", throttle_classes)
+        self.assertIn("monster_create", settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"])
+
+
+class AdminLoginRateLimitTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @override_settings(
+        ADMIN_LOGIN_THROTTLE_LIMIT=1,
+        ADMIN_LOGIN_THROTTLE_WINDOW_SECONDS=60,
+    )
+    def test_admin_login_post_is_rate_limited_by_ip(self):
+        first_response = self.client.post(
+            "/admin/login/",
+            {"username": "admin", "password": "wrong"},
+            REMOTE_ADDR="203.0.113.10",
+        )
+        second_response = self.client.post(
+            "/admin/login/",
+            {"username": "admin", "password": "wrong"},
+            REMOTE_ADDR="203.0.113.10",
+        )
+
+        self.assertNotEqual(first_response.status_code, 429)
+        self.assertEqual(second_response.status_code, 429)

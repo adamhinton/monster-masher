@@ -16,6 +16,12 @@ import { z } from "zod";
 import { getSafeNextPath } from "@/lib/auth/redirects";
 import { createClientSSROnly } from "@/lib/supabase/server";
 import { NextApiError } from "@/lib/api/errors";
+import { rejectCrossSiteMutatingRequest } from "@/lib/security/requestGuards";
+import {
+	checkRateLimit,
+	clientIpFromRequest,
+	rateLimitExceededResponse,
+} from "@/lib/security/rateLimit";
 
 const signInRequestSchema = z.object({
 	email: z.email().trim().toLowerCase(),
@@ -33,6 +39,9 @@ export async function POST(
 	// Use SignInRequestSchema. email and optional "next" path to redirect after signin. Probably /gallery
 	request: NextRequest,
 ): Promise<NextResponse<SignInResponse>> {
+	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
+	if (crossSiteResponse) return crossSiteResponse;
+
 	let raw: unknown;
 
 	try {
@@ -54,6 +63,14 @@ export async function POST(
 	}
 
 	const { email, next: rawNext } = parsed.data;
+	const rateLimit = checkRateLimit({
+		scope: "auth-sign-in",
+		identifier: `${clientIpFromRequest(request)}:${email}`,
+		limit: 10,
+		windowMs: 15 * 60 * 1000,
+	});
+	if (!rateLimit.allowed) return rateLimitExceededResponse(rateLimit);
+
 	/**Redirect route after successful sign-in */
 	const next = getSafeNextPath(rawNext ?? null);
 
