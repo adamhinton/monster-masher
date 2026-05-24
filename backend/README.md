@@ -36,6 +36,24 @@ OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES gunicorn config.wsgi:application --bind 
 Visit:
 http://127.0.0.1:8000/
 
+## Before committing changes
+
+Note to future self, these steps are duplicated in the frontend README.
+
+1. Regenerate OpenAPI schema on the backend, and generate new API types in the frontend.
+   - From /backend (this assumes you've already activated the virtual environment):
+     `python manage.py spectacular --file openapi.yaml`
+
+   - From /frontend:
+     `npm run generate:api`
+
+2. Run `npx tsc` to check for type errors
+   - While not everything is covered, this should catch most API contract drift issues between backend schema and frontend schemas/types.ts.
+   - If you see errors here after regenerating the API, it likely means you forgot to update some of the frontend code that calls the affected endpoint(s) to match the new contract.
+3. Run `npm run lint`
+4. From /frontend, run `npm run test`
+5. From /backend, run `python manage.py test`
+
 ## API Endpoints
 
 ### Health check
@@ -309,3 +327,7 @@ Tests live alongside the code they cover:
 - `apps/common/tests.py` — error response shape and `/api/` conventions
 
 No test hits a network endpoint or external service. Keep it that way.
+
+```
+
+```

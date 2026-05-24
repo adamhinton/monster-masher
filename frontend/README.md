@@ -25,6 +25,24 @@ npm run generate:api
 
 This writes `src/lib/api/__generated__/types.ts`. Do not edit that file manually — it is machine-generated and committed to the repo. Run the command and commit the output whenever the backend OpenAPI schema changes.
 
+## Before committing changes
+
+Note to future self, these steps are duplicated in the backend README.
+
+1. Regenerate OpenAPI schema on the backend, and generate new API types in the frontend.
+   - From /backend (this assumes you've already activated the virtual environment):
+     `python manage.py spectacular --file openapi.yaml`
+
+   - From /frontend:
+     `npm run generate:api`
+
+2. Run `npx tsc` to check for type errors
+   - While not everything is covered, this should catch most API contract drift issues between backend schema and frontend schemas/types.ts.
+   - If you see errors here after regenerating the API, it likely means you forgot to update some of the frontend code that calls the affected endpoint(s) to match the new contract.
+3. Run `npm run lint`
+4. From /frontend, run `npm run test`
+5. From /backend, run `python manage.py test`
+
 ## Adding a New API Call
 
 For every new API endpoint call:
@@ -34,18 +52,21 @@ For every new API endpoint call:
    ```ts
    type _Check = Assert<AssertExact<z.output<typeof MySchema>, OpenAPIType>>;
    ```
-   If the Zod schema drifts from the OpenAPI type, `tsc` will fail on that line with a descriptive error showing both sides of the mismatch.
-3. Wrap the `Schema.parse(data)` call in a try/catch that sends to Sentry before re-throwing:
-   ```ts
-   try {
-   	return MySchema.parse(data);
-   } catch (err) {
-   	Sentry.captureException(err, {
-   		tags: { type: "api_contract_drift", endpoint: "/api/..." },
-   	});
-   	throw err;
-   }
-   ```
+
+````
+
+If the Zod schema drifts from the OpenAPI type, `tsc` will fail on that line with a descriptive error showing both sides of the mismatch. 3. Wrap the `Schema.parse(data)` call in a try/catch that sends to Sentry before re-throwing:
+
+```ts
+try {
+	return MySchema.parse(data);
+} catch (err) {
+	Sentry.captureException(err, {
+		tags: { type: "api_contract_drift", endpoint: "/api/..." },
+	});
+	throw err;
+}
+```
 
 See `src/lib/api/schemas/health.ts` and `src/lib/api/health.ts` for a working example.
 
@@ -155,3 +176,4 @@ type AuthState =
 - `monsterDeleted(monsterId)` — removes a monster by id
 
 Initial state is derived server-side in the root layout: Supabase session checked → Django `POST /api/me/bootstrap/` fetched and Zod-validated → hydrated into Redux before first render.
+````
