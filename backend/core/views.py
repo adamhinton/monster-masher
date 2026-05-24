@@ -6,7 +6,7 @@ uptime monitoring and by the frontend smoke test to confirm the API is reachable
 """
 
 from rest_framework import serializers
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
 from sentry_sdk import logger as sentry_logger
 from drf_spectacular.utils import extend_schema, inline_serializer
