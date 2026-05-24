@@ -17,6 +17,16 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
 	/* config options here */
 	typedRoutes: true,
+	images: {
+		remotePatterns: [
+			// Supabase URLs which is where I store monster images
+			{
+				protocol: "https",
+				hostname: "jspbqekckumhdgqgthxc.supabase.co",
+				pathname: "/storage/v1/object/public/**",
+			},
+		],
+	},
 	async headers() {
 		return [
 			{

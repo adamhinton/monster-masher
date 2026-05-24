@@ -1,12 +1,18 @@
 // TODO flesh this out when project is more defined
 
 import Link from "next/link";
+import { GitHubIcon, LinkedInIcon } from "@/components/icons/BrandIcons";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/darkTheming/ThemeToggle";
 import { MobileNav } from "@/components/layout/MobileNav";
 import HeaderAuthButton from "@/components/layout/Header/HeaderAuthButton";
+import { Route } from "next";
 
-const navLinks = [
+const navLinks: {
+	href: Route;
+	label: string;
+}[] = [
+	{ href: "/about", label: "About" },
 	{ href: "/create", label: "Create" },
 	{ href: "/gallery", label: "Gallery" },
 ] as const;
@@ -54,9 +60,29 @@ export function Header() {
 					))}
 				</nav>
 
-				{/* Right side: theme toggle + auth + mobile nav trigger */}
+				{/* Right side: external links + theme toggle + auth + mobile nav trigger */}
 				<div className="flex items-center gap-2">
-					<div className="hidden md:flex md:items-center md:gap-2">
+					<div className="hidden md:flex md:items-center md:gap-1">
+						{/* External profile links */}
+						<Link
+							href="https://github.com/adamhinton/monster-masher"
+							target="_blank"
+							rel="noopener noreferrer"
+							aria-label="Adam Hinton on GitHub (opens in new tab)"
+							className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+						>
+							<GitHubIcon className="size-4" aria-hidden="true" />
+						</Link>
+						<Link
+							href="https://www.linkedin.com/in/adam-hinton/"
+							target="_blank"
+							rel="noopener noreferrer"
+							aria-label="Adam Hinton on LinkedIn (opens in new tab)"
+							className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+						>
+							<LinkedInIcon className="size-4" aria-hidden="true" />
+						</Link>
+						<Separator orientation="vertical" className="mx-1 h-5" />
 						<ThemeToggle />
 						<HeaderAuthButton />
 					</div>

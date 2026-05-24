@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu, LogOut } from "lucide-react";
+import { GitHubIcon, LinkedInIcon } from "@/components/icons/BrandIcons";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -21,10 +22,14 @@ import { useAppDispatch } from "../../../store/hooks";
 import { authSignedOut } from "../../../store/authSlice";
 import { Route } from "next";
 
-const navLinks = [
+const navLinks: {
+	href: Route;
+	label: string;
+}[] = [
+	{ href: "/about", label: "About" },
 	{ href: "/create", label: "Create" },
 	{ href: "/gallery", label: "Gallery" },
-] as const;
+];
 
 export function MobileNav() {
 	const dispatch = useAppDispatch();
@@ -77,6 +82,32 @@ export function MobileNav() {
 						</Link>
 					))}
 				</nav>
+				<Separator className="my-4" />
+				{/* External links */}
+				<div className="flex items-center gap-3 px-1">
+					<Link
+						href="https://github.com/adamhinton/monster-masher"
+						target="_blank"
+						rel="noopener noreferrer"
+						aria-label="Adam Hinton on GitHub (opens in new tab)"
+						className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+						onClick={() => setIsOpen(false)}
+					>
+						<GitHubIcon className="size-4 shrink-0" aria-hidden="true" />
+						GitHub
+					</Link>
+					<Link
+						href="https://www.linkedin.com/in/adam-hinton/"
+						target="_blank"
+						rel="noopener noreferrer"
+						aria-label="Adam Hinton on LinkedIn (opens in new tab)"
+						className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+						onClick={() => setIsOpen(false)}
+					>
+						<LinkedInIcon className="size-4 shrink-0" aria-hidden="true" />
+						LinkedIn
+					</Link>
+				</div>
 				<Separator className="my-4" />
 				<div className="flex items-center justify-between px-1">
 					<span className="text-sm text-muted-foreground">Theme</span>

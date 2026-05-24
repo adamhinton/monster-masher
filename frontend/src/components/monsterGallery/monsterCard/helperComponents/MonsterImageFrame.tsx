@@ -22,13 +22,21 @@ import { cn } from "@/lib/utils";
 
 /**
  * Side length in px for each variant. The frame is always perfectly square.
- * Adjust here to resize all MonsterImageFrame instances globally.
+ * Adjust here to resize all monster image frame instances globally.
  */
-const SIDE_PX = {
+export const MONSTER_FRAME_SIDE_PX = {
 	compact: 80,
 	card: 240,
 	detail: 480,
 } as const;
+
+/** Shared outer box-shadow for the monster image frame. Exported for use in ExampleMonsterImage.tsx */
+export const MONSTER_FRAME_OUTER_SHADOW =
+	"0 0 48px var(--brand-primary-glow), 0 2px 16px oklch(0 0 0 / 0.06)";
+
+/** Base className for the outer figure element shared across all frame variants. */
+export const MONSTER_FRAME_BASE_CLASS =
+	"relative shrink-0 overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm";
 
 type Variant = "card" | "detail" | "compact";
 
@@ -43,6 +51,20 @@ export interface MonsterImageFrameProps {
 	isExpandable?: boolean;
 	/** Extra Tailwind classes applied to the outer figure element. */
 	className?: string;
+}
+
+/**
+ * Inset glow ring decorating the inside edge of the frame.
+ * Shared between MonsterImageFrame and ExampleMonsterImage.
+ */
+export function InsetGlowOverlay() {
+	return (
+		<div
+			aria-hidden="true"
+			className="pointer-events-none absolute inset-0 rounded-3xl"
+			style={{ boxShadow: "inset 0 0 40px var(--brand-accent-glow)" }}
+		/>
+	);
 }
 
 /**
@@ -124,7 +146,7 @@ export function MonsterImageFrame({
 	const [isLoaded, setIsLoaded] = useState(false);
 
 	/** Pixel side length derived from the variant constant. */
-	const side = SIDE_PX[variant];
+	const side = MONSTER_FRAME_SIDE_PX[variant];
 
 	/** Null when no image has been generated yet, or when the URL is explicitly null. */
 	const imageUrl = image?.public_image_url ?? null;
@@ -138,15 +160,11 @@ export function MonsterImageFrame({
 	return (
 		<Dialog>
 			<figure
-				className={cn(
-					"relative shrink-0 overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm",
-					className,
-				)}
+				className={cn(MONSTER_FRAME_BASE_CLASS, className)}
 				style={{
 					width: side,
 					height: side,
-					boxShadow:
-						"0 0 48px var(--brand-primary-glow), 0 2px 16px oklch(0 0 0 / 0.06)",
+					boxShadow: MONSTER_FRAME_OUTER_SHADOW,
 				}}
 			>
 				<ImagePlaceholder variant={variant} aria-hidden={imageVisible} />
@@ -167,11 +185,7 @@ export function MonsterImageFrame({
 					/>
 				)}
 
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute inset-0 rounded-3xl"
-					style={{ boxShadow: "inset 0 0 40px var(--brand-accent-glow)" }}
-				/>
+				<InsetGlowOverlay />
 
 				{variant !== "compact" && <CornerMarkers />}
 

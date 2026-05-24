@@ -1,0 +1,177 @@
+// _______________
+// Example detail page for a single example monster at /gallery/example/[monsterId].
+//
+// Public: no auth required. Looks up the monster from the static example set.
+// Renders notFound() for unknown IDs so Next.js shows the 404 page.
+//
+// Structured like /gallery/[monsterID] but without Redux, deletion, or generation.
+// generateStaticParams pre-renders all six example monsters at build time.
+// _______________
+
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, Sparkles } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { PageContainer } from "@/components/layout/PageContainer";
+import { MonsterBadges } from "@/components/monsterGallery/monsterCard/helperComponents/MonsterBadges";
+import { MonsterTraitList } from "@/components/monsterGallery/monsterCard/helperComponents/MonsterTraitList";
+import { ExampleDownloadButton } from "@/components/landingPage/ExampleDownloadButton";
+import { ExampleMonsterImage } from "@/components/landingPage/ExampleMonsterImage";
+import {
+	getExampleMonsterById,
+	exampleMonsterIds,
+} from "@/lib/landingPage/landingExampleData";
+import z from "zod";
+import { UUID } from "crypto";
+
+interface ExampleDetailPageProps {
+	params: Promise<{ monsterId: string }>;
+}
+
+export async function generateStaticParams() {
+	return exampleMonsterIds.map((id) => ({ monsterId: id }));
+}
+
+export async function generateMetadata({ params }: ExampleDetailPageProps) {
+	const { monsterId } = await params;
+	// This should never happen, but I use it to validate that it's a UUID
+	if (!z.uuid().safeParse(monsterId).success) {
+		throw new Error(`Invalid monsterId: ${monsterId}`);
+	}
+
+	// We verified just above that it's a UUID
+	// There's a prettier way to do this but I'm too lazy
+	const monster = getExampleMonsterById(monsterId as unknown as UUID);
+	if (!monster) return {};
+	return {
+		title: `${monster.display_name} — Monster Masher`,
+		description: monster.tagline,
+	};
+}
+
+export default async function ExampleDetailPage({
+	params,
+}: ExampleDetailPageProps) {
+	const { monsterId } = await params;
+	// This should never happen, but I use it to validate that it's a UUID
+	if (!z.uuid().safeParse(monsterId).success) {
+		throw new Error(`Monster ID needs to be a UUID: ${monsterId}`);
+	}
+
+	// We verified just above that it's a valid UUID
+	// There's a prettier way to do this but I'm too lazy
+	const monster = getExampleMonsterById(monsterId as unknown as UUID);
+
+	if (!monster) {
+		notFound();
+	}
+
+	return (
+		<PageContainer size="detail">
+			<main>
+				{/* ── Back navigation ───────────────────────────────────────── */}
+				<nav aria-label="Back navigation" className="mb-6">
+					<Link
+						href="/gallery/example"
+						className={buttonVariants({ variant: "ghost", size: "sm" })}
+					>
+						<ArrowLeft aria-hidden="true" className="size-4" />
+						Example gallery
+					</Link>
+				</nav>
+
+				{/* ── Two-column dossier ────────────────────────────────────── */}
+				<article
+					aria-labelledby="example-monster-name"
+					className="grid grid-cols-1 gap-8 lg:grid-cols-[480px_1fr]"
+				>
+					{/* Left column — image */}
+					<div className="flex justify-center lg:justify-start">
+						<ExampleMonsterImage monster={monster} variant="detail" />
+					</div>
+
+					{/* Right column — dossier */}
+					<div className="flex flex-col gap-6">
+						{/* Name + element badge */}
+						<header className="flex flex-col gap-3">
+							<h1
+								id="example-monster-name"
+								className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl"
+							>
+								{monster.display_name}
+							</h1>
+							<MonsterBadges traits={monster.traits} variant="card" />
+						</header>
+
+						{/* Tagline */}
+						<p className="text-lg text-muted-foreground">{monster.tagline}</p>
+
+						<Separator />
+
+						{/* Flavor text */}
+						{monster.flavor_text && (
+							<Card>
+								<CardHeader className="pb-2">
+									<h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+										Lore
+									</h2>
+								</CardHeader>
+								<CardContent>
+									<p className="text-sm leading-relaxed text-foreground">
+										{monster.flavor_text}
+									</p>
+								</CardContent>
+							</Card>
+						)}
+
+						{/* Traits */}
+						<section aria-labelledby="traits-heading">
+							<h2
+								id="traits-heading"
+								className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground"
+							>
+								Traits
+							</h2>
+							<MonsterTraitList traits={monster.traits} />
+						</section>
+
+						{/* Example badge */}
+						<div className="flex items-center gap-2">
+							<Badge variant="secondary">Example monster</Badge>
+							<span className="text-xs text-muted-foreground">
+								Generated by Monster Masher
+							</span>
+						</div>
+
+						{/* CTA */}
+						<div className="flex flex-col gap-3 pt-2 sm:flex-row">
+							<ExampleDownloadButton
+								imageUrl={monster.image.public_image_url}
+								filename={monster.download_filename}
+								monsterName={monster.display_name}
+								className="sm:h-11 sm:px-8 sm:text-base"
+							/>
+							<Link href="/create" className={buttonVariants({ size: "lg" })}>
+								<Sparkles aria-hidden="true" className="size-4" />
+								Create my monster
+							</Link>
+							<Link
+								href="/gallery/example"
+								className={buttonVariants({
+									variant: "outline",
+									size: "lg",
+								})}
+							>
+								<ArrowLeft aria-hidden="true" className="size-4" />
+								Back to examples
+							</Link>
+						</div>
+					</div>
+				</article>
+			</main>
+		</PageContainer>
+	);
+}

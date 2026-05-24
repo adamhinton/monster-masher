@@ -1,14 +1,17 @@
 // TODO fill this out when project is more defined
 
+import Link from "next/link";
+import { GitHubIcon, LinkedInIcon } from "@/components/icons/BrandIcons";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
 const techStack = [
 	"Next.js",
-	"Django",
-	"Supabase",
 	"TypeScript",
-	"ShadCN UI",
+	"Django REST",
+	"Python",
+	"PostgreSQL",
+	"OpenAI",
 ] as const;
 
 export function Footer() {
@@ -28,16 +31,28 @@ export function Footer() {
 						</p>
 					</div>
 
-					{/* Links — TODO uncomment and fill in once repo is public */}
-					<div className="flex flex-col gap-2 text-sm text-muted-foreground">
-						{/* <Link
-							href="https://github.com/YOUR_USERNAME/monster-masher"
+					{/* External links */}
+					<div className="flex items-center gap-3">
+						<Link
+							href="https://github.com/adamhinton/monster-masher"
 							target="_blank"
 							rel="noopener noreferrer"
-							className="transition-colors hover:text-foreground"
+							className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+							aria-label="Adam Hinton on GitHub (opens in new tab)"
 						>
-							GitHub →
-						</Link> */}
+							<GitHubIcon className="size-4 shrink-0" aria-hidden="true" />
+							GitHub
+						</Link>
+						<Link
+							href="https://www.linkedin.com/in/adam-hinton/"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+							aria-label="Adam Hinton on LinkedIn (opens in new tab)"
+						>
+							<LinkedInIcon className="size-4 shrink-0" aria-hidden="true" />
+							LinkedIn
+						</Link>
 					</div>
 				</div>
 
