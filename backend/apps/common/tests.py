@@ -119,6 +119,12 @@ class AdminLoginRateLimitTests(TestCase):
     @override_settings(
         ADMIN_LOGIN_THROTTLE_LIMIT=1,
         ADMIN_LOGIN_THROTTLE_WINDOW_SECONDS=60,
+        STORAGES={
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {
+                "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+            },
+        },
     )
     def test_admin_login_post_is_rate_limited_by_ip(self):
         first_response = self.client.post(
