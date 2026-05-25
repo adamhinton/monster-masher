@@ -3,7 +3,7 @@ Tests for the /health endpoint.
 This endpoint is very simple as of 4.30.26, just returns {status: "ok"}
 """
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 
 class HealthEndpointTests(TestCase):
@@ -21,6 +21,25 @@ class HealthEndpointTests(TestCase):
         """
         response = self.client.post("/health")
         self.assertEqual(response.status_code, 405)
+
+    @override_settings(
+        REST_FRAMEWORK={
+            "DEFAULT_THROTTLE_CLASSES": [
+                "rest_framework.throttling.AnonRateThrottle",
+                "rest_framework.throttling.UserRateThrottle",
+            ],
+            "DEFAULT_THROTTLE_RATES": {
+                "anon": "1/minute",
+                "user": "1/minute",
+            },
+        }
+    )
+    def test_health_is_not_throttled(self):
+        """Health endpoint should never be throttled, because Render pings it every five seconds for uptime monitoring."""
+        first = self.client.get("/health")
+        second = self.client.get("/health")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
 
 
 class HealthEndpointTrailingSlashTests(TestCase):

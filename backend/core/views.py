@@ -22,10 +22,10 @@ from drf_spectacular.utils import extend_schema, inline_serializer
         )
     },
 )
+@api_view(["GET"])
 @throttle_classes(
     []
 )  # no throttling for health check; Render pings it every five seconds
-@api_view(["GET"])
 def health(request):
     """Health check endpoint."""
     return Response({"status": "ok"})
