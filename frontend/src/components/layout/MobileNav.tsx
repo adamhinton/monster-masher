@@ -10,6 +10,7 @@ import { buttonVariants } from "@/components/ui/button";
 import {
 	Sheet,
 	SheetContent,
+	SheetDescription,
 	SheetHeader,
 	SheetTitle,
 	SheetTrigger,
@@ -69,6 +70,9 @@ export function MobileNav() {
 			<SheetContent side="right" className="w-72">
 				<SheetHeader>
 					<SheetTitle className="text-left">Monster Masher</SheetTitle>
+					<SheetDescription className="text-left">
+						100% free monster portraits. No subscriptions.
+					</SheetDescription>
 				</SheetHeader>
 				<nav className="mt-6 flex flex-col gap-1">
 					{navLinks.map((link) => (

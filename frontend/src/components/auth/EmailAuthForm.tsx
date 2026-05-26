@@ -139,7 +139,7 @@ export function EmailAuthForm({ nextPath }: EmailAuthFormProps) {
 					</p>
 				) : (
 					<p className="text-sm text-muted-foreground">
-						No password needed. We’ll send you a secure magic link.
+						No password or payment needed. We’ll send you a secure magic link.
 					</p>
 				)}
 			</div>

@@ -44,7 +44,7 @@ export function LandingHero() {
 					<p className="max-w-lg text-lg leading-relaxed text-muted-foreground sm:text-xl">
 						Describe a weird little creature, generate an original monster
 						portrait, then download it as a share-ready image or save your
-						favorites for later.
+						favorites for later. A 100% free portfolio project.
 					</p>
 				</div>
 

@@ -70,7 +70,8 @@ export function Footer() {
 				</div>
 
 				<p className="mt-6 text-xs text-muted-foreground">
-					A portfolio project. Not affiliated with any game franchise.
+					A 100% free portfolio project. Not affiliated with any game
+					franchise.
 				</p>
 			</div>
 		</footer>

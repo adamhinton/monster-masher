@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { GitHubIcon, LinkedInIcon } from "@/components/icons/BrandIcons";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/darkTheming/ThemeToggle";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -22,14 +23,22 @@ export function Header() {
 		<header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/70">
 			<div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
 				{/* Logo / brand */}
-				<Link
-					href="/"
-					className="flex items-center gap-2 font-semibold text-foreground transition-colors hover:text-primary"
-				>
-					{/* Emoji placeholder — TODO replace with real logo asset later */}
-					<span aria-hidden="true">🧌</span>
-					<span>Monster Masher</span>
-				</Link>
+				<div className="flex items-center gap-2">
+					<Link
+						href="/"
+						className="flex items-center gap-2 font-semibold text-foreground transition-colors hover:text-primary"
+					>
+						{/* Emoji placeholder — TODO replace with real logo asset later */}
+						<span aria-hidden="true">🧌</span>
+						<span>Monster Masher</span>
+					</Link>
+					<Badge
+						variant="secondary"
+						className="hidden border border-border/70 bg-card/80 text-[11px] font-semibold sm:inline-flex"
+					>
+						100% free
+					</Badge>
+				</div>
 
 				{/* If in dev, link to /dev/gallery 
 				TODO delete this after testing is done

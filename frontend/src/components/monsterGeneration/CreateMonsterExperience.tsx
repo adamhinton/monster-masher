@@ -347,7 +347,9 @@ export function CreateMonsterExperience() {
 				<CardHeader>
 					<CardTitle>Create a Monster</CardTitle>
 					<CardDescription>
-						Fill in your monster&apos;s traits and kick off image generation.
+						Fill in your monster&apos;s traits and kick off image generation.{" "}
+						Monster Masher is 100% free; daily limits just keep it available
+						for everyone.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -362,7 +364,8 @@ export function CreateMonsterExperience() {
 					{imageGensRemaining !== null && (
 						<p className="mt-3 text-sm text-muted-foreground">
 							{imageGensRemaining.num_remaining} of{" "}
-							{imageGensRemaining.max_per_day} image generations remaining today
+							{imageGensRemaining.max_per_day} free image generations remaining
+							today
 						</p>
 					)}
 				</CardContent>

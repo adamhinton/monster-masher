@@ -1,18 +1,5 @@
 // ____________
 // About / landing page — the recruiter-facing entry point for Monster Masher.
-//
-// Core hook: Your next profile picture should have fangs.
-//
-// Block order (each has a stable anchor id for the page guide):
-//   #download-ready   — download showcase: portraits as PNGs
-//   #how-it-works     — four-step process
-//   #sample-downloads — three example monsters
-//   #example-gallery  — gallery teaser linking to /gallery/example
-//   #tech-stack       — credibility badges
-//   #try-it           — final CTA to /create
-//
-// Server Component by default. Client interactivity is scoped to
-// ExampleMonsterImage (Sentry image error reporting).
 // ____________
 
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -28,9 +15,22 @@ import { FinalCtaBlock } from "@/components/landingPage/FinalCtaBlock";
 export default function AboutPage() {
 	return (
 		<PageContainer size="marketing">
-			<main className="flex flex-col gap-24 py-8 sm:py-16">
+			<main className="flex flex-col gap-24 py-2 sm:py-2">
 				{/* ── Hero ──────────────────────────────────────────────────── */}
-				<LandingHero />
+				<section aria-label="Introduction" className="flex flex-col gap-6">
+					<LandingHero />
+
+					<aside
+						aria-label="Pricing"
+						className="rounded-2xl border border-border/60 bg-card px-5 py-4 text-sm text-muted-foreground shadow-sm"
+					>
+						<strong className="font-semibold text-foreground">
+							100% free.
+						</strong>{" "}
+						Create, save, and download monsters without subscriptions, paid
+						tiers, or checkout.
+					</aside>
+				</section>
 
 				{/* ── Page guide ────────────────────────────────────────────── */}
 				<TableOfContents />
