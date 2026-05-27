@@ -1,22 +1,20 @@
-# Purpose
+# Monster Masher — Backend
 
-This is the Django backend for the Monster Masher project.
+> This README covers the **Django backend** only. For a project overview, getting-started guide, and deployment summary, see the [root README](../README.md).
 
 ## Start the project
 
 If running for the first time:
-
-<!-- Note to self, make these instructions better before publishing project -->
 
 Git checkout root folder of project, then:
 cd backend (if in root folder)
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env # then fill in real values (DJANGO_SECRET_KEY and DATABASE_URL at minimum)
 
-`.env.example` lists all env vars the project knows about, with safe placeholder
-values. The real `.env` is gitignored — never commit it. On Render, env vars are
+# Create backend/.env — use the Backend section of .env.example (repo root) as a guide
+
+The real `.env` is gitignored — never commit it. On Render, env vars are
 set through the dashboard instead of a `.env` file, so `load_dotenv()` is a no-op
 in production.
 

@@ -1,5 +1,7 @@
 # Monster Masher — Frontend
 
+> This README covers the **Next.js frontend** only. For a project overview, getting-started guide, and deployment summary, see the [root README](../README.md).
+
 Next.js App Router frontend for Monster Masher.
 
 ## Getting Started
@@ -8,11 +10,11 @@ Next.js App Router frontend for Monster Masher.
 npm run dev
 ```
 
-Copy `.env.local.example` to `.env.local` and fill in values before running.
+Create `frontend/.env.local` using the Frontend section of `.env.example` at the repo root.
 
 ## Environment Variables
 
-Check `.env.local.example` for required environment variables.
+See `.env.example` at the repo root (Frontend section) for all required variables.
 
 ## Regenerating API Types
 
