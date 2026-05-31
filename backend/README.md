@@ -258,19 +258,11 @@ SENTRY_ENVIRONMENT=production
 
 ---
 
-## Code Conventions
-
-- **Module docstrings**: Triple-quoted docstrings at the top of Python files that benefit from context (views, models, serializers, middleware, management commands). Not needed for trivial `__init__.py` files.
-- **Function/class docstrings**: On non-obvious functions and classes.
-- **Comments**: Only when they explain _why_, not _what_. If the code reads clearly, don't comment it.
-
----
-
 ## API Conventions
 
 ### Error response shape
 
-All API errors use this shape:
+All API errors use this shape (defined in the type NextApiError):
 
 ```json
 {

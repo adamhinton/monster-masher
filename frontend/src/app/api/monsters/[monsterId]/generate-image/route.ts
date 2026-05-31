@@ -420,11 +420,7 @@ export async function POST(
 	const maybeSendEmailNotification = async (
 		scenario: ImageGenerationDoneScenario,
 	) => {
-		console.log("maybeSendEmailNotification called with scenario:", scenario);
 		if (!requestOptions.should_email_when_done || !userEmail) {
-			console.log(
-				"Email notification skipped: should_email_when_done is false or userEmail is missing",
-			);
 			return;
 		}
 		await notifyImageGenerationDone({

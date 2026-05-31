@@ -150,38 +150,6 @@ Open two terminal tabs — one running `python manage.py runserver` in `backend/
 
 All env vars are documented in [`.env.example`](.env.example) at the repo root, split into **Frontend** and **Backend** sections. There is no single `.env` file — each app has its own (`frontend/.env.local` and `backend/.env`). The highlights:
 
-### Backend (`backend/.env`)
-
-| Variable                  | Description                                                                                                                   | Required |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
-| `DJANGO_SECRET_KEY`       | Long random string for Django crypto operations                                                                               | ✓        |
-| `DATABASE_URL`            | Supabase PostgreSQL connection string. Use direct connection or session pooler — **never** the transaction pooler (port 6543) | ✓        |
-| `SUPABASE_URL`            | Your Supabase project URL (used for JWT verification)                                                                         | ✓        |
-| `SUPABASE_JWT_ALGORITHM`  | `ES256` for new projects, `RS256` for older ones — check Supabase Dashboard → Authentication → JWT Signing Keys               | ✓        |
-| `CORS_ALLOWED_ORIGINS`    | `http://localhost:3000` for local dev                                                                                         | ✓        |
-| `NEXT_SERVER_SECRET`      | Shared secret for internal frontend→backend job-transition calls — must match the frontend value                              | ✓        |
-| `SENTRY_DSN`              | Sentry project DSN (can be left blank for local dev)                                                                          | Optional |
-| `MAX_GENERATIONS_PER_DAY` | Max image generations per user per 24 h — must match the frontend value (default: 6)                                          | Optional |
-
-### Frontend (`frontend/.env.local`)
-
-| Variable                               | Description                                                                                     | Required                      |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------- |
-| `NEXT_PUBLIC_DJANGO_API_BASE_URL`      | Backend URL — `http://localhost:8000` for local dev                                             | ✓                             |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Your Supabase project URL                                                                       | ✓                             |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable (anon) key                                                                 | ✓                             |
-| `NEXT_PUBLIC_APP_URL`                  | App's own base URL — `http://localhost:3000` for local dev                                      | ✓                             |
-| `SUPABASE_SECRET_KEY`                  | Supabase secret (service role) key — server-side only, never exposed to the browser             | ✓                             |
-| `SUPABASE_STORAGE_BUCKET`              | Name of the Supabase Storage bucket for images (e.g. `monster-images`)                          | ✓                             |
-| `RESEND_API_KEY`                       | Resend API key for transactional email delivery                                                 | ✓                             |
-| `NEXT_SERVER_SECRET`                   | Shared secret for internal frontend→backend job-transition calls — must match the backend value | ✓                             |
-| `IMAGE_GENERATION_MODE`                | `fake` skips real API calls; `real` calls OpenAI via Vercel AI Gateway                          | Optional (defaults to `fake`) |
-| `AI_GATEWAY_API_KEY`                   | Vercel AI Gateway API key (required when `IMAGE_GENERATION_MODE=real`)                          | Required when mode is `real`  |
-| `AI_IMAGE_MODEL`                       | Image model to use (e.g. `openai/gpt-image-2`)                                                  | Required when mode is `real`  |
-| `OPENAI_API_KEY`                       | OpenAI key used for prompt moderation (required when `IMAGE_GENERATION_MODE=real`)              | Required when mode is `real`  |
-| `SENTRY_AUTH_TOKEN`                    | Only needed for production builds that upload source maps                                       | Optional                      |
-| `MAX_GENERATIONS_PER_DAY`              | Max image generations per user per 24 h — must match the backend value (default: 6)             | Optional                      |
-
 ---
 
 ## Development Workflow

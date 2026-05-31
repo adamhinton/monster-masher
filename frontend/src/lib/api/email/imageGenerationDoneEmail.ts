@@ -74,11 +74,6 @@ export async function notifyImageGenerationDone({
 	monsterId,
 }: NotifyImageGenerationDoneParams): Promise<SendEmailResponse> {
 	try {
-		console.log("notifyImageGenerationDone called with:", {
-			email,
-			scenario,
-			monsterName,
-		});
 		const url = `${env.appUrl}/api/email/image-generation-done`;
 		const response = await fetch(url, {
 			method: "POST",
@@ -93,10 +88,6 @@ export async function notifyImageGenerationDone({
 				...(monsterId !== undefined ? { monsterId } : {}),
 			}),
 		});
-		console.log(
-			"response inside imageGenerationDoneEmail.ts from POST /api/email/image-generation/done:",
-			response,
-		);
 
 		const responseBody: unknown = await response.json();
 

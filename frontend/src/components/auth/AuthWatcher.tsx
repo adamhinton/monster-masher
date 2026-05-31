@@ -113,7 +113,6 @@ export function AuthWatcher() {
 				}
 
 				// Logged in successfully, set profile in global redux state
-				console.log("parsed.data.user:", parsed.data.user);
 				dispatch(authSignedIn(parsed.data.user));
 			} catch (error) {
 				if (!isAbortError(error)) {

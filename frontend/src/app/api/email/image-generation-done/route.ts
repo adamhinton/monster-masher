@@ -91,11 +91,6 @@ export async function POST(
 	const crossSiteResponse = rejectCrossSiteMutatingRequest(request);
 	if (crossSiteResponse) return crossSiteResponse;
 
-	console.log(
-		"Received request to /api/email/image-generation-done",
-		// accessToken,
-	);
-
 	// ── Step 1: Verify Supabase session via JWT in Authorization header ────────
 	//
 	// We extract the access token from the Authorization header so this route
@@ -122,13 +117,6 @@ export async function POST(
 	const supabase = await createClientSSROnly();
 	const { data: userData, error: authError } =
 		await supabase.auth.getUser(accessToken);
-
-	// console.log("data in  api/email/image-generation-done/route.ts:", data);
-	// console.log("data", data);
-	console.log(
-		"userData in api/email/image-generation-done/route.ts:",
-		userData,
-	);
 
 	if (authError || !userData.user) {
 		return NextResponse.json<NextApiError>(

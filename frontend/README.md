@@ -51,9 +51,12 @@ For every new API endpoint call:
 
 1. Write a Zod schema in `src/lib/api/schemas/` (one file per resource/endpoint group).
 2. Add a compile-time drift check at the bottom of the schema file:
+
    ```ts
    type _Check = Assert<AssertExact<z.output<typeof MySchema>, OpenAPIType>>;
    ```
+
+   See MonsterSchema.ts for an example.
 
 ````
 
@@ -70,7 +73,7 @@ try {
 }
 ```
 
-See `src/lib/api/schemas/health.ts` and `src/lib/api/health.ts` for a working example.
+See `src/lib/api/schemas/health.ts` and `src/lib/api/health.ts` or `src/lib/api/schemas/monster/monsterSchema.ts` for a working example.
 
 ---
 
@@ -84,7 +87,7 @@ Auth is handled by Next.js + Supabase Auth. Magic links are delivered by Resend.
 2. `POST /api/auth/sign-in` calls Supabase, which sends a magic link email via Resend.
 3. User clicks the link — browser hits `GET /api/auth/callback?code=...&next=...`.
 4. Callback exchanges the code for a Supabase session (sets auth cookies) and redirects to the safe `next` path.
-5. `AuthWatcher` (mounted in the root layout) detects the `SIGNED_IN` event from the Supabase client.
+5. `AuthWatcher` component (mounted in the root layout) detects the `SIGNED_IN` event from the Supabase client.
 6. `AuthWatcher` calls `POST /api/auth/bootstrap-auth`, which verifies the JWT server-side, calls Django's `POST /api/me/bootstrap/`, and returns a `UserProfileWithMonsters` payload — profile fields plus all saved monsters with images.
 7. Redux dispatches `authSignedIn(profile)` — the app now has full auth + monster state.
 
