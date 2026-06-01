@@ -8,7 +8,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { type Route } from "next";
 import z from "zod";
+import { Sparkles } from "lucide-react";
 
 import { GenerateMonsterForm } from "@/components/monsterGeneration/GenerateMonsterForm";
 import { GenerationStatusPanel } from "@/components/monsterGeneration/GenerationStatusPanel";
@@ -19,6 +22,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { buttonVariants } from "@/components/ui/button";
 import {
 	emptyMonsterFormValues,
 	monsterFormSchema,
@@ -305,6 +310,15 @@ export function CreateMonsterExperience() {
 		};
 	}, [generationState.status, dispatch]);
 
+	// Auth gate — must come after all hooks
+	if (authState.status === "loading") {
+		return <CreateFormSkeleton />;
+	}
+
+	if (authState.status === "anonymous") {
+		return <UnauthenticatedGate />;
+	}
+
 	/**Delete all form values */
 	function handleClearForm() {
 		setFormValues(emptyMonsterFormValues);
@@ -348,8 +362,8 @@ export function CreateMonsterExperience() {
 					<CardTitle>Create a Monster</CardTitle>
 					<CardDescription>
 						Fill in your monster&apos;s traits and kick off image generation.{" "}
-						Monster Masher is 100% free; daily limits just keep it available
-						for everyone.
+						Monster Masher is 100% free; daily limits just keep it available for
+						everyone.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -389,6 +403,85 @@ export function CreateMonsterExperience() {
 				</Card>
 			)}
 		</div>
+	);
+}
+
+function CreateFormSkeleton() {
+	return (
+		<div
+			aria-busy="true"
+			aria-label="Loading create monster form"
+			className="flex flex-col gap-6"
+		>
+			<div className="flex flex-col gap-2">
+				<Skeleton className="h-8 w-52" />
+				<Skeleton className="h-5 w-80" />
+			</div>
+			<div className="grid gap-8 lg:grid-cols-2">
+				<div className="flex flex-col gap-5">
+					{Array.from({ length: 5 }, (_, i) => (
+						<div key={i} className="flex flex-col gap-1.5">
+							<Skeleton className="h-4 w-28" />
+							<Skeleton className="h-10 w-full" />
+						</div>
+					))}
+					<Skeleton className="mt-2 h-10 w-full rounded-md" />
+				</div>
+				<Skeleton className="hidden h-96 rounded-xl lg:block" />
+			</div>
+		</div>
+	);
+}
+
+function UnauthenticatedGate() {
+	const authHref: Route = "/auth";
+
+	return (
+		<section
+			aria-labelledby="create-gate-heading"
+			className="flex min-h-[calc(100dvh-16rem)] items-center justify-center py-12"
+		>
+			<Card className="w-full max-w-md">
+				<CardHeader className="items-center gap-3 pb-2 text-center">
+					<span aria-hidden="true" className="text-6xl leading-none">
+						🧌
+					</span>
+					<div className="flex flex-col gap-1">
+						<h2
+							id="create-gate-heading"
+							className="text-2xl font-semibold leading-none"
+						>
+							Sign in to create your monster
+						</h2>
+						<CardDescription className="text-base">
+							Accounts are free and take under 30 seconds to set up. No credit
+							card. No subscription. Ever.
+						</CardDescription>
+					</div>
+				</CardHeader>
+				<CardContent className="flex flex-col gap-3 pt-4">
+					<Link href={authHref} className={buttonVariants({ size: "lg" })}>
+						<Sparkles aria-hidden="true" className="size-4" />
+						Create a free account
+					</Link>
+					<Link
+						href={authHref}
+						className={buttonVariants({ variant: "outline", size: "lg" })}
+					>
+						Sign in
+					</Link>
+					<p className="text-center text-sm text-muted-foreground">
+						Just want to browse?{" "}
+						<Link
+							href="/gallery/example"
+							className="underline underline-offset-4 transition-colors hover:text-foreground"
+						>
+							See example monsters
+						</Link>
+					</p>
+				</CardContent>
+			</Card>
+		</section>
 	);
 }
 

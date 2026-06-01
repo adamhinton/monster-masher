@@ -81,8 +81,8 @@ describe("CreatePage", () => {
 		renderCreatePage();
 	});
 
-	it("renders the generation form fields", () => {
-		renderCreatePage();
+	it("renders the generation form fields for authenticated users", () => {
+		renderCreatePage({ status: "authenticated", user: validUserProfile });
 		expect(screen.getByLabelText(/monster name/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/element/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/habitat/i)).toBeInTheDocument();
@@ -92,6 +92,37 @@ describe("CreatePage", () => {
 		expect(
 			screen.getByRole("button", { name: /clear form/i }),
 		).toBeInTheDocument();
+	});
+
+	it("shows sign-in prompt when anonymous", () => {
+		renderCreatePage({ status: "anonymous" });
+		expect(
+			screen.getByRole("heading", { name: /sign in to create your monster/i }),
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("link", { name: /create a free account/i }),
+		).toBeInTheDocument();
+		expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
+	});
+
+	it("auth gate links point to /auth", () => {
+		renderCreatePage({ status: "anonymous" });
+		const ctaLinks = screen
+			.getAllByRole("link")
+			.filter((el) => el.getAttribute("href")?.includes("/auth"));
+		expect(ctaLinks.length).toBeGreaterThanOrEqual(2);
+	});
+
+	it("shows a skeleton while auth is loading", () => {
+		renderCreatePage({ status: "loading" });
+		expect(
+			screen.getByLabelText(/loading create monster form/i),
+		).toBeInTheDocument();
+	});
+
+	it("does not show form fields when anonymous", () => {
+		renderCreatePage({ status: "anonymous" });
+		expect(screen.queryByLabelText(/monster name/i)).not.toBeInTheDocument();
 	});
 
 	it("submits the create flow through running to succeeded for authenticated users", async () => {
@@ -196,7 +227,7 @@ describe("CreatePage", () => {
 			} as Response;
 		});
 
-		renderCreatePage();
+		renderCreatePage({ status: "authenticated", user: validUserProfile });
 
 		await fillRequiredFields(user);
 		await user.click(screen.getByRole("button", { name: /generate monster/i }));
@@ -238,7 +269,7 @@ describe("CreatePage", () => {
 			} as Response;
 		});
 
-		renderCreatePage();
+		renderCreatePage({ status: "authenticated", user: validUserProfile });
 
 		await fillRequiredFields(user);
 		await user.click(screen.getByRole("button", { name: /generate monster/i }));
